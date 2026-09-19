@@ -2,7 +2,7 @@
 
 Career Switch Assistant is a guided career-readiness platform for software professionals with 1–5 years of experience who want to move into a specific technical role or prepare for their next opportunity.
 
-It turns an often confusing career transition into a focused, practical plan: identify the gap between a person's current experience and their target role, prioritize the skills that matter most, and help them build proof that they are ready to be hired.
+It turns an often confusing career transition into a focused, practical plan: identify the gap between a person's current experience and their target role, prioritize the skills that matter most, and help them follow a structured path toward becoming job-ready for their target role.
 
 ## The problem
 
@@ -15,9 +15,9 @@ Generic roadmaps and scattered online courses rarely answer the questions that m
 - Which projects best demonstrate that I can do the job?
 - How do I turn my current experience into a credible resume, portfolio, and interview story?
 - How can I measure whether I am actually job-ready?
-- How to keep consistancy by dividing large goald into task that I can track? 
+- How to keep consistency by dividing large goals into trackable tasks? 
 
-Without a structured answer, people spend time on low-impact learning, lose momentum, consistancy and apply before they can confidently show the capabilities employers expect.
+Without a structured answer, people spend time on low-impact learning, lose momentum, consistency and apply before they can confidently show the capabilities employers expect.
 
 ## Our product
 
@@ -40,7 +40,7 @@ The product is built for software professionals with roughly 1–5 years of expe
 - are preparing for a more demanding engineering role;
 - have learned independently but need structure and prioritization; or
 - want a clear, evidence-based definition of job readiness.
-- want to get personalised remainter on tasks and track the daily progress
+- want to get personalised reminder on tasks and track the daily progress
 
 ## Product vision
 
@@ -68,7 +68,7 @@ The following is the proposed technology baseline for the application. Update it
 - **Design system:** Astryx, Tailwind css
 - **API:** Node.js, TypeScript, Express
 - **Discord bot:** discord.js, TypeScript
-- **Database:** PostgreSQL, MongoDB
+- **Database:** PostgreSQL
 - **AI:** gemini free trial
 - **Testing:** Vitetest, React Testing Library, Playwright 
 - **Shared packages:** UI components, TypeScript types, validation schemas, and configuration
