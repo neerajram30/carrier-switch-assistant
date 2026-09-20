@@ -17,7 +17,7 @@ Generic roadmaps and scattered online courses rarely answer the questions that m
 - How can I measure whether I am actually job-ready?
 - How to keep consistency by dividing large goals into trackable tasks? 
 
-Without a structured answer, people spend time on low-impact learning, lose momentum, consistency and apply before they can confidently show the capabilities employers expect.
+Without a structured answer, people spend time on low-impact learning, lose momentum, and may apply before they can confidently demonstrate the capabilities employers expect.
 
 ## Our product
 
@@ -28,7 +28,8 @@ The platform is designed to support the complete journey:
 - **Role targeting:** clarify the destination role and the expectations associated with it.
 - **Skill-gap analysis:** compare existing strengths with the practical technical, tooling, and communication skills needed next.
 - **Personalized roadmap:** organize high-value learning into achievable milestones based on the user's current profile, target role, and available time.
-- **Daily task tracker:** provide a list of task to achieve a goal and will provide an option to connect with discord, so user will get notification which task to take up, also there is a dedicated dashboard to track the tasks
+- **Daily task notifier:** roadmap will be divided into daily tasks user can connect discord account to receive and update daily task 
+- **Daily task tracker:** dedicated dashboard to track the progress of task 
 
 Rather than treating a career change as a collection of courses, Career Switch Assistant treats it as an outcome-driven plan: become demonstrably ready for a particular technical role.
 
@@ -39,7 +40,7 @@ The product is built for software professionals with roughly 1–5 years of expe
 - want to specialize or switch technical tracks;
 - are preparing for a more demanding engineering role;
 - have learned independently but need structure and prioritization; or
-- want a clear, career readiness indicators.
+- want clear career-readiness indicators.
 - want to get personalised reminder on tasks and track the daily progress
 
 ## Product vision

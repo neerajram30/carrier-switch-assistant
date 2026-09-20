@@ -101,13 +101,13 @@ Resumes are highly sensitive personal data. Apply encryption in transit and at r
 ## 8. Deployment architecture
 
 - **Web app:** deploy Next.js as a managed web service or container behind HTTPS and a CDN.
-- **API:** deploy NestJS as horizontally scalable containers behind a load balancer.
+- **API:** deploy the NestJS API using the selected hosting platform. The deployment should support secure HTTPS access and allow horizontal scaling if required by future traffic.
 - **Proposed background worker:** deploy separately from the API so long-running AI and document jobs do not block requests.
 - **PostgreSQL:** use a managed service with private network access, backups, monitoring, and encryption.
 - **Proposed Redis:** use a managed service with private network access, monitoring, and encryption if it is adopted.
 - **Proposed object storage:** use private, encrypted S3-compatible storage for uploaded resumes if it is adopted.
 - **Configuration and secrets:** inject through a managed secrets service; never commit them to source control.
-- **Observability:** centralize structured logs, metrics, traces, error reporting, and alerts.
+- **Observability:** implement structured logging, error reporting, application metrics, and alerting. Distributed tracing can be introduced when the system's complexity justifies it.
 
 Separate development, staging, and production environments. CI should run linting, tests, and security checks before deployment; production releases should support rollback.
 
@@ -140,7 +140,7 @@ Separate development, staging, and production environments. CI should run lintin
 flowchart TB
     User[User]
     Browser[Browser]
-    AuthLayer[Next.js authentication layer<br/>proposed]
+    AuthLayer[Authentication provider<br/>proposed]
     AccessToken[API access token]
     API[NestJS API]
     UploadRecord[Create upload record]
