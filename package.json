@@ -2,6 +2,11 @@
   "name": "carrier-switch-assistant",
   "version": "1.0.0",
   "description": "",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "homepage": "https://github.com/neerajram30/carrier-switch-assistant#readme",
   "bugs": {
     "url": "https://github.com/neerajram30/carrier-switch-assistant/issues"
@@ -15,6 +20,10 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:web": "npm run dev --workspace=@career-switch-assistant/web",
+    "dev:api": "npm run start:dev --workspace=@career-switch-assistant/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   }
 }
