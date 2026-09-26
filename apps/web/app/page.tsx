@@ -11,14 +11,14 @@ interface HealthResponse {
 }
 
 export default function Home() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const [apiStatus, setApiStatus] = useState<ApiStatus>(
+    apiUrl ? 'checking' : 'unavailable',
+  );
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
     if (!apiUrl) {
-      setApiStatus('unavailable');
       return;
     }
 
@@ -47,7 +47,7 @@ export default function Home() {
     void checkApiHealth();
 
     return () => controller.abort();
-  }, []);
+  }, [apiUrl]);
 
   return (
     <div>
