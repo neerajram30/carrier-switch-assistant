@@ -1,7 +1,11 @@
 {
-  "name": "carrier-switch-assistant",
+  "name": "career-switch-assistant",
   "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "homepage": "https://github.com/neerajram30/carrier-switch-assistant#readme",
   "bugs": {
     "url": "https://github.com/neerajram30/carrier-switch-assistant/issues"
@@ -11,10 +15,16 @@
     "url": "git+https://github.com/neerajram30/carrier-switch-assistant.git"
   },
   "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently -n \"web,api\" -c \"cyan,magenta\" \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "npm run dev --workspace=@career-switch-assistant/web",
+    "dev:api": "npm run start:dev --workspace=@career-switch-assistant/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }
