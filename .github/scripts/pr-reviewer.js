@@ -10,6 +10,8 @@ const prNumber = process.env.PR_NUMBER;
 
 const BOT_SIGNATURE = '### 🤖 Senior Engineer AI Review';
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function fetchGitHub(url, options = {}) {
   const res = await fetch(`https://api.github.com${url}`, {
     ...options,
@@ -104,71 +106,90 @@ async function callGemini(prompt) {
   const candidateModels = [
     process.env.GEMINI_MODEL,
     'gemini-3.8-flash',
+    'gemini-3.6-flash',
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
     'gemini-flash-latest',
     'gemini-3.5-flash',
-    'gemini-2.5-flash',
   ].filter(Boolean);
 
   const models = [...new Set(candidateModels)];
   let lastError = null;
 
   for (const model of models) {
-    console.log(`Attempting review generation with model: ${model}...`);
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 2500,
+    const maxRetries = 3;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`[Attempt ${attempt}/${maxRetries}] Generating review with model: ${model}...`);
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
           },
-        }),
-      });
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 2500,
+            },
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        console.error(`Gemini API error with model ${model} (HTTP ${res.status}):`, JSON.stringify(data, null, 2));
-        lastError = new Error(
-          `Gemini API HTTP ${res.status}: ${data.error?.message || res.statusText || 'Unknown error'}`
-        );
+        if (!res.ok) {
+          console.error(`Gemini API error with model ${model} (HTTP ${res.status}):`, JSON.stringify(data, null, 2));
+          lastError = new Error(
+            `Gemini API HTTP ${res.status}: ${data.error?.message || res.statusText || 'Unknown error'}`
+          );
 
-        // If the API key itself is invalid or project unauthorized, fail fast
-        if (res.status === 400 && data.error?.message?.toLowerCase().includes('api key')) {
-          throw lastError;
+          // If the API key itself is invalid or unauthorized, fail immediately
+          if (res.status === 400 && data.error?.message?.toLowerCase().includes('api key')) {
+            throw lastError;
+          }
+          if (res.status === 403) {
+            throw lastError;
+          }
+
+          // If transient error (503 Service Unavailable or 429 Rate Limit), retry with backoff
+          if ((res.status === 503 || res.status === 429) && attempt < maxRetries) {
+            const backoffMs = attempt * 2500;
+            console.log(`Transient error (${res.status}) on ${model}. Retrying in ${backoffMs}ms...`);
+            await sleep(backoffMs);
+            continue;
+          }
+
+          // Otherwise break to try next model
+          break;
         }
-        if (res.status === 403) {
-          throw lastError;
+
+        const candidate = data.candidates?.[0];
+        const text = candidate?.content?.parts?.[0]?.text;
+
+        if (!text) {
+          const finishReason = candidate?.finishReason || 'UNKNOWN';
+          const blockReason = data.promptFeedback?.blockReason;
+          console.warn(`No text in candidate for model ${model}. finishReason: ${finishReason}, blockReason: ${blockReason}`);
+          lastError = new Error(
+            `Model returned no content (finishReason: ${finishReason}${blockReason ? `, blockReason: ${blockReason}` : ''})`
+          );
+          break;
         }
 
-        // For 404 (model not found) or other errors, try the next model
-        continue;
-      }
-
-      const candidate = data.candidates?.[0];
-      const text = candidate?.content?.parts?.[0]?.text;
-
-      if (!text) {
-        const finishReason = candidate?.finishReason || 'UNKNOWN';
-        const blockReason = data.promptFeedback?.blockReason;
-        console.warn(`No text in candidate for model ${model}. finishReason: ${finishReason}, blockReason: ${blockReason}`);
-        lastError = new Error(`Model returned no content (finishReason: ${finishReason}${blockReason ? `, blockReason: ${blockReason}` : ''})`);
-        continue;
-      }
-
-      console.log(`Successfully generated review using model: ${model}`);
-      return text;
-    } catch (err) {
-      console.error(`Call failed for model ${model}:`, err.message);
-      lastError = err;
-      if (err.message.toLowerCase().includes('api key') || err.message.includes('403')) {
-        throw err;
+        console.log(`Successfully generated review using model: ${model}`);
+        return text;
+      } catch (err) {
+        console.error(`Call failed for model ${model} (attempt ${attempt}):`, err.message);
+        lastError = err;
+        if (err.message.toLowerCase().includes('api key') || err.message.includes('403')) {
+          throw err;
+        }
+        if (attempt < maxRetries) {
+          await sleep(attempt * 2000);
+        }
       }
     }
   }
