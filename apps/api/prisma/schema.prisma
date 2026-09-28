@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  careerProfile CareerProfile?
+  @@map("users")
+}
+
+model CareerProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique // @unique enforces the 1:1 constraint
+  currentRole       String
+  yearsOfExperience Int
+  targetRole        String
+  summary           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  // Foreign key relation linking to User
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("career_profiles")
+}

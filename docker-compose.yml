@@ -1,0 +1,24 @@
+name: career-switch-assistant
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: career-switch-assistant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: neeraj
+      POSTGRES_PASSWORD: Tintumon@12345
+      POSTGRES_DB: career_switch_assistant
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neeraj -d career_switch_assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: career-switch-assistant-postgres-data
