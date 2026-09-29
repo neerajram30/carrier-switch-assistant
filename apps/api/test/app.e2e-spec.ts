@@ -25,6 +25,16 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/health/db (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/health/db')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.database).toEqual(expect.any(String));
+        expect(body.timestamp).toEqual(expect.any(String));
+      });
+  });
+
   afterEach(async () => {
     await app.close();
   });
