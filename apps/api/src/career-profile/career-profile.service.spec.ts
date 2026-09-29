@@ -35,8 +35,8 @@ describe('CareerProfileService', () => {
   });
 
   describe('create', () => {
+    const mockUserId = 'user-123';
     const mockDto = {
-      userId: 'user-123',
       currentRole: 'Frontend Developer',
       yearsOfExperience: 3,
       targetRole: 'Full Stack Engineer',
@@ -49,11 +49,12 @@ describe('CareerProfileService', () => {
         id: 'profile-uuid-1',
         createdAt: new Date(),
         updatedAt: new Date(),
+        userId: mockUserId,
         ...mockDto,
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue({
-        id: mockDto.userId,
+        id: mockUserId,
         email: 'user@example.com',
       });
       mockPrismaService.careerProfile.findUnique.mockResolvedValue(null);
@@ -62,18 +63,21 @@ describe('CareerProfileService', () => {
       );
 
       // 2. ACT
-      const result = await service.create(mockDto);
+      const result = await service.create(mockUserId, mockDto);
 
       // 3. ASSERT
       expect(result).toEqual(mockCreatedProfile);
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: mockDto.userId },
+        where: { id: mockUserId },
       });
       expect(mockPrismaService.careerProfile.findUnique).toHaveBeenCalledWith({
-        where: { userId: mockDto.userId },
+        where: { userId: mockUserId },
       });
       expect(mockPrismaService.careerProfile.create).toHaveBeenCalledWith({
-        data: mockDto,
+        data: {
+          userId: mockUserId,
+          ...mockDto,
+        },
       });
     });
 
@@ -82,7 +86,7 @@ describe('CareerProfileService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       // 2. ACT & ASSERT: Expect service.create to reject with NotFoundException
-      await expect(service.create(mockDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(mockUserId, mockDto)).rejects.toThrow(NotFoundException);
 
       // Verify that it aborted early and never queried careerProfile or created anything
       expect(mockPrismaService.careerProfile.findUnique).not.toHaveBeenCalled();
@@ -92,17 +96,17 @@ describe('CareerProfileService', () => {
     it('throws ConflictException if career profile already exists for user', async () => {
       // 1. ARRANGE: User exists, but already has an existing profile
       mockPrismaService.user.findUnique.mockResolvedValue({
-        id: mockDto.userId,
+        id: mockUserId,
         email: 'user@example.com',
       });
       mockPrismaService.careerProfile.findUnique.mockResolvedValue({
         id: 'existing-profile-id',
-        userId: mockDto.userId,
+        userId: mockUserId,
         currentRole: 'Junior Developer',
       });
 
       // 2. ACT & ASSERT: Expect service.create to reject with ConflictException
-      await expect(service.create(mockDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(mockUserId, mockDto)).rejects.toThrow(ConflictException);
 
       // Verify that it aborted and never called create()
       expect(mockPrismaService.careerProfile.create).not.toHaveBeenCalled();

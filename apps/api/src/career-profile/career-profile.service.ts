@@ -10,35 +10,43 @@ import { PrismaService } from '../prisma/prisma.service.js';
 @Injectable()
 export class CareerProfileService {
   constructor(private readonly prisma: PrismaService) {}
-  async create(createCareerProfileDto: CreateCareerProfileDto) {
+
+  private serializeProfile<T extends { yearsOfExperience: unknown }>(profile: T) {
+    return {
+      ...profile,
+      yearsOfExperience: Number(profile.yearsOfExperience),
+    };
+  }
+
+  async create(userId: string, createCareerProfileDto: CreateCareerProfileDto) {
     const user = await this.prisma.user.findUnique({
-      where: { id: createCareerProfileDto.userId },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new NotFoundException(
-        `User with ID "${createCareerProfileDto.userId}" not found`,
-      );
+      throw new NotFoundException(`User with ID "${userId}" not found`);
     }
 
     const existing = await this.prisma.careerProfile.findUnique({
-      where: { userId: createCareerProfileDto.userId },
+      where: { userId },
     });
     if (existing) {
       throw new ConflictException(
-        `Career profile already exists for user "${createCareerProfileDto.userId}"`,
+        `Career profile already exists for user "${userId}"`,
       );
     }
 
-    return this.prisma.careerProfile.create({
+    const created = await this.prisma.careerProfile.create({
       data: {
-        userId: createCareerProfileDto.userId,
+        userId,
         currentRole: createCareerProfileDto.currentRole,
         yearsOfExperience: createCareerProfileDto.yearsOfExperience,
         targetRole: createCareerProfileDto.targetRole,
         summary: createCareerProfileDto.summary,
       },
     });
+
+    return this.serializeProfile(created);
   }
 
   async findByUserId(userId: string) {
@@ -59,15 +67,16 @@ export class CareerProfileService {
         `Career profile for user "${userId}" not found`,
       );
     }
-    return profile;
+    return this.serializeProfile(profile);
   }
 
   async update(userId: string, dto: UpdateCareerProfileDto) {
     // Ensure profile exists first
     await this.findByUserId(userId);
-    return this.prisma.careerProfile.update({
+    const updated = await this.prisma.careerProfile.update({
       where: { userId },
       data: dto,
     });
+    return this.serializeProfile(updated);
   }
 }

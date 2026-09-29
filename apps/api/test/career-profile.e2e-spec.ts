@@ -53,13 +53,65 @@ describe('CareerProfile (e2e)', () => {
     }
   });
 
+  describe('Authorization Boundary (x-user-id header)', () => {
+    it('rejects POST /career-profile when x-user-id header is missing with 401 Unauthorized', async () => {
+      await request(app.getHttpServer())
+        .post('/career-profile')
+        .send({
+          currentRole: 'Frontend Developer',
+          yearsOfExperience: 3,
+          targetRole: 'Full Stack Engineer',
+        })
+        .expect(401);
+    });
+
+    it('rejects GET /career-profile when x-user-id header is missing with 401 Unauthorized', async () => {
+      await request(app.getHttpServer())
+        .get('/career-profile')
+        .expect(401);
+    });
+
+    it('rejects PUT /career-profile when x-user-id header is missing with 401 Unauthorized', async () => {
+      await request(app.getHttpServer())
+        .put('/career-profile')
+        .send({ targetRole: 'Staff Engineer' })
+        .expect(401);
+    });
+
+    it('rejects non-UUID x-user-id header with 401 Unauthorized', async () => {
+      await request(app.getHttpServer())
+        .get('/career-profile')
+        .set('x-user-id', 'invalid-not-a-uuid')
+        .expect(401);
+    });
+  });
+
   describe('POST /career-profile (Validation & Creation)', () => {
+    it('rejects client attempting to inject userId in body with 400 Bad Request', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/career-profile')
+        .set('x-user-id', testUserId)
+        .send({
+          userId: testUserId, // INVALID: client must not pass userId in request body
+          currentRole: 'Frontend Developer',
+          yearsOfExperience: 3,
+          targetRole: 'Full Stack Engineer',
+        })
+        .expect(400);
+
+      expect(response.body.message).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('property userId should not exist'),
+        ]),
+      );
+    });
+
     it('rejects invalid data with 400 Bad Request', async () => {
       // Send invalid data: negative years, empty targetRole
       const response = await request(app.getHttpServer())
         .post('/career-profile')
+        .set('x-user-id', testUserId)
         .send({
-          userId: testUserId,
           currentRole: 'Frontend Developer',
           yearsOfExperience: -10, // INVALID: must be >= 0
           targetRole: '', // INVALID: cannot be empty
@@ -78,8 +130,8 @@ describe('CareerProfile (e2e)', () => {
     it('rejects unknown properties with 400 Bad Request (forbidNonWhitelisted)', async () => {
       const response = await request(app.getHttpServer())
         .post('/career-profile')
+        .set('x-user-id', testUserId)
         .send({
-          userId: testUserId,
           currentRole: 'Frontend Developer',
           yearsOfExperience: 3,
           targetRole: 'Full Stack Engineer',
@@ -96,7 +148,6 @@ describe('CareerProfile (e2e)', () => {
 
     it('successfully creates a career profile in PostgreSQL with 201 Created', async () => {
       const validPayload = {
-        userId: testUserId,
         currentRole: 'Frontend Developer',
         yearsOfExperience: 3.4,
         targetRole: 'Full Stack Developer',
@@ -105,6 +156,7 @@ describe('CareerProfile (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/career-profile')
+        .set('x-user-id', testUserId)
         .send(validPayload)
         .expect(201);
 
@@ -129,8 +181,8 @@ describe('CareerProfile (e2e)', () => {
     it('rejects duplicate profile creation for same user with 409 Conflict', async () => {
       await request(app.getHttpServer())
         .post('/career-profile')
+        .set('x-user-id', testUserId)
         .send({
-          userId: testUserId,
           currentRole: 'Frontend Developer',
           yearsOfExperience: 3,
           targetRole: 'Full Stack Developer',
@@ -139,10 +191,11 @@ describe('CareerProfile (e2e)', () => {
     });
   });
 
-  describe('GET /career-profile/:userId (Retrieval)', () => {
-    it('retrieves the created profile with user information from PostgreSQL', async () => {
+  describe('GET /career-profile (Retrieval)', () => {
+    it('retrieves the caller profile with user information from PostgreSQL', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/career-profile/${testUserId}`)
+        .get('/career-profile')
+        .set('x-user-id', testUserId)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -160,20 +213,22 @@ describe('CareerProfile (e2e)', () => {
     it('returns 404 Not Found when profile does not exist', async () => {
       const nonExistentUserId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
-        .get(`/career-profile/${nonExistentUserId}`)
+        .get('/career-profile')
+        .set('x-user-id', nonExistentUserId)
         .expect(404);
     });
   });
 
-  describe('PUT /career-profile/:userId (Update)', () => {
-    it('updates profile in PostgreSQL with 200 OK', async () => {
+  describe('PUT /career-profile (Update)', () => {
+    it('updates caller profile in PostgreSQL with 200 OK', async () => {
       const updatePayload = {
         targetRole: 'Staff Full Stack Engineer',
         yearsOfExperience: 5,
       };
 
       const response = await request(app.getHttpServer())
-        .put(`/career-profile/${testUserId}`)
+        .put('/career-profile')
+        .set('x-user-id', testUserId)
         .send(updatePayload)
         .expect(200);
 

@@ -3,16 +3,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
 
 export class CreateCareerProfileDto {
-  @IsUUID('4', { message: 'userId must be a valid UUID' })
-  @IsNotEmpty({ message: 'userId is required' })
-  userId: string;
-
   @IsString({ message: 'currentRole must be a string' })
   @IsNotEmpty({ message: 'currentRole cannot be empty' })
   @MaxLength(100, { message: 'currentRole must not exceed 100 characters' })
