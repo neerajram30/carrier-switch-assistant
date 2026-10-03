@@ -181,17 +181,12 @@ export default function Home() {
 
           <Divider />
 
-          <HStack justify="between" align="center" width="100%">
+          <HStack justify="end" align="center" width="100%">
             <Button
               label="Refresh Status"
               variant="secondary"
               isLoading={isRefreshing}
               onClick={handleRefresh}
-            />
-            <Button
-              label="Start Onboarding →"
-              variant="primary"
-              href="/onboarding"
             />
           </HStack>
         </VStack>
