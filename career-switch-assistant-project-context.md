@@ -38,7 +38,8 @@
   - `docs/operations`
 - **PR #1** established the architecture/system-design documentation and was merged.
 - **PR #2** established `AGENTS.md` and was subsequently merged.
-- Current task: **ENG-002 — Bootstrap the Monorepo**.
+- The project has progressed beyond the original monorepo bootstrap task.
+- **PR #8** is currently focused on Astryx design-system integration and the Neutral + Dark visual foundation; onboarding implementation was intentionally removed so this remains a focused integration PR.
 
 ## Confirmed technology choices
 
@@ -214,3 +215,122 @@ Expected foundation:
 - You want me to **challenge weak architectural decisions**, identify unnecessary complexity, review PRs critically, and teach the reasoning behind professional engineering practices.
 - We should avoid spending weeks creating documentation before writing code; documentation should be **just ahead of the work**.
 - The objective isn't merely to finish an app—it is to use the app as a vehicle to learn **real product engineering practices**.
+
+
+## Updated Current State — Post ENG-002
+
+The previous context's statement that **ENG-002 — Bootstrap the Monorepo** is the current task is now historical and should not be used to judge current implementation work.
+
+### Current design-system decision
+
+- **Astryx (`@astryxdesign/*`) is the selected design-system direction for the web application.**
+- Theme direction: **Neutral + Dark**.
+- The application is intentionally **dark-first**.
+- The desired visual personality is:
+  - Calm
+  - Intelligent
+  - Trustworthy
+  - Focused
+  - Technical
+- Avoid excessive gradients, neon styling, unnecessary decoration, and generic "AI purple" treatment.
+- Prefer semantic color usage:
+  - Neutral → backgrounds/surfaces/text/borders
+  - Primary → actions/focus
+  - Success → completed/valid/achieved
+  - Warning → needs attention
+  - Error → invalid/failed
+  - Info → contextual information
+  - Progress → learning/execution state
+  - AI → restrained AI-generated insight/processing indicator
+- Prefer Astryx tokens/components over arbitrary application-level colors and styling.
+
+### Current PR
+
+**PR #8 — Astryx Integration**
+
+The purpose of PR #8 is now:
+
+> Prove that the Next.js application can reliably consume Astryx, the Neutral theme, and the dark-first visual foundation.
+
+PR #8 should contain:
+
+- Astryx dependencies/integration
+- Neutral theme configuration
+- Dark theme configuration
+- required CSS/token integration
+- required theme/provider configuration
+- minimal Astryx component usage/smoke validation
+- supporting test/tooling configuration where justified
+
+PR #8 should **not** contain:
+
+- Career Profile onboarding
+- Resume Upload UI
+- Resume processing
+- AI extraction
+- Profile review
+- Career goal implementation
+- unrelated homepage/product redesign
+
+Onboarding code that was previously added to PR #8 has intentionally been removed so the PR remains a coherent design-system integration change.
+
+### Immediate next sequence
+
+```text
+PR #8 — Astryx + Neutral/Dark
+        ↓
+Review / CI / manual smoke validation
+        ↓
+Merge
+        ↓
+New feature branch
+        ↓
+Career Profile / Resume Upload UI
+        ↓
+Resume Upload API
+        ↓
+Resume processing
+        ↓
+AI extraction
+        ↓
+Profile review
+        ↓
+Career goal / target role
+        ↓
+Skill gap analysis
+        ↓
+Roadmap
+        ↓
+Daily missions
+        ↓
+Execution tracking
+```
+
+### Resume onboarding implementation direction
+
+The first product-facing onboarding slice should provide a real, usable UI while keeping backend concerns separate.
+
+Initial responsibilities:
+
+- Resume upload entry point
+- PDF/DOCX validation
+- File-size validation
+- Drag/drop interaction
+- Keyboard accessibility
+- Upload/loading/processing UI states
+- Error states
+- Manual-entry path
+- Component/unit tests
+
+The first UI slice does **not** need the real resume-processing backend or AI extraction.
+
+Those become separate vertical slices.
+
+### Testing strategy
+
+- Colocate component/unit tests with the feature code where practical.
+- Use feature-level integration tests when multiple components need to be tested together.
+- Keep application-level E2E tests under the E2E test area.
+- Do not create E2E tests for every component.
+- Add the first meaningful onboarding E2E test when the real upload → processing → profile-review journey exists.
+- Test behavior rather than implementation details.
