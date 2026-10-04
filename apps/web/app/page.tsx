@@ -31,49 +31,66 @@ export default function Home() {
     apiUrl ? 'checking' : 'unknown',
   );
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const checkHealth = async (signal?: AbortSignal) => {
+  useEffect(() => {
     if (!apiUrl) {
       return;
     }
 
-    // Check API liveness
-    try {
-      const apiRes = await fetch(`${apiUrl}/health`, { signal });
-      if (!apiRes.ok) {
-        throw new Error(`API health check failed with status ${apiRes.status}`);
-      }
-      const apiHealth = (await apiRes.json()) as ApiHealthResponse;
-      setApiStatus(apiHealth.status === 'ok' ? 'connected' : 'unavailable');
-      setCheckedAt(apiHealth.timestamp);
-    } catch {
-      if (!signal?.aborted) {
-        setApiStatus('unavailable');
-        setDbStatus('unknown');
-      }
-      return;
-    }
-
-    // Check database connectivity
-    try {
-      const dbRes = await fetch(`${apiUrl}/health/db`, { signal });
-      if (!dbRes.ok) {
-        throw new Error(`DB health check failed with status ${dbRes.status}`);
-      }
-      const dbHealth = (await dbRes.json()) as DbHealthResponse;
-      setDbStatus(dbHealth.database);
-    } catch {
-      if (!signal?.aborted) {
-        setDbStatus('unknown');
-      }
-    }
-  };
-
-  useEffect(() => {
     const controller = new AbortController();
-    void checkHealth(controller.signal);
+
+    async function checkHealth() {
+      // Check API liveness
+      try {
+        const apiRes = await fetch(`${apiUrl}/health`, {
+          signal: controller.signal,
+        });
+
+        if (!apiRes.ok) {
+          throw new Error(`API health check failed with status ${apiRes.status}`);
+        }
+
+        const apiHealth = (await apiRes.json()) as ApiHealthResponse;
+        setApiStatus(apiHealth.status === 'ok' ? 'connected' : 'unavailable');
+        setCheckedAt(apiHealth.timestamp);
+      } catch {
+        if (!controller.signal.aborted) {
+          setApiStatus('unavailable');
+          setDbStatus('unknown');
+        }
+        return;
+      }
+
+      // Check database connectivity
+      try {
+        const dbRes = await fetch(`${apiUrl}/health/db`, {
+          signal: controller.signal,
+        });
+
+        if (!dbRes.ok) {
+          throw new Error(`DB health check failed with status ${dbRes.status}`);
+        }
+
+        const dbHealth = (await dbRes.json()) as DbHealthResponse;
+        setDbStatus(dbHealth.database);
+      } catch {
+        if (!controller.signal.aborted) {
+          setDbStatus('unknown');
+        }
+      }
+    }
+
+    void checkHealth();
+
     return () => controller.abort();
-  }, [apiUrl]);
+  }, [apiUrl, refreshTrigger]);
+
+  const handleRefresh = () => {
+    setApiStatus('checking');
+    setDbStatus('checking');
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   const getDotVariant = (
     status: ApiStatus | DbStatus,
@@ -127,7 +144,7 @@ export default function Home() {
           <Button
             label="Re-check Status"
             variant="secondary"
-            onClick={() => void checkHealth()}
+            onClick={handleRefresh}
           />
         </VStack>
       </Card>
