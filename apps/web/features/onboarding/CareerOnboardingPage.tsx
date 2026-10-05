@@ -13,12 +13,11 @@ const INITIAL_PROFILE_STATE: CareerProfileData = {
   yearsOfExperience: '',
   skills: [],
   summary: '',
-  targetRole: '',
-  source: 'manual',
 };
 
 export default function CareerOnboardingPage() {
   const [step, setStep] = useState<OnboardingStep>('upload');
+  // Local state for the manual entry form before backend profile persistence is implemented.
   const [profileData, setProfileData] = useState<CareerProfileData>(
     INITIAL_PROFILE_STATE,
   );
@@ -28,8 +27,9 @@ export default function CareerOnboardingPage() {
     setUploadedFile(file);
   };
 
-  const handleManualEntryComplete = (manual: CareerProfileData) => {
-    setProfileData(manual);
+  const handleManualEntryComplete = (profile: CareerProfileData) => {
+    // Temporary local state update until profile persistence is implemented.
+    setProfileData(profile);
   };
 
   return (

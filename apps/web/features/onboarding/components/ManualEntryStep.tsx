@@ -66,8 +66,6 @@ export function ManualEntryStep({
       yearsOfExperience: yearsOfExperience.trim(),
       skills,
       summary: initialData?.summary ?? '',
-      targetRole: initialData?.targetRole ?? '',
-      source: 'manual',
     });
   };
 

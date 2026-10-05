@@ -5,8 +5,10 @@ export interface CareerProfileData {
   yearsOfExperience: string;
   skills: string[];
   summary: string;
+}
+
+export interface CareerGoal {
   targetRole: string;
-  source: 'ai_extracted' | 'manual';
 }
 
 export interface FileValidationError {
