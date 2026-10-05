@@ -1,10 +1,4 @@
-export type OnboardingStep =
-  | 'upload'
-  | 'manual'
-  | 'review'
-  | 'goal'
-  | 'analyzing'
-  | 'complete';
+export type OnboardingStep = 'upload' | 'manual';
 
 export interface CareerProfileData {
   currentRole: string;

@@ -63,37 +63,41 @@ describe('useResumeUpload Hook', () => {
     expect(result.current.isProcessing).toBe(true);
   });
 
-  it('rejects unsupported extensions', () => {
+  it('rejects files with unsupported extensions', () => {
     // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook and create an unsupported file (.js)
+    // 1. Arrange: Render hook with mock callback and create an invalid text file mock
     // -------------------------------------------------------------------------
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useResumeUpload(onSuccess));
 
-    const badFile = new File(['bad'], 'script.js', { type: 'text/javascript' });
-
-    // -------------------------------------------------------------------------
-    // 2. Act: Pass unsupported file to handleFileChange handler
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(badFile);
+    const invalidFile = new File(['mock content'], 'resume.txt', {
+      type: 'text/plain',
     });
 
     // -------------------------------------------------------------------------
-    // 3. Assert: Verify file is rejected and format validation error is set
+    // 2. Act: Pass invalid file to handleFileChange handler
+    // -------------------------------------------------------------------------
+    act(() => {
+      result.current.handleFileChange(invalidFile);
+    });
+
+    // -------------------------------------------------------------------------
+    // 3. Assert: Verify validation error is generated and file reference is cleared
     // -------------------------------------------------------------------------
     expect(result.current.selectedFile).toBeNull();
     expect(result.current.validationError?.reason).toBe('format');
+    expect(result.current.validationError?.message).toContain('not supported');
   });
 
-  it('rejects files exceeding 5 MB limit', () => {
+  it('rejects files exceeding size limits', () => {
     // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook and create a 6 MB oversized file
+    // 1. Arrange: Render hook and create a 6 MB oversized PDF file mock (>5 MB)
     // -------------------------------------------------------------------------
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useResumeUpload(onSuccess));
 
-    const largeFile = new File([new Uint8Array(6 * 1024 * 1024)], 'too-big.pdf', {
+    const oversizedBuffer = new ArrayBuffer(6 * 1024 * 1024);
+    const oversizedFile = new File([oversizedBuffer], 'huge-resume.pdf', {
       type: 'application/pdf',
     });
 
@@ -101,17 +105,17 @@ describe('useResumeUpload Hook', () => {
     // 2. Act: Pass oversized file to handleFileChange handler
     // -------------------------------------------------------------------------
     act(() => {
-      result.current.handleFileChange(largeFile);
+      result.current.handleFileChange(oversizedFile);
     });
 
     // -------------------------------------------------------------------------
-    // 3. Assert: Verify file is rejected and size validation error is set
+    // 3. Assert: Verify size validation error is returned and file is not stored
     // -------------------------------------------------------------------------
     expect(result.current.selectedFile).toBeNull();
     expect(result.current.validationError?.reason).toBe('size');
   });
 
-  it('triggers extraction completion after simulated delay', () => {
+  it('accepts file and invokes onSuccess callback with uploaded file', () => {
     // -------------------------------------------------------------------------
     // 1. Arrange: Render hook with mock callback and create a valid file
     // -------------------------------------------------------------------------
@@ -121,28 +125,18 @@ describe('useResumeUpload Hook', () => {
     const file = new File(['valid'], 'resume.pdf', { type: 'application/pdf' });
 
     // -------------------------------------------------------------------------
-    // 2. Act: Trigger file change and fast-forward fake timers past delay
+    // 2. Act: Trigger file change
     // -------------------------------------------------------------------------
     act(() => {
       result.current.handleFileChange(file);
     });
 
+    // -------------------------------------------------------------------------
+    // 3. Assert: Verify processing flag is set and onSuccess called with the file
+    // -------------------------------------------------------------------------
     expect(result.current.isProcessing).toBe(true);
-
-    act(() => {
-      vi.advanceTimersByTime(2000);
-    });
-
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify processing flag cleared and onSuccess called with extracted data
-    // -------------------------------------------------------------------------
-    expect(result.current.isProcessing).toBe(false);
-    expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({
-        currentRole: 'Frontend Developer',
-        source: 'ai_extracted',
-      }),
-    );
+    expect(result.current.selectedFile).toBe(file);
+    expect(onSuccess).toHaveBeenCalledWith(file);
   });
 
   it('clears error state when requested', () => {

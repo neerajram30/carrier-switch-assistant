@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { CareerProfileData, FileValidationError } from '../types';
+import type { FileValidationError } from '../types';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx'];
 
-export function useResumeUpload(onSuccess: (extractedData: CareerProfileData) => void) {
+export function useResumeUpload(onSuccess?: (file: File) => void) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<FileValidationError | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -37,6 +37,7 @@ export function useResumeUpload(onSuccess: (extractedData: CareerProfileData) =>
     if (!file) {
       setSelectedFile(null);
       setValidationError(null);
+      setIsProcessing(false);
       return;
     }
 
@@ -44,30 +45,20 @@ export function useResumeUpload(onSuccess: (extractedData: CareerProfileData) =>
     if (error) {
       setSelectedFile(null);
       setValidationError(error);
+      setIsProcessing(false);
       return;
     }
 
     setValidationError(null);
     setSelectedFile(file);
     setIsProcessing(true);
-
-    // Simulate standard asynchronous AI extraction for UI testing
-    setTimeout(() => {
-      setIsProcessing(false);
-      onSuccess({
-        currentRole: 'Frontend Developer',
-        yearsOfExperience: '3.4',
-        skills: ['React', 'TypeScript', 'Next.js', 'CSS', 'REST APIs'],
-        summary: 'Frontend specialist focusing on modern React apps and responsive web interfaces.',
-        targetRole: '',
-        source: 'ai_extracted',
-      });
-    }, 1800);
+    onSuccess?.(file);
   };
 
   const clearError = () => {
     setValidationError(null);
     setSelectedFile(null);
+    setIsProcessing(false);
   };
 
   return {

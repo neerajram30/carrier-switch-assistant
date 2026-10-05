@@ -9,10 +9,9 @@ import { HStack, VStack } from "@astryxdesign/core/Stack";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Text } from "@astryxdesign/core/Text";
 import { useResumeUpload } from "../hooks/useResumeUpload";
-import type { CareerProfileData } from "../types";
 
 interface ResumeUploadStepProps {
-  onSuccess: (data: CareerProfileData) => void;
+  onSuccess?: (file: File) => void;
   onSwitchToManual: () => void;
 }
 
@@ -69,7 +68,7 @@ export function ResumeUploadStep({
       )}
 
       {/* Screen 1B: Extraction / Processing State (AI Cyan) */}
-      {isProcessing ? (
+      {isProcessing && selectedFile ? (
         <Card variant="cyan" elevation="none">
           <VStack gap={4} align="center" padding={6}>
             <StatusDot variant="accent" label="Analyzing" isPulsing />
@@ -83,14 +82,25 @@ export function ResumeUploadStep({
               </Text>
             </VStack>
             <Text type="supporting" color="secondary">
+              File: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+            </Text>
+            <Text type="supporting" color="secondary">
               Taking longer than expected?
             </Text>
-            <Button
-              label="Enter details manually"
-              variant="ghost"
-              size="sm"
-              onClick={onSwitchToManual}
-            />
+            <HStack gap={3}>
+              <Button
+                label="Choose another file"
+                variant="secondary"
+                size="sm"
+                onClick={clearError}
+              />
+              <Button
+                label="Enter details manually"
+                variant="ghost"
+                size="sm"
+                onClick={onSwitchToManual}
+              />
+            </HStack>
           </VStack>
         </Card>
       ) : (

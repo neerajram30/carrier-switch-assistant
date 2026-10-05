@@ -25,7 +25,7 @@ export function ManualEntryStep({
     initialData?.yearsOfExperience ?? '',
   );
   const [skills, setSkills] = useState<string[]>(
-    initialData?.skills?.length ? initialData.skills : ['React', 'JavaScript'],
+    initialData?.skills?.length ? initialData.skills : [],
   );
   const [newSkill, setNewSkill] = useState('');
   const [roleError, setRoleError] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function ManualEntryStep({
       <VStack gap={4}>
         <TextInput
           label="Current Role *"
-          placeholder="e.g. Frontend Developer"
+          placeholder="e.g. Software Engineer"
           value={currentRole}
           onChange={(val) => {
             setCurrentRole(val);
