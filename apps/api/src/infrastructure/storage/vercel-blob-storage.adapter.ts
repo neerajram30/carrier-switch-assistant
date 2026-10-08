@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { put, del } from '@vercel/blob';
+import { generateClientTokenFromReadWriteToken } from '@vercel/blob/client';
 import type {
+  GenerateUploadTokenOptions,
   ObjectStoragePort,
   UploadFileBody,
   UploadFileOptions,
   UploadFileResult,
+  UploadTokenResult,
 } from './object-storage.port.js';
 
 @Injectable()
@@ -54,6 +57,28 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
     } catch (error) {
       this.logger.error(
         `Failed to delete file from Vercel Blob at "${url}": ${(error as Error).message}`,
+      );
+      throw error;
+    }
+  }
+
+  async generateUploadToken(
+    options: GenerateUploadTokenOptions,
+  ): Promise<UploadTokenResult> {
+    this.logger.debug(`Generating upload token for Vercel Blob: ${options.pathname}`);
+
+    try {
+      const clientToken = await generateClientTokenFromReadWriteToken({
+        pathname: options.pathname,
+        token: this.token,
+        maximumSizeInBytes: options.maximumSizeInBytes,
+        allowedContentTypes: [options.contentType],
+      });
+
+      return { clientToken };
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate upload token for Vercel Blob at "${options.pathname}": ${(error as Error).message}`,
       );
       throw error;
     }

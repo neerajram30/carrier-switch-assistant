@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthController } from './health/health.controller.js';
 import { CareerProfileModule } from './career-profile/career-profile.module.js';
+import { ResumeModule } from './resume/resume.module.js';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { CareerProfileModule } from './career-profile/career-profile.module.js';
     }),
     PrismaModule,
     CareerProfileModule,
+    ResumeModule,
   ],
   controllers: [HealthController],
 })

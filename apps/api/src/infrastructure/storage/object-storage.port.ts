@@ -19,6 +19,16 @@ export interface UploadFileResult {
   contentType?: string;
 }
 
+export interface GenerateUploadTokenOptions {
+  pathname: string;
+  contentType: string;
+  maximumSizeInBytes: number;
+}
+
+export interface UploadTokenResult {
+  clientToken: string;
+}
+
 export interface ObjectStoragePort {
   upload(
     pathname: string,
@@ -26,4 +36,7 @@ export interface ObjectStoragePort {
     options?: UploadFileOptions,
   ): Promise<UploadFileResult>;
   delete(url: string): Promise<void>;
+  generateUploadToken(
+    options: GenerateUploadTokenOptions,
+  ): Promise<UploadTokenResult>;
 }
