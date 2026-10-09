@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CurrentUser } from '../common/auth/current-user.interface.js';
 import type { ObjectStoragePort } from '../infrastructure/storage/object-storage.port.js';
@@ -24,6 +28,8 @@ describe('ResumeService', () => {
       },
       resume: {
         create: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn(),
       },
     };
 
@@ -31,6 +37,8 @@ describe('ResumeService', () => {
       generateUploadToken: vi.fn(),
       upload: vi.fn(),
       delete: vi.fn(),
+      head: vi.fn(),
+      exists: vi.fn(),
     } as unknown as ObjectStoragePort;
 
     service = new ResumeService(
@@ -239,7 +247,6 @@ describe('ResumeService', () => {
     });
 
     it('rejects when extension does not match MIME content type', async () => {
-      // .docx file with application/pdf header
       const mismatchedDto1 = {
         fileName: 'resume.docx',
         contentType: 'application/pdf',
@@ -250,7 +257,6 @@ describe('ResumeService', () => {
         service.createUploadIntent(mockUser, mismatchedDto1),
       ).rejects.toThrow(BadRequestException);
 
-      // .pdf file with application/vnd.openxml... header
       const mismatchedDto2 = {
         fileName: 'resume.pdf',
         contentType:
@@ -261,6 +267,90 @@ describe('ResumeService', () => {
       await expect(
         service.createUploadIntent(mockUser, mismatchedDto2),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('completeUpload', () => {
+    const resumeId = 'resume-uuid-1';
+    const completeDto = {
+      blobUrl:
+        'https://store.public.blob.vercel-storage.com/users/user-uuid-123/resumes/resume-uuid-1/original',
+    };
+
+    it('successfully updates status to UPLOADED when object exists in storage', async () => {
+      // 1. ARRANGE
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        status: 'UPLOADING',
+      });
+      mockStorage.exists.mockResolvedValue(true);
+      mockPrisma.resume.update.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        originalFileName: 'resume.pdf',
+        contentType: 'application/pdf',
+        fileSize: 1000,
+        storageKey: completeDto.blobUrl,
+        status: 'UPLOADED',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // 2. ACT
+      const result = await service.completeUpload(mockUser, resumeId, completeDto);
+
+      // 3. ASSERT
+      expect(mockStorage.exists).toHaveBeenCalledWith(completeDto.blobUrl);
+      expect(mockPrisma.resume.update).toHaveBeenCalledWith({
+        where: { id: resumeId },
+        data: {
+          status: 'UPLOADED',
+          storageKey: completeDto.blobUrl,
+        },
+      });
+      expect(result.status).toBe('UPLOADED');
+    });
+
+    it('throws NotFoundException if resume does not exist', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.completeUpload(mockUser, 'non-existent-id', completeDto),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockStorage.exists).not.toHaveBeenCalled();
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
+    });
+
+    it('throws ForbiddenException if resume belongs to a different user', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: 'different-user-id',
+        status: 'UPLOADING',
+      });
+
+      await expect(
+        service.completeUpload(mockUser, resumeId, completeDto),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockStorage.exists).not.toHaveBeenCalled();
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException if the object does not exist in storage', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        status: 'UPLOADING',
+      });
+      mockStorage.exists.mockResolvedValue(false);
+
+      await expect(
+        service.completeUpload(mockUser, resumeId, completeDto),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
     });
   });
 });

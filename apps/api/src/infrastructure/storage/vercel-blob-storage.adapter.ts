@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { put, del } from '@vercel/blob';
+import { put, del, head } from '@vercel/blob';
 import { generateClientTokenFromReadWriteToken } from '@vercel/blob/client';
 import type {
   GenerateUploadTokenOptions,
   ObjectStoragePort,
+  StorageMetadata,
   UploadFileBody,
   UploadFileOptions,
   UploadFileResult,
@@ -65,7 +66,9 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
   async generateUploadToken(
     options: GenerateUploadTokenOptions,
   ): Promise<UploadTokenResult> {
-    this.logger.debug(`Generating upload token for Vercel Blob: ${options.pathname}`);
+    this.logger.debug(
+      `Generating upload token for Vercel Blob: ${options.pathname}`,
+    );
 
     try {
       const clientToken = await generateClientTokenFromReadWriteToken({
@@ -82,5 +85,40 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
       );
       throw error;
     }
+  }
+
+  async head(url: string): Promise<StorageMetadata | null> {
+    this.logger.debug(`Fetching metadata for Vercel Blob: ${url}`);
+
+    try {
+      const metadata = await head(url, {
+        token: this.token,
+      });
+
+      return {
+        url: metadata.url,
+        pathname: metadata.pathname,
+        size: metadata.size,
+        contentType: metadata.contentType,
+        uploadedAt: metadata.uploadedAt,
+      };
+    } catch (error) {
+      if (
+        (error as Error).name === 'BlobNotFoundError' ||
+        (error as Error).message?.includes('could not find') ||
+        (error as Error).message?.toLowerCase().includes('not found')
+      ) {
+        return null;
+      }
+      this.logger.error(
+        `Failed to fetch metadata for Vercel Blob at "${url}": ${(error as Error).message}`,
+      );
+      throw error;
+    }
+  }
+
+  async exists(url: string): Promise<boolean> {
+    const metadata = await this.head(url);
+    return metadata !== null;
   }
 }

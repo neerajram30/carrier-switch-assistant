@@ -29,6 +29,14 @@ export interface UploadTokenResult {
   clientToken: string;
 }
 
+export interface StorageMetadata {
+  size: number;
+  uploadedAt: Date;
+  pathname: string;
+  contentType: string;
+  url: string;
+}
+
 export interface ObjectStoragePort {
   upload(
     pathname: string,
@@ -39,4 +47,6 @@ export interface ObjectStoragePort {
   generateUploadToken(
     options: GenerateUploadTokenOptions,
   ): Promise<UploadTokenResult>;
+  exists(url: string): Promise<boolean>;
+  head(url: string): Promise<StorageMetadata | null>;
 }

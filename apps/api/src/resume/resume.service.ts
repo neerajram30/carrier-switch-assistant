@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { CurrentUser } from '../common/auth/current-user.interface.js';
@@ -11,6 +13,7 @@ import {
   type ObjectStoragePort,
 } from '../infrastructure/storage/object-storage.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { CompleteResumeUploadDto } from './dto/complete-upload.dto.js';
 import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
@@ -30,6 +33,18 @@ export interface UploadIntentResponse {
   storageKey: string;
   clientToken: string;
   status: string;
+}
+
+export interface ResumeResponse {
+  id: string;
+  userId: string;
+  originalFileName: string;
+  contentType: string;
+  fileSize: number;
+  storageKey: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 @Injectable()
@@ -93,6 +108,58 @@ export class ResumeService {
       storageKey: resume.storageKey,
       clientToken,
       status: resume.status,
+    };
+  }
+
+  async completeUpload(
+    user: CurrentUser,
+    resumeId: string,
+    dto: CompleteResumeUploadDto,
+  ): Promise<ResumeResponse> {
+    const resume = await this.prisma.resume.findUnique({
+      where: { id: resumeId },
+    });
+
+    if (!resume) {
+      throw new NotFoundException(`Resume with ID "${resumeId}" not found`);
+    }
+
+    if (resume.userId !== user.id) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this resume',
+      );
+    }
+
+    // Verify that the object actually exists in object storage before updating state
+    const objectExists = await this.storage.exists(dto.blobUrl);
+    if (!objectExists) {
+      throw new BadRequestException(
+        `Cannot mark resume as UPLOADED: the uploaded object at "${dto.blobUrl}" does not exist in storage.`,
+      );
+    }
+
+    this.logger.debug(
+      `Marking resume "${resumeId}" as UPLOADED after storage verification`,
+    );
+
+    const updated = await this.prisma.resume.update({
+      where: { id: resumeId },
+      data: {
+        status: 'UPLOADED',
+        storageKey: dto.blobUrl,
+      },
+    });
+
+    return {
+      id: updated.id,
+      userId: updated.userId,
+      originalFileName: updated.originalFileName,
+      contentType: updated.contentType,
+      fileSize: updated.fileSize,
+      storageKey: updated.storageKey,
+      status: updated.status,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
     };
   }
 

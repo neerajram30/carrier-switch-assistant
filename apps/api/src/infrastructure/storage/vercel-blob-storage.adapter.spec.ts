@@ -7,6 +7,7 @@ import * as vercelBlobClient from '@vercel/blob/client';
 vi.mock('@vercel/blob', () => ({
   put: vi.fn(),
   del: vi.fn(),
+  head: vi.fn(),
 }));
 
 vi.mock('@vercel/blob/client', () => ({
@@ -157,6 +158,51 @@ describe('VercelBlobStorageAdapter', () => {
           maximumSizeInBytes: 5242880,
         }),
       ).rejects.toThrow('Token generation failed');
+    });
+  });
+
+  describe('head and exists', () => {
+    it('returns metadata when blob exists', async () => {
+      const mockMeta = {
+        url: 'https://store.public.blob.vercel-storage.com/file.pdf',
+        pathname: 'file.pdf',
+        size: 1024,
+        contentType: 'application/pdf',
+        uploadedAt: new Date('2026-10-09T00:00:00Z'),
+      };
+      vi.mocked(vercelBlob.head).mockResolvedValue(mockMeta as never);
+
+      const result = await adapter.head('https://store.public.blob.vercel-storage.com/file.pdf');
+
+      expect(vercelBlob.head).toHaveBeenCalledWith(
+        'https://store.public.blob.vercel-storage.com/file.pdf',
+        { token: 'mock-token-xyz' },
+      );
+      expect(result).toEqual(mockMeta);
+
+      const exists = await adapter.exists('https://store.public.blob.vercel-storage.com/file.pdf');
+      expect(exists).toBe(true);
+    });
+
+    it('returns null and exists false when blob is not found', async () => {
+      const notFoundError = new Error('The requested blob does not exist or was not found');
+      notFoundError.name = 'BlobNotFoundError';
+      vi.mocked(vercelBlob.head).mockRejectedValue(notFoundError as never);
+
+      const result = await adapter.head('https://store.public.blob.vercel-storage.com/missing.pdf');
+      expect(result).toBeNull();
+
+      const exists = await adapter.exists('https://store.public.blob.vercel-storage.com/missing.pdf');
+      expect(exists).toBe(false);
+    });
+
+    it('rethrows on unexpected errors in head', async () => {
+      const networkError = new Error('Connection refused');
+      vi.mocked(vercelBlob.head).mockRejectedValue(networkError as never);
+
+      await expect(
+        adapter.head('https://store.public.blob.vercel-storage.com/file.pdf'),
+      ).rejects.toThrow('Connection refused');
     });
   });
 });
