@@ -93,8 +93,71 @@ describe('DevHeaderUserProvider', () => {
         UnauthorizedException,
       );
       expect(() => provider.resolveUser(mockRequest)).toThrow(
-        /forbidden in production/i,
+        /strictly disabled/i,
       );
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('throws UnauthorizedException when NODE_ENV is staging (fails closed)', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'staging';
+    try {
+      const mockRequest = {
+        headers: {
+          'x-user-id': '123e4567-e89b-12d3-a456-426614174000',
+        },
+      } as unknown as Request;
+
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        UnauthorizedException,
+      );
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        /strictly disabled/i,
+      );
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('throws UnauthorizedException when NODE_ENV is undefined or empty (fails closed)', () => {
+    const originalEnv = process.env.NODE_ENV;
+    delete process.env.NODE_ENV;
+    try {
+      const mockRequest = {
+        headers: {
+          'x-user-id': '123e4567-e89b-12d3-a456-426614174000',
+        },
+      } as unknown as Request;
+
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        UnauthorizedException,
+      );
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        /strictly disabled/i,
+      );
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('succeeds when NODE_ENV is development or test', () => {
+    const originalEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'development';
+      const mockRequest = {
+        headers: {
+          'x-user-id': '123e4567-e89b-12d3-a456-426614174000',
+        },
+      } as unknown as Request;
+
+      const devResult = provider.resolveUser(mockRequest);
+      expect(devResult.id).toBe('123e4567-e89b-12d3-a456-426614174000');
+
+      process.env.NODE_ENV = 'test';
+      const testResult = provider.resolveUser(mockRequest);
+      expect(testResult.id).toBe('123e4567-e89b-12d3-a456-426614174000');
     } finally {
       process.env.NODE_ENV = originalEnv;
     }

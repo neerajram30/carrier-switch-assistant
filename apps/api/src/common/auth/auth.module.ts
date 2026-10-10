@@ -1,9 +1,11 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Global, Module, OnModuleInit } from '@nestjs/common';
 import {
   CURRENT_USER_PROVIDER,
   DevHeaderUserProvider,
 } from './current-user.provider.js';
+import { AuthGuard } from './auth.guard.js';
 
+@Global()
 @Module({
   providers: [
     {
@@ -11,14 +13,16 @@ import {
       useClass: DevHeaderUserProvider,
     },
     DevHeaderUserProvider,
+    AuthGuard,
   ],
-  exports: [CURRENT_USER_PROVIDER, DevHeaderUserProvider],
+  exports: [CURRENT_USER_PROVIDER, DevHeaderUserProvider, AuthGuard],
 })
 export class AuthModule implements OnModuleInit {
   onModuleInit(): void {
-    if (process.env.NODE_ENV === 'production') {
+    const env = process.env.NODE_ENV;
+    if (env !== 'development' && env !== 'test') {
       throw new Error(
-        'DevHeaderUserProvider cannot be loaded in production. A production authentication provider must be configured.',
+        `DevHeaderUserProvider cannot be loaded in "${env ?? 'undefined'}" environment. A production authentication provider must be configured.`,
       );
     }
   }

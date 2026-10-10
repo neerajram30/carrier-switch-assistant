@@ -97,12 +97,26 @@ export class ResumeService {
       },
     });
 
-    const { clientToken } = await this.storage.generateUploadToken({
-      pathname: storageKey,
-      contentType: dto.contentType.trim(),
-      maximumSizeInBytes: MAX_FILE_SIZE_BYTES,
-      access: 'private',
-    });
+    let clientToken: string;
+    try {
+      const tokenResult = await this.storage.generateUploadToken({
+        pathname: storageKey,
+        contentType: dto.contentType.trim(),
+        maximumSizeInBytes: MAX_FILE_SIZE_BYTES,
+        access: 'private',
+      });
+      clientToken = tokenResult.clientToken;
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate upload token for resume "${resumeId}": ${(error as Error).message}`,
+      );
+      await this.prisma.resume.delete({ where: { id: resumeId } }).catch((cleanupError) => {
+        this.logger.error(
+          `Failed to cleanup orphaned resume record "${resumeId}": ${(cleanupError as Error).message}`,
+        );
+      });
+      throw error;
+    }
 
     return {
       resumeId: resume.id,

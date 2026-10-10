@@ -1,19 +1,27 @@
 import {
   createParamDecorator,
   ExecutionContext,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { DevHeaderUserProvider } from '../auth/current-user.provider.js';
-
-const defaultProvider = new DevHeaderUserProvider();
+import type { CurrentUser as ICurrentUser } from '../auth/current-user.interface.js';
 
 /**
  * Temporary development user ID resolution decorator.
- * Delegates to DevHeaderUserProvider to enforce consistent user identity resolution.
+ * Reads the identity resolved and attached to request.user by AuthGuard.
  */
 export const CurrentUserId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string => {
-    const request = ctx.switchToHttp().getRequest<Request>();
-    return defaultProvider.resolveUser(request).id;
+    const request = ctx
+      .switchToHttp()
+      .getRequest<Request & { user?: ICurrentUser }>();
+
+    if (!request.user) {
+      throw new UnauthorizedException(
+        'Request is unauthenticated. Ensure AuthGuard is applied.',
+      );
+    }
+
+    return request.user.id;
   },
 );

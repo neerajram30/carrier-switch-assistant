@@ -31,6 +31,7 @@ describe('ResumeService', () => {
         create: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
+        delete: vi.fn(),
       },
     };
 
@@ -203,6 +204,32 @@ describe('ResumeService', () => {
 
       expect(mockPrisma.resume.create).not.toHaveBeenCalled();
       expect(mockStorage.generateUploadToken).not.toHaveBeenCalled();
+    });
+
+    it('cleans up newly created database record when token generation fails', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
+      mockPrisma.resume.create.mockImplementation((args: any) =>
+        Promise.resolve({ ...args.data }),
+      );
+      mockStorage.generateUploadToken.mockRejectedValue(
+        new Error('Vercel Blob token service unreachable'),
+      );
+      mockPrisma.resume.delete.mockResolvedValue({} as any);
+
+      const dto = {
+        fileName: 'my-resume.pdf',
+        contentType: 'application/pdf',
+        fileSize: 100000,
+      };
+
+      await expect(service.createUploadIntent(mockUser, dto)).rejects.toThrow(
+        'Vercel Blob token service unreachable',
+      );
+
+      expect(mockPrisma.resume.create).toHaveBeenCalled();
+      expect(mockPrisma.resume.delete).toHaveBeenCalledWith({
+        where: { id: expect.any(String) },
+      });
     });
 
     it('rejects when fileName has no extension', async () => {

@@ -24,13 +24,13 @@ export class DevHeaderUserProvider implements CurrentUserProvider {
   ) {}
 
   resolveUser(request: Request): CurrentUser {
-    const isProduction =
-      process.env.NODE_ENV === 'production' ||
-      this.configService?.get<string>('NODE_ENV') === 'production';
+    const env =
+      this.configService?.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    const isAllowedDevEnv = env === 'development' || env === 'test';
 
-    if (isProduction) {
+    if (!isAllowedDevEnv) {
       throw new UnauthorizedException(
-        'Development identity provider ("x-user-id" header) is strictly forbidden in production environment.',
+        `Development identity provider ("x-user-id" header) is strictly disabled in "${env || 'unconfigured'}" environment. A production authentication provider must be configured.`,
       );
     }
 
