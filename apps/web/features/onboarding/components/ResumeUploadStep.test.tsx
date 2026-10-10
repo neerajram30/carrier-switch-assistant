@@ -11,7 +11,7 @@ describe('ResumeUploadStep Component', () => {
   const defaultMockResult = {
     resumeId: 'res-123',
     blobUrl: 'https://blob.example.com/resumes/res-123.pdf',
-    storageKey: 'users/u1/resumes/res-123/original',
+    storageKey: 'users/u1/resumes/res-123/original.pdf',
     status: 'UPLOADED' as const,
   };
 
@@ -268,7 +268,7 @@ describe('ResumeUploadStep Component', () => {
           json: async () => ({
             resumeId: 'res-intent-101',
             clientToken: 'client-token-abc',
-            storageKey: 'users/u1/resumes/res-intent-101/original',
+            storageKey: 'users/u1/resumes/res-intent-101/original.pdf',
           }),
         })
         // Step 3: complete verification response
@@ -286,7 +286,7 @@ describe('ResumeUploadStep Component', () => {
         url: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
         downloadUrl:
           'https://store.public.blob.vercel-storage.com/uploaded.pdf?download=1',
-        pathname: 'users/u1/resumes/res-intent-101/original',
+        pathname: 'users/u1/resumes/res-intent-101/original.pdf',
         contentType: 'application/pdf',
         contentDisposition: 'inline',
         etag: 'mock-etag',
@@ -321,7 +321,7 @@ describe('ResumeUploadStep Component', () => {
 
       // 2. Direct Blob upload performed with clientToken and storageKey
       expect(vercelBlobClient.put).toHaveBeenCalledWith(
-        'users/u1/resumes/res-intent-101/original',
+        'users/u1/resumes/res-intent-101/original.pdf',
         validPdf,
         expect.objectContaining({
           access: 'private',
@@ -373,7 +373,7 @@ describe('ResumeUploadStep Component', () => {
         json: async () => ({
           resumeId: 'res-intent-101',
           clientToken: 'client-token-abc',
-          storageKey: 'users/u1/resumes/res-intent-101/original',
+          storageKey: 'users/u1/resumes/res-intent-101/original.pdf',
         }),
       });
 
@@ -397,6 +397,56 @@ describe('ResumeUploadStep Component', () => {
       expect(
         screen.getByText(/Network error uploading to Vercel Blob/i),
       ).toBeInTheDocument();
+    });
+
+    it('handles server verification failure in step 3 and displays error in UI', async () => {
+      global.fetch = vi
+        .fn()
+        // Step 1: intent succeeds
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            resumeId: 'res-intent-101',
+            clientToken: 'client-token-abc',
+            storageKey: 'users/u1/resumes/res-intent-101/original.pdf',
+          }),
+        })
+        // Step 3: complete verification fails
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({
+            message: 'Stored object size does not match expected file size',
+          }),
+        });
+
+      // Step 2: blob upload succeeds
+      vi.mocked(vercelBlobClient.put).mockResolvedValueOnce({
+        url: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+        downloadUrl:
+          'https://store.public.blob.vercel-storage.com/uploaded.pdf?download=1',
+        pathname: 'users/u1/resumes/res-intent-101/original.pdf',
+        contentType: 'application/pdf',
+        contentDisposition: 'inline',
+        etag: 'mock-etag',
+      });
+
+      render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'my-resume.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText(/Stored object size does not match expected file size/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Resume uploaded')).not.toBeInTheDocument();
     });
   });
 });

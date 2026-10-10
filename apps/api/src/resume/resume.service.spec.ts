@@ -76,7 +76,7 @@ describe('ResumeService', () => {
       expect(result.status).toBe('UPLOADING');
       expect(result.clientToken).toBe('mock-client-token-xyz');
       expect(result.storageKey).toMatch(
-        new RegExp(`^users/${mockUser.id}/resumes/[0-9a-f-]+/original$`),
+        new RegExp(`^users/${mockUser.id}/resumes/[0-9a-f-]+/original\\.pdf$`),
       );
       expect(mockPrisma.resume.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -117,6 +117,9 @@ describe('ResumeService', () => {
 
       expect(result.status).toBe('UPLOADING');
       expect(result.clientToken).toBe('docx-token');
+      expect(result.storageKey).toMatch(
+        new RegExp(`^users/${mockUser.id}/resumes/[0-9a-f-]+/original\\.docx$`),
+      );
     });
 
     it('throws UnauthorizedException when user does not exist in database (no auto-provisioning)', async () => {
@@ -254,7 +257,7 @@ describe('ResumeService', () => {
 
   describe('completeUpload', () => {
     const resumeId = 'resume-uuid-1';
-    const canonicalStorageKey = `users/${mockUser.id}/resumes/${resumeId}/original`;
+    const canonicalStorageKey = `users/${mockUser.id}/resumes/${resumeId}/original.pdf`;
 
     it('successfully verifies canonical storage object and updates status to UPLOADED', async () => {
       // 1. ARRANGE
@@ -419,6 +422,31 @@ describe('ResumeService', () => {
       await expect(
         service.completeUpload(mockUser, resumeId),
       ).rejects.toThrow(/does not match expected content type/i);
+
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when stored pathname does not match expected canonical storageKey', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        fileSize: 100000,
+        contentType: 'application/pdf',
+        storageKey: canonicalStorageKey,
+        status: 'UPLOADING',
+      });
+
+      mockStorage.head.mockResolvedValue({
+        pathname: 'users/attacker/resumes/other/original.pdf', // Mismatched pathname!
+        size: 100000,
+        contentType: 'application/pdf',
+        uploadedAt: new Date(),
+        url: 'https://store.blob.vercel-storage.com/private',
+      });
+
+      await expect(
+        service.completeUpload(mockUser, resumeId),
+      ).rejects.toThrow(/does not match expected storage key/i);
 
       expect(mockPrisma.resume.update).not.toHaveBeenCalled();
     });

@@ -26,7 +26,7 @@ describe('Resume Upload E2E Journey', () => {
     const mockIntentResponse = {
       resumeId: 'resume-e2e-uuid-42',
       clientToken: 'scoped-client-token-xyz',
-      storageKey: 'users/dev-user-123/resumes/resume-e2e-uuid-42/original',
+      storageKey: 'users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf',
       status: 'UPLOADING' as const,
     };
 
@@ -37,7 +37,7 @@ describe('Resume Upload E2E Journey', () => {
       contentType: 'application/pdf',
       fileSize: 183421,
       storageKey:
-        'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original',
+        'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf',
       status: 'UPLOADED' as const,
     };
 
@@ -58,10 +58,10 @@ describe('Resume Upload E2E Journey', () => {
 
     // Step 2: Controlled Blob Storage upload adapter
     vi.mocked(vercelBlobClient.put).mockResolvedValueOnce({
-      url: 'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original',
+      url: 'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf',
       downloadUrl:
-        'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original?download=1',
-      pathname: 'users/dev-user-123/resumes/resume-e2e-uuid-42/original',
+        'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf?download=1',
+      pathname: 'users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf',
       contentType: 'application/pdf',
       contentDisposition: 'inline',
       etag: 'mock-etag-e2e',
@@ -156,11 +156,12 @@ describe('Resume Upload E2E Journey', () => {
 
     // 5B: Direct Vercel Blob client upload contract
     expect(vercelBlobClient.put).toHaveBeenCalledWith(
-      'users/dev-user-123/resumes/resume-e2e-uuid-42/original',
+      'users/dev-user-123/resumes/resume-e2e-uuid-42/original.pdf',
       resumeFile,
       {
         access: 'private',
         token: 'scoped-client-token-xyz',
+        contentType: 'application/pdf',
       },
     );
 

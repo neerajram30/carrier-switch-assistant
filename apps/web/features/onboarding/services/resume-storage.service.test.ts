@@ -30,7 +30,7 @@ describe('uploadResumeDirectly Service', () => {
         json: async () => ({
           resumeId: 'res-uuid-1',
           clientToken: 'mock-token-xyz',
-          storageKey: 'users/u1/resumes/res-uuid-1/original',
+          storageKey: 'users/u1/resumes/res-uuid-1/original.pdf',
         }),
       })
       // Step 3: complete response
@@ -39,7 +39,7 @@ describe('uploadResumeDirectly Service', () => {
         json: async () => ({
           id: 'res-uuid-1',
           status: 'UPLOADED',
-          storageKey: 'users/u1/resumes/res-uuid-1/original',
+          storageKey: 'users/u1/resumes/res-uuid-1/original.pdf',
         }),
       });
 
@@ -49,7 +49,7 @@ describe('uploadResumeDirectly Service', () => {
       url: 'https://store.blob.vercel-storage.com/uploaded.pdf',
       downloadUrl:
         'https://store.blob.vercel-storage.com/uploaded.pdf?download=1',
-      pathname: 'users/u1/resumes/res-uuid-1/original',
+      pathname: 'users/u1/resumes/res-uuid-1/original.pdf',
       contentType: 'application/pdf',
       contentDisposition: 'inline',
       etag: 'mock-etag',
@@ -79,13 +79,14 @@ describe('uploadResumeDirectly Service', () => {
       }),
     );
 
-    // Verify Step 2: Vercel Blob client upload with private access
+    // Verify Step 2: Vercel Blob client upload with private access and contentType
     expect(vercelBlobClient.put).toHaveBeenCalledWith(
-      'users/u1/resumes/res-uuid-1/original',
+      'users/u1/resumes/res-uuid-1/original.pdf',
       mockFile,
       {
         access: 'private',
         token: 'mock-token-xyz',
+        contentType: 'application/pdf',
       },
     );
 
@@ -106,7 +107,7 @@ describe('uploadResumeDirectly Service', () => {
     expect(result).toEqual({
       resumeId: 'res-uuid-1',
       blobUrl: 'https://store.blob.vercel-storage.com/uploaded.pdf',
-      storageKey: 'users/u1/resumes/res-uuid-1/original',
+      storageKey: 'users/u1/resumes/res-uuid-1/original.pdf',
       status: 'UPLOADED',
     });
   });

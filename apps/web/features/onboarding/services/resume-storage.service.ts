@@ -47,6 +47,7 @@ export async function uploadResumeDirectly(
     blobResult = await put(storageKey, file, {
       access: 'private',
       token: clientToken,
+      contentType,
     });
   } catch (error) {
     throw new Error(

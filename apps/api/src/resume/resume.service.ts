@@ -76,7 +76,10 @@ export class ResumeService {
     }
 
     const resumeId = randomUUID();
-    const storageKey = `users/${user.id}/resumes/${resumeId}/original`;
+    const trimmedFileName = dto.fileName.trim();
+    const lastDotIndex = trimmedFileName.lastIndexOf('.');
+    const extension = trimmedFileName.slice(lastDotIndex).toLowerCase();
+    const storageKey = `users/${user.id}/resumes/${resumeId}/original${extension}`;
 
     this.logger.debug(
       `Creating upload intent for user "${user.id}" and resume "${resumeId}"`,
@@ -151,6 +154,13 @@ export class ResumeService {
     if (!metadata) {
       throw new BadRequestException(
         `Cannot mark resume as UPLOADED: the object at canonical storage path "${resume.storageKey}" does not exist in storage.`,
+      );
+    }
+
+    // Verify stored object's pathname matches canonical storageKey
+    if (metadata.pathname !== resume.storageKey) {
+      throw new BadRequestException(
+        `Stored object pathname "${metadata.pathname}" does not match expected storage key "${resume.storageKey}".`,
       );
     }
 

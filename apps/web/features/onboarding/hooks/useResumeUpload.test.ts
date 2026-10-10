@@ -6,7 +6,7 @@ describe('useResumeUpload Hook', () => {
   const defaultMockResult = {
     resumeId: 'res-test-123',
     blobUrl: 'https://blob.example.com/resumes/res-test-123.pdf',
-    storageKey: 'users/u1/resumes/res-test-123/original',
+    storageKey: 'users/u1/resumes/res-test-123/original.pdf',
     status: 'UPLOADED' as const,
   };
 
@@ -43,13 +43,13 @@ describe('useResumeUpload Hook', () => {
     expect(result.current.isProcessing).toBe(false);
     expect(result.current.uploadedResume).toEqual({
       resumeId: 'res-test-123',
-      storageKey: 'users/u1/resumes/res-test-123/original',
+      storageKey: 'users/u1/resumes/res-test-123/original.pdf',
       status: 'UPLOADED',
     });
     expect(mockUploadFn).toHaveBeenCalledWith(validPdf);
     expect(onSuccess).toHaveBeenCalledWith(validPdf, {
       resumeId: 'res-test-123',
-      storageKey: 'users/u1/resumes/res-test-123/original',
+      storageKey: 'users/u1/resumes/res-test-123/original.pdf',
       status: 'UPLOADED',
     });
   });
@@ -72,7 +72,7 @@ describe('useResumeUpload Hook', () => {
     expect(result.current.uploadState).toBe('uploaded');
     expect(result.current.uploadedResume).toEqual({
       resumeId: 'res-test-123',
-      storageKey: 'users/u1/resumes/res-test-123/original',
+      storageKey: 'users/u1/resumes/res-test-123/original.pdf',
       status: 'UPLOADED',
     });
     expect(mockUploadFn).toHaveBeenCalledWith(validDocx);

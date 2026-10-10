@@ -34,7 +34,7 @@ describe('ResumeController', () => {
 
       const mockResponse = {
         resumeId: 'res-1',
-        storageKey: 'users/user-123/resumes/res-1/original',
+        storageKey: 'users/user-123/resumes/res-1/original.pdf',
         clientToken: 'token-abc',
         status: 'UPLOADING',
       };
@@ -62,7 +62,7 @@ describe('ResumeController', () => {
         originalFileName: 'file.pdf',
         contentType: 'application/pdf',
         fileSize: 12345,
-        storageKey: 'users/user-123/resumes/res-1/original',
+        storageKey: 'users/user-123/resumes/res-1/original.pdf',
         status: 'UPLOADED',
         createdAt: new Date(),
         updatedAt: new Date(),

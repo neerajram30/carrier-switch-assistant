@@ -15,7 +15,7 @@ Use Vercel Blob as the object-storage layer for resume files in the initial vers
 - **PostgreSQL** remains the authoritative system of record for resume metadata (e.g., file IDs, user associations, filenames, content types, processing status, timestamps).
 - **Vercel Blob** stores the raw uploaded resume binary content (PDF/DOCX).
 - **Private Access**: All resume objects are stored with `access: 'private'`. Resumes contain personally identifiable information (PII) and are never publicly readable. Download access is granted only after database ownership authorization.
-- **Immutable Server Storage Keys**: The server generates canonical, immutable storage keys adhering to ownership boundaries (`users/{userId}/resumes/{resumeId}/original`). Client-supplied URLs are never trusted as authoritative references.
+- **Immutable Server Storage Keys**: The server generates canonical, immutable storage keys adhering to ownership boundaries and preserving file extensions for direct downloads (`users/{userId}/resumes/{resumeId}/original${extension}`, e.g., `original.pdf` or `original.docx`). Client-supplied URLs are never trusted as authoritative references.
 - **Key-Based Abstraction**: The application accesses storage through an `ObjectStoragePort` abstraction that operates on application-controlled storage keys rather than arbitrary URLs.
 
 ## Rationale
@@ -44,7 +44,7 @@ NestJS Resume API
            │
            ▼
        Vercel Blob (Private Storage)
-           └── users/{userId}/resumes/{resumeId}/original
+           └── users/{userId}/resumes/{resumeId}/original${extension}
 ```
 
 ### Component Flow
