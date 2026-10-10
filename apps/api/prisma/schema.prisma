@@ -7,13 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ResumeStatus {
+  UPLOADING
+  UPLOADED
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   careerProfile CareerProfile?
+  resumes       Resume[]
+
   @@map("users")
 }
 
@@ -28,5 +35,23 @@ model CareerProfile {
   updatedAt         DateTime @updatedAt
   // Foreign key relation linking to User
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("career_profiles")
+}
+
+model Resume {
+  id               String       @id @default(uuid())
+  userId           String
+  originalFileName String
+  contentType      String
+  fileSize         Int
+  storageKey       String
+  status           ResumeStatus @default(UPLOADING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("resumes")
 }

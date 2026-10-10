@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../common/auth/auth.guard.js';
 import { CareerProfileService } from './career-profile.service.js';
 import { CreateCareerProfileDto } from './dto/create-career-profile.dto.js';
 import { UpdateCareerProfileDto } from './dto/update-career-profile.dto.js';
 import { CurrentUserId } from '../common/decorators/current-user-id.decorator.js';
 
 @Controller('career-profile')
+@UseGuards(AuthGuard)
 export class CareerProfileController {
   constructor(private readonly careerProfileService: CareerProfileService) {}
 

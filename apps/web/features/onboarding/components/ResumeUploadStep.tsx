@@ -9,23 +9,28 @@ import { HStack, VStack } from "@astryxdesign/core/Stack";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Text } from "@astryxdesign/core/Text";
 import { useResumeUpload } from "../hooks/useResumeUpload";
+import type { UploadedResumeInfo } from "../types";
+import type { UploadResumeResult } from "../services/resume-storage.service";
 
 interface ResumeUploadStepProps {
-  onSuccess?: (file: File) => void;
+  onSuccess?: (file: File, resumeInfo: UploadedResumeInfo) => void;
   onSwitchToManual: () => void;
+  uploadFn?: (file: File) => Promise<UploadResumeResult>;
 }
 
 export function ResumeUploadStep({
   onSuccess,
   onSwitchToManual,
+  uploadFn,
 }: ResumeUploadStepProps) {
   const {
     selectedFile,
     validationError,
+    uploadState,
     isProcessing,
     handleFileChange,
     clearError,
-  } = useResumeUpload(onSuccess);
+  } = useResumeUpload(onSuccess, uploadFn);
 
   return (
     <VStack gap={6} width="100%">
@@ -67,18 +72,51 @@ export function ResumeUploadStep({
         </Card>
       )}
 
-      {/* Screen 1B: Extraction / Processing State (AI Cyan) */}
-      {isProcessing && selectedFile ? (
+      {/* Screen 1B: Uploaded Success State */}
+      {uploadState === 'uploaded' && selectedFile ? (
+        <Card variant="default" elevation="none">
+          <VStack gap={4} align="center" padding={6}>
+            <StatusDot variant="success" label="Uploaded" />
+            <VStack gap={1} align="center">
+              <Heading level={3} weight="medium">
+                Resume uploaded
+              </Heading>
+              <Text type="supporting" color="secondary">
+                Your resume has been securely uploaded and is ready for analysis.
+              </Text>
+            </VStack>
+            <Text type="supporting" color="secondary">
+              File: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+            </Text>
+            <HStack gap={3}>
+              <Button
+                label="Choose another file"
+                variant="secondary"
+                size="sm"
+                onClick={clearError}
+              />
+            </HStack>
+          </VStack>
+        </Card>
+      ) : isProcessing && selectedFile ? (
+        /* Screen 1B: Validating / Uploading State (AI Cyan) */
         <Card variant="cyan" elevation="none">
           <VStack gap={4} align="center" padding={6}>
-            <StatusDot variant="accent" label="Analyzing" isPulsing />
+            <StatusDot
+              variant="accent"
+              label={uploadState === 'validating' ? 'Validating' : 'Uploading'}
+              isPulsing
+            />
             <VStack gap={1} align="center">
               <Heading level={3} weight="medium" style={{ color: 'var(--color-text-cyan)' }}>
-                Analyzing your resume...
+                {uploadState === 'validating'
+                  ? 'Validating your resume...'
+                  : 'Uploading your resume...'}
               </Heading>
               <Text type="supporting" style={{ color: 'var(--color-text-cyan)' }}>
-                We&apos;re extracting your experience, skills, and current role
-                with AI.
+                {uploadState === 'validating'
+                  ? 'Checking file format and size...'
+                  : 'Uploading your resume to secure storage...'}
               </Text>
             </VStack>
             <Text type="supporting" color="secondary">

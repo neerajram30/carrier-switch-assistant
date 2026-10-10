@@ -4,14 +4,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import type { CurrentUser as ICurrentUser } from '../auth/current-user.interface.js';
+import type { CurrentUser as ICurrentUser } from './current-user.interface.js';
 
 /**
- * Temporary development user ID resolution decorator.
+ * Resolves the current user identity at the controller boundary.
  * Reads the identity resolved and attached to request.user by AuthGuard.
  */
-export const CurrentUserId = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): string => {
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): ICurrentUser => {
     const request = ctx
       .switchToHttp()
       .getRequest<Request & { user?: ICurrentUser }>();
@@ -22,6 +22,6 @@ export const CurrentUserId = createParamDecorator(
       );
     }
 
-    return request.user.id;
+    return request.user;
   },
 );
