@@ -59,7 +59,9 @@ async function verifyPrivateBlobIntegration() {
   if (publicFetchResponse.status === 403 || publicFetchResponse.status === 401) {
     console.log('CONFIRMED: Unauthenticated access is DENIED (HTTP ' + publicFetchResponse.status + '). Blob is strictly private.');
   } else {
-    console.warn('WARNING: Expected 403 Forbidden for private blob, got:', publicFetchResponse.status);
+    throw new Error(
+      `SECURITY BREACH: Expected HTTP 403 or 401 for private blob, but got HTTP ${publicFetchResponse.status}. Unauthenticated access was permitted!`,
+    );
   }
 
   console.log('\n=== Step 5: Deletion Verification ===');
@@ -77,7 +79,9 @@ async function verifyPrivateBlobIntegration() {
   if (!afterDeleteMeta) {
     console.log('CONFIRMED: Object successfully deleted and confirmed absent from storage.');
   } else {
-    console.error('ERROR: Object still exists after deletion:', afterDeleteMeta);
+    throw new Error(
+      `CLEANUP FAILURE: Object still exists in storage after deletion! Metadata: ${JSON.stringify(afterDeleteMeta)}`,
+    );
   }
 
   console.log('\n=== ALL PRIVATE STORAGE VERIFICATION CHECKS PASSED ===');

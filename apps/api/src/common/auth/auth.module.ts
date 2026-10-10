@@ -1,4 +1,5 @@
 import { Global, Module, OnModuleInit } from '@nestjs/common';
+import { PrismaModule } from '../../prisma/prisma.module.js';
 import {
   CURRENT_USER_PROVIDER,
   DevHeaderUserProvider,
@@ -7,6 +8,7 @@ import { AuthGuard } from './auth.guard.js';
 
 @Global()
 @Module({
+  imports: [PrismaModule],
   providers: [
     {
       provide: CURRENT_USER_PROVIDER,

@@ -106,15 +106,22 @@ export class ResumeService {
         access: 'private',
       });
       clientToken = tokenResult.clientToken;
-    } catch (error) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to generate upload token for resume "${resumeId}": ${(error as Error).message}`,
+        `Failed to generate upload token for resume "${resumeId}": ${message}`,
       );
-      await this.prisma.resume.delete({ where: { id: resumeId } }).catch((cleanupError) => {
-        this.logger.error(
-          `Failed to cleanup orphaned resume record "${resumeId}": ${(cleanupError as Error).message}`,
-        );
-      });
+      await this.prisma.resume
+        .delete({ where: { id: resumeId } })
+        .catch((cleanupError: unknown) => {
+          const cleanupMessage =
+            cleanupError instanceof Error
+              ? cleanupError.message
+              : String(cleanupError);
+          this.logger.error(
+            `Failed to cleanup orphaned resume record "${resumeId}": ${cleanupMessage}`,
+          );
+        });
       throw error;
     }
 
