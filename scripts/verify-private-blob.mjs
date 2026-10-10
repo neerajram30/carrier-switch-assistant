@@ -69,20 +69,39 @@ async function verifyPrivateBlobIntegration() {
   console.log('del() executed for storageKey:', storageKey);
 
   let afterDeleteMeta = null;
+  let confirmedNotFound = false;
   try {
     afterDeleteMeta = await head(storageKey, { token });
   } catch (err) {
-    // Expected BlobNotFoundError
-    console.log('head() after del threw expected error:', err.message || err.name);
+    const isNotFoundError =
+      err?.name === 'BlobNotFoundError' ||
+      err?.status === 404 ||
+      err?.message?.toLowerCase().includes('does not exist') ||
+      err?.message?.toLowerCase().includes('could not find') ||
+      err?.message?.toLowerCase().includes('not found');
+
+    if (isNotFoundError) {
+      confirmedNotFound = true;
+      console.log('head() confirmed object absence with expected error:', err.message || err.name);
+    } else {
+      console.error('Unexpected error during deletion verification:', err);
+      throw err;
+    }
   }
 
-  if (!afterDeleteMeta) {
-    console.log('CONFIRMED: Object successfully deleted and confirmed absent from storage.');
-  } else {
+  if (afterDeleteMeta) {
     throw new Error(
       `CLEANUP FAILURE: Object still exists in storage after deletion! Metadata: ${JSON.stringify(afterDeleteMeta)}`,
     );
   }
+
+  if (!confirmedNotFound) {
+    throw new Error(
+      'CLEANUP FAILURE: Object absence could not be confirmed after deletion.',
+    );
+  }
+
+  console.log('CONFIRMED: Object successfully deleted and confirmed absent from storage.');
 
   console.log('\n=== ALL PRIVATE STORAGE VERIFICATION CHECKS PASSED ===');
 }

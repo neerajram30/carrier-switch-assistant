@@ -6,7 +6,7 @@ import { CompleteResumeUploadDto } from './dto/complete-upload.dto.js';
 import { CreateUploadIntentDto } from './dto/create-upload-intent.dto.js';
 import { ResumeService } from './resume.service.js';
 
-@Controller('api/v1/resumes')
+@Controller('resumes')
 @UseGuards(AuthGuard)
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
