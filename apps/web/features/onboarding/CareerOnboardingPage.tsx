@@ -6,7 +6,11 @@ import { VStack } from '@astryxdesign/core/Stack';
 import { ManualEntryStep } from './components/ManualEntryStep';
 import { OnboardingHeader } from './components/OnboardingHeader';
 import { ResumeUploadStep } from './components/ResumeUploadStep';
-import type { CareerProfileData, OnboardingStep } from './types';
+import type {
+  CareerProfileData,
+  OnboardingStep,
+  UploadedResumeInfo,
+} from './types';
 
 const INITIAL_PROFILE_STATE: CareerProfileData = {
   currentRole: '',
@@ -22,9 +26,15 @@ export default function CareerOnboardingPage() {
     INITIAL_PROFILE_STATE,
   );
   const [, setUploadedFile] = useState<File | null>(null);
+  // Store uploaded resume identity (resumeId, storageKey, status) for upcoming document processing
+  const [, setUploadedResume] = useState<UploadedResumeInfo | null>(null);
 
-  const handleUploadSuccess = (file: File) => {
+  const handleUploadSuccess = (
+    file: File,
+    resumeInfo: UploadedResumeInfo,
+  ) => {
     setUploadedFile(file);
+    setUploadedResume(resumeInfo);
   };
 
   const handleManualEntryComplete = (profile: CareerProfileData) => {

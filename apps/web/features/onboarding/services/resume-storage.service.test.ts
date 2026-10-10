@@ -107,6 +107,8 @@ describe('uploadResumeDirectly Service', () => {
     expect(result).toEqual({
       resumeId: 'res-uuid-1',
       blobUrl: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+      storageKey: 'users/u1/resumes/res-uuid-1/original',
+      status: 'UPLOADED',
     });
   });
 

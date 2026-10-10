@@ -1,29 +1,23 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as vercelBlobClient from '@vercel/blob/client';
 import { ResumeUploadStep } from './ResumeUploadStep';
 
-describe('ResumeUploadStep Component', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
+vi.mock('@vercel/blob/client', () => ({
+  put: vi.fn(),
+}));
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+describe('ResumeUploadStep Component', () => {
+  const defaultMockResult = {
+    resumeId: 'res-123',
+    blobUrl: 'https://blob.example.com/resumes/res-123.pdf',
+    storageKey: 'users/u1/resumes/res-123/original',
+    status: 'UPLOADED' as const,
+  };
 
   it('renders empty state', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component in initial state with mock callbacks
-    // -------------------------------------------------------------------------
     render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
 
-    // -------------------------------------------------------------------------
-    // 2. Act: (Component mount is the action being tested)
-    // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify Screen 1 initial wireframe elements are present
-    // -------------------------------------------------------------------------
     // Heading and instructions
     expect(screen.getByText('Build your career baseline')).toBeInTheDocument();
     expect(
@@ -48,11 +42,20 @@ describe('ResumeUploadStep Component', () => {
     expect(screen.queryByText("Resume couldn't be uploaded")).not.toBeInTheDocument();
   });
 
-  it('accepts PDF', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create a valid PDF file mock
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+  it('accepts PDF and shows uploading then uploaded state', async () => {
+    let resolveUpload!: (value: typeof defaultMockResult) => void;
+    const mockUploadPromise = new Promise<typeof defaultMockResult>((resolve) => {
+      resolveUpload = resolve;
+    });
+    const mockUploadFn = vi.fn().mockReturnValue(mockUploadPromise);
+
+    render(
+      <ResumeUploadStep
+        onSuccess={vi.fn()}
+        onSwitchToManual={vi.fn()}
+        uploadFn={mockUploadFn}
+      />,
+    );
 
     const input = document.querySelector('input[type="file"]')!;
     expect(input).toBeInTheDocument();
@@ -61,73 +64,85 @@ describe('ResumeUploadStep Component', () => {
       type: 'application/pdf',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Select the PDF file through the input
-    // -------------------------------------------------------------------------
     fireEvent.change(input, { target: { files: [validPdf] } });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify transition to processing state and absence of errors
-    // -------------------------------------------------------------------------
-    expect(screen.getByText('Analyzing your resume...')).toBeInTheDocument();
+    // Transition to uploading state
+    expect(screen.getByText('Uploading your resume...')).toBeInTheDocument();
+    expect(
+      screen.getByText('Uploading your resume to secure storage...'),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Resume couldn't be uploaded")).not.toBeInTheDocument();
+
+    // Resolve upload
+    resolveUpload(defaultMockResult);
+
+    await waitFor(() => {
+      expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/Your resume has been securely uploaded/i),
+    ).toBeInTheDocument();
   });
 
-  it('accepts DOCX', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create a valid DOCX file mock
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+  it('accepts DOCX and completes upload', async () => {
+    const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+
+    render(
+      <ResumeUploadStep
+        onSuccess={vi.fn()}
+        onSwitchToManual={vi.fn()}
+        uploadFn={mockUploadFn}
+      />,
+    );
 
     const input = document.querySelector('input[type="file"]')!;
-    expect(input).toBeInTheDocument();
-
     const validDocx = new File(['mock docx content'], 'sample-resume.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Select the DOCX file through the input
-    // -------------------------------------------------------------------------
     fireEvent.change(input, { target: { files: [validDocx] } });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify transition to processing state and absence of errors
-    // -------------------------------------------------------------------------
-    expect(screen.getByText('Analyzing your resume...')).toBeInTheDocument();
-    expect(screen.queryByText("Resume couldn't be uploaded")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+    });
+
+    expect(mockUploadFn).toHaveBeenCalledWith(validDocx);
   });
 
   it('rejects unsupported file', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create an invalid file format (.png)
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+    const mockUploadFn = vi.fn();
+    render(
+      <ResumeUploadStep
+        onSuccess={vi.fn()}
+        onSwitchToManual={vi.fn()}
+        uploadFn={mockUploadFn}
+      />,
+    );
 
     const input = document.querySelector('input[type="file"]')!;
     const unsupportedFile = new File(['image bytes'], 'picture.png', {
       type: 'image/png',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Select the unsupported file
-    // -------------------------------------------------------------------------
     fireEvent.change(input, { target: { files: [unsupportedFile] } });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify Screen 1A rejection alert appears with format explanation
-    // -------------------------------------------------------------------------
     expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
     expect(
       screen.getByText(/is not supported\. Please upload a PDF or DOCX\./i),
     ).toBeInTheDocument();
+    expect(mockUploadFn).not.toHaveBeenCalled();
   });
 
   it('rejects >5 MB', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create a 6 MB oversized file
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+    const mockUploadFn = vi.fn();
+    render(
+      <ResumeUploadStep
+        onSuccess={vi.fn()}
+        onSwitchToManual={vi.fn()}
+        uploadFn={mockUploadFn}
+      />,
+    );
 
     const input = document.querySelector('input[type="file"]')!;
     const largeBuffer = new Uint8Array(6 * 1024 * 1024);
@@ -135,54 +150,61 @@ describe('ResumeUploadStep Component', () => {
       type: 'application/pdf',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Select the oversized file
-    // -------------------------------------------------------------------------
     fireEvent.change(input, { target: { files: [oversizedFile] } });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify Screen 1A rejection alert specifies the size constraint
-    // -------------------------------------------------------------------------
     expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
     expect(screen.getByText(/larger than 5 MB/i)).toBeInTheDocument();
+    expect(mockUploadFn).not.toHaveBeenCalled();
   });
 
-  it('displays validation error', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and prepare an invalid file (.txt)
-    // -------------------------------------------------------------------------
+  it('displays validation error and dismisses on Choose another file', () => {
     render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
 
     const input = document.querySelector('input[type="file"]')!;
     const invalidFile = new File(['text'], 'notes.txt', { type: 'text/plain' });
 
-    // -------------------------------------------------------------------------
-    // 2. Act (Phase 1): Trigger validation error
-    // -------------------------------------------------------------------------
     fireEvent.change(input, { target: { files: [invalidFile] } });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert (Phase 1): Check error alert content and recovery action buttons
-    // -------------------------------------------------------------------------
     expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose another file/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Enter details manually$/i })).toBeInTheDocument();
 
-    // -------------------------------------------------------------------------
-    // 4. Act (Phase 2): Click "Choose another file" to dismiss error
-    // -------------------------------------------------------------------------
     fireEvent.click(screen.getByRole('button', { name: /Choose another file/i }));
 
-    // -------------------------------------------------------------------------
-    // 5. Assert (Phase 2): Verify error card is dismissed and dropzone is restored
-    // -------------------------------------------------------------------------
     expect(screen.queryByText("Resume couldn't be uploaded")).not.toBeInTheDocument();
+    expect(screen.getByText(/Supports PDF or DOCX \(Max 5 MB\)/i)).toBeInTheDocument();
+  });
+
+  it('displays error card when backend upload fails', async () => {
+    const mockUploadFn = vi
+      .fn()
+      .mockRejectedValue(new Error('Server storage connection timed out'));
+
+    render(
+      <ResumeUploadStep
+        onSuccess={vi.fn()}
+        onSwitchToManual={vi.fn()}
+        uploadFn={mockUploadFn}
+      />,
+    );
+
+    const input = document.querySelector('input[type="file"]')!;
+    const validPdf = new File(['%PDF content'], 'my-resume.pdf', {
+      type: 'application/pdf',
+    });
+
+    fireEvent.change(input, { target: { files: [validPdf] } });
+
+    await waitFor(() => {
+      expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText('Server storage connection timed out'),
+    ).toBeInTheDocument();
   });
 
   it('handles drag-over', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and locate dropzone element
-    // -------------------------------------------------------------------------
     render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
 
     const dropzone =
@@ -191,103 +213,192 @@ describe('ResumeUploadStep Component', () => {
 
     expect(dropzone).toBeInTheDocument();
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Simulate drag-over and drag-enter events
-    // -------------------------------------------------------------------------
     fireEvent.dragOver(dropzone);
     fireEvent.dragEnter(dropzone);
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Dropzone remains rendered and stable
-    // -------------------------------------------------------------------------
     expect(dropzone).toBeInTheDocument();
   });
 
-  it('handles keyboard activation', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component with spy callback and locate manual button
-    // -------------------------------------------------------------------------
+  it('handles keyboard activation for manual entry button', () => {
     const onSwitchToManual = vi.fn();
     render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={onSwitchToManual} />);
 
     const manualBtn = screen.getByRole('button', { name: /Enter details manually →/i });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Focus the button and simulate keyboard activation
-    // -------------------------------------------------------------------------
     manualBtn.focus();
     expect(manualBtn).toHaveFocus();
 
     fireEvent.click(manualBtn);
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify callback was triggered exactly once
-    // -------------------------------------------------------------------------
     expect(onSwitchToManual).toHaveBeenCalledTimes(1);
   });
 
-  it('shows loading state', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create a valid file
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
-
-    const input = document.querySelector('input[type="file"]')!;
-    const validFile = new File(['content'], 'my-resume.pdf', { type: 'application/pdf' });
-
-    // -------------------------------------------------------------------------
-    // 2. Act: Submit the valid file
-    // -------------------------------------------------------------------------
-    fireEvent.change(input, { target: { files: [validFile] } });
-
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify initial dropzone is replaced by loading/extraction state
-    // -------------------------------------------------------------------------
-    expect(screen.queryByText(/Drop your resume here, or browse files/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Analyzing your resume...')).toBeInTheDocument();
-  });
-
-  it('shows processing state', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component and create a valid file
-    // -------------------------------------------------------------------------
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
-
-    const input = document.querySelector('input[type="file"]')!;
-    const validFile = new File(['content'], 'candidate-resume.pdf', { type: 'application/pdf' });
-
-    // -------------------------------------------------------------------------
-    // 2. Act: Submit file to trigger AI extraction
-    // -------------------------------------------------------------------------
-    fireEvent.change(input, { target: { files: [validFile] } });
-
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify Screen 1B extraction card, copy, and pulsing StatusDot
-    // -------------------------------------------------------------------------
-    expect(screen.getByText('Analyzing your resume...')).toBeInTheDocument();
-    expect(
-      screen.getByText(/We're extracting your experience, skills, and current role with AI/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Analyzing/i })).toBeInTheDocument();
-    expect(screen.getByText('Taking longer than expected?')).toBeInTheDocument();
-  });
-
-  it('manual entry action works', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render component with spy callback
-    // -------------------------------------------------------------------------
+  it('manual entry action works from error recovery card', () => {
     const onSwitchToManual = vi.fn();
     render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={onSwitchToManual} />);
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Click the manual entry button
-    // -------------------------------------------------------------------------
-    const manualBtn = screen.getByRole('button', { name: /Enter details manually →/i });
+    const input = document.querySelector('input[type="file"]')!;
+    const invalidFile = new File(['text'], 'notes.txt', { type: 'text/plain' });
+
+    fireEvent.change(input, { target: { files: [invalidFile] } });
+
+    const manualBtn = screen.getByRole('button', { name: /^Enter details manually$/i });
     fireEvent.click(manualBtn);
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify the navigation callback was fired
-    // -------------------------------------------------------------------------
     expect(onSwitchToManual).toHaveBeenCalledTimes(1);
+  });
+
+  describe('Direct upload pipeline integration (Step 14)', () => {
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('completes the full flow: valid file -> upload intent requested -> upload performed -> success state', async () => {
+      const mockFetch = vi
+        .fn()
+        // Step 1: upload intent response
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            resumeId: 'res-intent-101',
+            clientToken: 'client-token-abc',
+            storageKey: 'users/u1/resumes/res-intent-101/original',
+          }),
+        })
+        // Step 3: complete verification response
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            id: 'res-intent-101',
+            status: 'UPLOADED',
+          }),
+        });
+
+      global.fetch = mockFetch;
+
+      vi.mocked(vercelBlobClient.put).mockResolvedValueOnce({
+        url: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+        downloadUrl:
+          'https://store.public.blob.vercel-storage.com/uploaded.pdf?download=1',
+        pathname: 'users/u1/resumes/res-intent-101/original',
+        contentType: 'application/pdf',
+        contentDisposition: 'inline',
+        etag: 'mock-etag',
+      });
+
+      render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'my-resume.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      // In flight: uploading UI shown
+      expect(screen.getByText('Uploading your resume...')).toBeInTheDocument();
+
+      // Successful completion: success state rendered
+      await waitFor(() => {
+        expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+      });
+
+      // 1. Intent requested from backend API
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('/api/v1/resumes/upload-intent'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        }),
+      );
+
+      // 2. Direct Blob upload performed with clientToken and storageKey
+      expect(vercelBlobClient.put).toHaveBeenCalledWith(
+        'users/u1/resumes/res-intent-101/original',
+        validPdf,
+        expect.objectContaining({
+          access: 'public',
+          token: 'client-token-abc',
+        }),
+      );
+
+      // 3. Complete verification requested from backend API
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('/api/v1/resumes/res-intent-101/complete'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            blobUrl: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+          }),
+        }),
+      );
+    });
+
+    it('handles API failure during upload-intent and displays error', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          message: 'Upload intent service temporarily unavailable',
+        }),
+      });
+
+      render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'my-resume.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('Upload intent service temporarily unavailable'),
+      ).toBeInTheDocument();
+      expect(vercelBlobClient.put).not.toHaveBeenCalled();
+    });
+
+    it('handles Blob upload failure and displays error', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          resumeId: 'res-intent-101',
+          clientToken: 'client-token-abc',
+          storageKey: 'users/u1/resumes/res-intent-101/original',
+        }),
+      });
+
+      vi.mocked(vercelBlobClient.put).mockRejectedValueOnce(
+        new Error('Network error uploading to Vercel Blob'),
+      );
+
+      render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={vi.fn()} />);
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'my-resume.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('Network error uploading to Vercel Blob'),
+      ).toBeInTheDocument();
+    });
   });
 });

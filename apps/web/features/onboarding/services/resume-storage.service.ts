@@ -3,6 +3,8 @@ import { put } from '@vercel/blob/client';
 export interface UploadResumeResult {
   resumeId: string;
   blobUrl: string;
+  storageKey: string;
+  status: 'UPLOADED';
 }
 
 export async function uploadResumeDirectly(
@@ -67,8 +69,12 @@ export async function uploadResumeDirectly(
     );
   }
 
+  const completeData = await completeResponse.json().catch(() => ({}));
+
   return {
     resumeId,
     blobUrl: blobResult.url,
+    storageKey: completeData.storageKey || storageKey,
+    status: completeData.status || 'UPLOADED',
   };
 }

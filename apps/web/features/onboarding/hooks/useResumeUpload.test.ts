@@ -1,169 +1,176 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useResumeUpload } from './useResumeUpload';
 
 describe('useResumeUpload Hook', () => {
+  const defaultMockResult = {
+    resumeId: 'res-test-123',
+    blobUrl: 'https://blob.example.com/resumes/res-test-123.pdf',
+    storageKey: 'users/u1/resumes/res-test-123/original',
+    status: 'UPLOADED' as const,
+  };
+
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('initializes in idle state', () => {
+    const { result } = renderHook(() => useResumeUpload());
+
+    expect(result.current.uploadState).toBe('idle');
+    expect(result.current.selectedFile).toBeNull();
+    expect(result.current.uploadedResume).toBeNull();
+    expect(result.current.validationError).toBeNull();
+    expect(result.current.isProcessing).toBe(false);
   });
 
-  it('accepts PDF files within size limits', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook with mock callback and create a valid PDF file mock
-    // -------------------------------------------------------------------------
+  it('accepts PDF files within size limits and completes upload', async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useResumeUpload(onSuccess));
+    const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+    const { result } = renderHook(() => useResumeUpload(onSuccess, mockUploadFn));
 
-    const validPdf = new File(['mock content'], 'test.pdf', {
+    const validPdf = new File(['%PDF-1.4 mock content'], 'test.pdf', {
       type: 'application/pdf',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Pass valid PDF to handleFileChange handler
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(validPdf);
+    await act(async () => {
+      await result.current.handleFileChange(validPdf);
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify validation passes, file is stored, and processing starts
-    // -------------------------------------------------------------------------
     expect(result.current.validationError).toBeNull();
     expect(result.current.selectedFile).toBe(validPdf);
-    expect(result.current.isProcessing).toBe(true);
+    expect(result.current.uploadState).toBe('uploaded');
+    expect(result.current.isProcessing).toBe(false);
+    expect(result.current.uploadedResume).toEqual({
+      resumeId: 'res-test-123',
+      storageKey: 'users/u1/resumes/res-test-123/original',
+      status: 'UPLOADED',
+    });
+    expect(mockUploadFn).toHaveBeenCalledWith(validPdf);
+    expect(onSuccess).toHaveBeenCalledWith(validPdf, {
+      resumeId: 'res-test-123',
+      storageKey: 'users/u1/resumes/res-test-123/original',
+      status: 'UPLOADED',
+    });
   });
 
-  it('accepts DOCX files within size limits', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook with mock callback and create a valid DOCX file mock
-    // -------------------------------------------------------------------------
+  it('accepts DOCX files within size limits and completes upload', async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useResumeUpload(onSuccess));
+    const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+    const { result } = renderHook(() => useResumeUpload(onSuccess, mockUploadFn));
 
     const validDocx = new File(['mock content'], 'test.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Pass valid DOCX to handleFileChange handler
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(validDocx);
+    await act(async () => {
+      await result.current.handleFileChange(validDocx);
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify validation passes, file is stored, and processing starts
-    // -------------------------------------------------------------------------
     expect(result.current.validationError).toBeNull();
     expect(result.current.selectedFile).toBe(validDocx);
-    expect(result.current.isProcessing).toBe(true);
+    expect(result.current.uploadState).toBe('uploaded');
+    expect(result.current.uploadedResume).toEqual({
+      resumeId: 'res-test-123',
+      storageKey: 'users/u1/resumes/res-test-123/original',
+      status: 'UPLOADED',
+    });
+    expect(mockUploadFn).toHaveBeenCalledWith(validDocx);
+    expect(onSuccess).toHaveBeenCalledWith(validDocx, expect.objectContaining({
+      resumeId: 'res-test-123',
+      status: 'UPLOADED',
+    }));
   });
 
-  it('rejects files with unsupported extensions', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook with mock callback and create an invalid text file mock
-    // -------------------------------------------------------------------------
+  it('rejects files with unsupported extensions', async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useResumeUpload(onSuccess));
+    const mockUploadFn = vi.fn();
+    const { result } = renderHook(() => useResumeUpload(onSuccess, mockUploadFn));
 
     const invalidFile = new File(['mock content'], 'resume.txt', {
       type: 'text/plain',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Pass invalid file to handleFileChange handler
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(invalidFile);
+    await act(async () => {
+      await result.current.handleFileChange(invalidFile);
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify validation error is generated and file reference is cleared
-    // -------------------------------------------------------------------------
     expect(result.current.selectedFile).toBeNull();
+    expect(result.current.uploadState).toBe('idle');
+    expect(result.current.uploadedResume).toBeNull();
     expect(result.current.validationError?.reason).toBe('format');
     expect(result.current.validationError?.message).toContain('not supported');
+    expect(mockUploadFn).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('rejects files exceeding size limits', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook and create a 6 MB oversized PDF file mock (>5 MB)
-    // -------------------------------------------------------------------------
+  it('rejects files exceeding size limits', async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useResumeUpload(onSuccess));
+    const mockUploadFn = vi.fn();
+    const { result } = renderHook(() => useResumeUpload(onSuccess, mockUploadFn));
 
     const oversizedBuffer = new ArrayBuffer(6 * 1024 * 1024);
     const oversizedFile = new File([oversizedBuffer], 'huge-resume.pdf', {
       type: 'application/pdf',
     });
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Pass oversized file to handleFileChange handler
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(oversizedFile);
+    await act(async () => {
+      await result.current.handleFileChange(oversizedFile);
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify size validation error is returned and file is not stored
-    // -------------------------------------------------------------------------
     expect(result.current.selectedFile).toBeNull();
+    expect(result.current.uploadState).toBe('idle');
+    expect(result.current.uploadedResume).toBeNull();
     expect(result.current.validationError?.reason).toBe('size');
+    expect(mockUploadFn).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('accepts file and invokes onSuccess callback with uploaded file', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook with mock callback and create a valid file
-    // -------------------------------------------------------------------------
+  it('transitions to idle and sets validationError when upload fails', async () => {
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useResumeUpload(onSuccess));
+    const mockUploadFn = vi
+      .fn()
+      .mockRejectedValue(new Error('Storage quota exceeded'));
+    const { result } = renderHook(() => useResumeUpload(onSuccess, mockUploadFn));
 
-    const file = new File(['valid'], 'resume.pdf', { type: 'application/pdf' });
-
-    // -------------------------------------------------------------------------
-    // 2. Act: Trigger file change
-    // -------------------------------------------------------------------------
-    act(() => {
-      result.current.handleFileChange(file);
+    const validPdf = new File(['%PDF content'], 'resume.pdf', {
+      type: 'application/pdf',
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify processing flag is set and onSuccess called with the file
-    // -------------------------------------------------------------------------
-    expect(result.current.isProcessing).toBe(true);
-    expect(result.current.selectedFile).toBe(file);
-    expect(onSuccess).toHaveBeenCalledWith(file);
+    await act(async () => {
+      await result.current.handleFileChange(validPdf);
+    });
+
+    expect(result.current.uploadState).toBe('idle');
+    expect(result.current.isProcessing).toBe(false);
+    expect(result.current.selectedFile).toBeNull();
+    expect(result.current.uploadedResume).toBeNull();
+    expect(result.current.validationError).toEqual({
+      fileName: 'resume.pdf',
+      message: 'Storage quota exceeded',
+      reason: 'upload_failed',
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('clears error state when requested', () => {
-    // -------------------------------------------------------------------------
-    // 1. Arrange: Render hook and trigger initial validation error
-    // -------------------------------------------------------------------------
+  it('clears error state and resets to idle when requested', async () => {
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useResumeUpload(onSuccess));
 
     const badFile = new File(['bad'], 'bad.txt', { type: 'text/plain' });
-    act(() => {
-      result.current.handleFileChange(badFile);
+    await act(async () => {
+      await result.current.handleFileChange(badFile);
     });
 
     expect(result.current.validationError).not.toBeNull();
 
-    // -------------------------------------------------------------------------
-    // 2. Act: Call clearError action
-    // -------------------------------------------------------------------------
     act(() => {
       result.current.clearError();
     });
 
-    // -------------------------------------------------------------------------
-    // 3. Assert: Verify error state and file reference are reset to null
-    // -------------------------------------------------------------------------
     expect(result.current.validationError).toBeNull();
     expect(result.current.selectedFile).toBeNull();
+    expect(result.current.uploadedResume).toBeNull();
+    expect(result.current.uploadState).toBe('idle');
   });
 });
