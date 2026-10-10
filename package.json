@@ -22,11 +22,14 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@astryxdesign/cli": "^0.6.4",
-    "concurrently": "^10.0.5"
+    "concurrently": "^10.0.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
   },
   "astryx": {
     "theme": "@astryxdesign/theme-neutral"
