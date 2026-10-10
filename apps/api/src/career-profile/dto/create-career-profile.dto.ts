@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -23,7 +24,13 @@ export class CreateCareerProfileDto {
   @IsString({ message: 'targetRole must be a string' })
   @IsNotEmpty({ message: 'targetRole cannot be empty' })
   @MaxLength(100, { message: 'targetRole must not exceed 100 characters' })
-  targetRole: string;
+  @IsOptional()
+  targetRole?: string;
+
+  @IsArray({ message: 'skills must be an array of strings' })
+  @IsString({ each: true, message: 'each skill must be a string' })
+  @IsOptional()
+  skills?: string[];
 
   @IsString({ message: 'summary must be a string' })
   @IsOptional()

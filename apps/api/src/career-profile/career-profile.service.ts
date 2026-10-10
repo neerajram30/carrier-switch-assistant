@@ -42,6 +42,7 @@ export class CareerProfileService {
         currentRole: createCareerProfileDto.currentRole,
         yearsOfExperience: createCareerProfileDto.yearsOfExperience,
         targetRole: createCareerProfileDto.targetRole,
+        skills: createCareerProfileDto.skills ?? [],
         summary: createCareerProfileDto.summary,
       },
     });
