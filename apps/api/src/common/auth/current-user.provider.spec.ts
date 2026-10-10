@@ -78,4 +78,25 @@ describe('DevHeaderUserProvider', () => {
       'Invalid "x-user-id" development authentication header: must be a valid UUID',
     );
   });
+
+  it('throws UnauthorizedException when NODE_ENV is production', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const mockRequest = {
+        headers: {
+          'x-user-id': '123e4567-e89b-12d3-a456-426614174000',
+        },
+      } as unknown as Request;
+
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        UnauthorizedException,
+      );
+      expect(() => provider.resolveUser(mockRequest)).toThrow(
+        /forbidden in production/i,
+      );
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });

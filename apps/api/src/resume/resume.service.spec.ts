@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CurrentUser } from '../common/auth/current-user.interface.js';
@@ -48,7 +49,7 @@ describe('ResumeService', () => {
   });
 
   describe('createUploadIntent', () => {
-    it('successfully creates an upload intent for valid PDF metadata', async () => {
+    it('successfully creates an upload intent with private access for valid PDF metadata', async () => {
       // 1. ARRANGE
       mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       mockPrisma.resume.create.mockImplementation((args: any) =>
@@ -92,11 +93,11 @@ describe('ResumeService', () => {
         pathname: result.storageKey,
         contentType: 'application/pdf',
         maximumSizeInBytes: 5 * 1024 * 1024,
+        access: 'private',
       });
     });
 
     it('successfully creates an upload intent for valid DOCX metadata', async () => {
-      // 1. ARRANGE
       mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       mockPrisma.resume.create.mockImplementation((args: any) =>
         Promise.resolve({ ...args.data }),
@@ -106,52 +107,38 @@ describe('ResumeService', () => {
       });
 
       const dto = {
-        fileName: 'my-resume.docx',
+        fileName: 'resume.docx',
         contentType:
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        fileSize: 50000,
+        fileSize: 200000,
       };
 
-      // 2. ACT
       const result = await service.createUploadIntent(mockUser, dto);
 
-      // 3. ASSERT
       expect(result.status).toBe('UPLOADING');
       expect(result.clientToken).toBe('docx-token');
     });
 
-    it('creates dev user if not already present in database', async () => {
+    it('throws UnauthorizedException when user does not exist in database (no auto-provisioning)', async () => {
       // 1. ARRANGE
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue({ id: mockUser.id });
-      mockPrisma.resume.create.mockImplementation((args: any) =>
-        Promise.resolve({ ...args.data }),
-      );
-      mockStorage.generateUploadToken.mockResolvedValue({
-        clientToken: 'token',
-      });
 
       const dto = {
-        fileName: 'my-resume.docx',
-        contentType:
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        fileName: 'my-resume.pdf',
+        contentType: 'application/pdf',
         fileSize: 50000,
       };
 
-      // 2. ACT
-      await service.createUploadIntent(mockUser, dto);
-
-      // 3. ASSERT
-      expect(mockPrisma.user.create).toHaveBeenCalledWith({
-        data: {
-          id: mockUser.id,
-          email: `${mockUser.id}@dev.local`,
-          name: 'Current User',
-        },
-      });
+      // 2. ACT & ASSERT
+      await expect(service.createUploadIntent(mockUser, dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(mockPrisma.user.create).not.toHaveBeenCalled();
+      expect(mockPrisma.resume.create).not.toHaveBeenCalled();
     });
 
     it('rejects when fileName is missing or whitespace', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const dto = {
         fileName: '   ',
         contentType: 'application/pdf',
@@ -164,6 +151,7 @@ describe('ResumeService', () => {
     });
 
     it('rejects when contentType is missing or whitespace', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const dto = {
         fileName: 'resume.pdf',
         contentType: '   ',
@@ -176,6 +164,7 @@ describe('ResumeService', () => {
     });
 
     it('rejects when fileSize is 0 or negative', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const zeroSizeDto = {
         fileName: 'resume.pdf',
         contentType: 'application/pdf',
@@ -198,10 +187,11 @@ describe('ResumeService', () => {
     });
 
     it('rejects when fileSize exceeds 5 MB', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const dto = {
         fileName: 'huge-resume.pdf',
         contentType: 'application/pdf',
-        fileSize: 5 * 1024 * 1024 + 1, // 5 MB + 1 byte
+        fileSize: 5 * 1024 * 1024 + 1,
       };
 
       await expect(
@@ -213,6 +203,7 @@ describe('ResumeService', () => {
     });
 
     it('rejects when fileName has no extension', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const dto = {
         fileName: 'my-resume',
         contentType: 'application/pdf',
@@ -225,6 +216,7 @@ describe('ResumeService', () => {
     });
 
     it('rejects unsupported file formats (.png, .exe, .doc)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
       const pngDto = {
         fileName: 'image.png',
         contentType: 'image/png',
@@ -247,68 +239,93 @@ describe('ResumeService', () => {
     });
 
     it('rejects when extension does not match MIME content type', async () => {
-      const mismatchedDto1 = {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: mockUser.id });
+      const mismatchedDto = {
         fileName: 'resume.docx',
         contentType: 'application/pdf',
         fileSize: 100000,
       };
 
       await expect(
-        service.createUploadIntent(mockUser, mismatchedDto1),
-      ).rejects.toThrow(BadRequestException);
-
-      const mismatchedDto2 = {
-        fileName: 'resume.pdf',
-        contentType:
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        fileSize: 100000,
-      };
-
-      await expect(
-        service.createUploadIntent(mockUser, mismatchedDto2),
+        service.createUploadIntent(mockUser, mismatchedDto),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('completeUpload', () => {
     const resumeId = 'resume-uuid-1';
-    const completeDto = {
-      blobUrl:
-        'https://store.public.blob.vercel-storage.com/users/user-uuid-123/resumes/resume-uuid-1/original',
-    };
+    const canonicalStorageKey = `users/${mockUser.id}/resumes/${resumeId}/original`;
 
-    it('successfully updates status to UPLOADED when object exists in storage', async () => {
+    it('successfully verifies canonical storage object and updates status to UPLOADED', async () => {
       // 1. ARRANGE
       mockPrisma.resume.findUnique.mockResolvedValue({
         id: resumeId,
         userId: mockUser.id,
+        originalFileName: 'resume.pdf',
+        contentType: 'application/pdf',
+        fileSize: 183421,
+        storageKey: canonicalStorageKey,
         status: 'UPLOADING',
       });
-      mockStorage.exists.mockResolvedValue(true);
+
+      mockStorage.head.mockResolvedValue({
+        pathname: canonicalStorageKey,
+        size: 183421,
+        contentType: 'application/pdf',
+        uploadedAt: new Date(),
+        url: 'https://store.blob.vercel-storage.com/private',
+      });
+
       mockPrisma.resume.update.mockResolvedValue({
         id: resumeId,
         userId: mockUser.id,
         originalFileName: 'resume.pdf',
         contentType: 'application/pdf',
-        fileSize: 1000,
-        storageKey: completeDto.blobUrl,
+        fileSize: 183421,
+        storageKey: canonicalStorageKey,
         status: 'UPLOADED',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      // 2. ACT
-      const result = await service.completeUpload(mockUser, resumeId, completeDto);
+      // 2. ACT: Client provides empty body or arbitrary URL; server uses canonical key
+      const result = await service.completeUpload(mockUser, resumeId, {
+        blobUrl: 'https://attacker.com/unrelated.pdf',
+      });
 
-      // 3. ASSERT
-      expect(mockStorage.exists).toHaveBeenCalledWith(completeDto.blobUrl);
+      // 3. ASSERT: Queried using canonical storageKey, never trusted client URL
+      expect(mockStorage.head).toHaveBeenCalledWith(canonicalStorageKey);
       expect(mockPrisma.resume.update).toHaveBeenCalledWith({
         where: { id: resumeId },
         data: {
           status: 'UPLOADED',
-          storageKey: completeDto.blobUrl,
         },
       });
+      expect(result.status).toBe('UPLOADED');
+      expect(result.storageKey).toBe(canonicalStorageKey);
+    });
+
+    it('is idempotent: returns existing record when resume is already UPLOADED', async () => {
+      // 1. ARRANGE
+      const alreadyUploaded = {
+        id: resumeId,
+        userId: mockUser.id,
+        originalFileName: 'resume.pdf',
+        contentType: 'application/pdf',
+        fileSize: 183421,
+        storageKey: canonicalStorageKey,
+        status: 'UPLOADED',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockPrisma.resume.findUnique.mockResolvedValue(alreadyUploaded);
+
+      // 2. ACT
+      const result = await service.completeUpload(mockUser, resumeId);
+
+      // 3. ASSERT: No storage check or database mutation needed
+      expect(mockStorage.head).not.toHaveBeenCalled();
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
       expect(result.status).toBe('UPLOADED');
     });
 
@@ -316,10 +333,10 @@ describe('ResumeService', () => {
       mockPrisma.resume.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.completeUpload(mockUser, 'non-existent-id', completeDto),
+        service.completeUpload(mockUser, 'non-existent-id'),
       ).rejects.toThrow(NotFoundException);
 
-      expect(mockStorage.exists).not.toHaveBeenCalled();
+      expect(mockStorage.head).not.toHaveBeenCalled();
       expect(mockPrisma.resume.update).not.toHaveBeenCalled();
     });
 
@@ -331,24 +348,77 @@ describe('ResumeService', () => {
       });
 
       await expect(
-        service.completeUpload(mockUser, resumeId, completeDto),
+        service.completeUpload(mockUser, resumeId),
       ).rejects.toThrow(ForbiddenException);
 
-      expect(mockStorage.exists).not.toHaveBeenCalled();
+      expect(mockStorage.head).not.toHaveBeenCalled();
       expect(mockPrisma.resume.update).not.toHaveBeenCalled();
     });
 
-    it('throws BadRequestException if the object does not exist in storage', async () => {
+    it('throws BadRequestException if the canonical object does not exist in storage', async () => {
       mockPrisma.resume.findUnique.mockResolvedValue({
         id: resumeId,
         userId: mockUser.id,
+        fileSize: 1000,
+        contentType: 'application/pdf',
+        storageKey: canonicalStorageKey,
         status: 'UPLOADING',
       });
-      mockStorage.exists.mockResolvedValue(false);
+      mockStorage.head.mockResolvedValue(null);
 
       await expect(
-        service.completeUpload(mockUser, resumeId, completeDto),
+        service.completeUpload(mockUser, resumeId),
       ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when stored file size does not match record metadata', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        fileSize: 100000,
+        contentType: 'application/pdf',
+        storageKey: canonicalStorageKey,
+        status: 'UPLOADING',
+      });
+
+      mockStorage.head.mockResolvedValue({
+        pathname: canonicalStorageKey,
+        size: 50, // Mismatched size!
+        contentType: 'application/pdf',
+        uploadedAt: new Date(),
+        url: 'https://store.blob.vercel-storage.com/private',
+      });
+
+      await expect(
+        service.completeUpload(mockUser, resumeId),
+      ).rejects.toThrow(/does not match expected file size/i);
+
+      expect(mockPrisma.resume.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when stored content type does not match record metadata', async () => {
+      mockPrisma.resume.findUnique.mockResolvedValue({
+        id: resumeId,
+        userId: mockUser.id,
+        fileSize: 100000,
+        contentType: 'application/pdf',
+        storageKey: canonicalStorageKey,
+        status: 'UPLOADING',
+      });
+
+      mockStorage.head.mockResolvedValue({
+        pathname: canonicalStorageKey,
+        size: 100000,
+        contentType: 'image/png', // Mismatched MIME type!
+        uploadedAt: new Date(),
+        url: 'https://store.blob.vercel-storage.com/private',
+      });
+
+      await expect(
+        service.completeUpload(mockUser, resumeId),
+      ).rejects.toThrow(/does not match expected content type/i);
 
       expect(mockPrisma.resume.update).not.toHaveBeenCalled();
     });

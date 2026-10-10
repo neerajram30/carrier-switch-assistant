@@ -62,7 +62,7 @@ describe('ResumeController', () => {
         originalFileName: 'file.pdf',
         contentType: 'application/pdf',
         fileSize: 12345,
-        storageKey: dto.blobUrl,
+        storageKey: 'users/user-123/resumes/res-1/original',
         status: 'UPLOADED',
         createdAt: new Date(),
         updatedAt: new Date(),

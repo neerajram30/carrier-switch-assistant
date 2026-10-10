@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Optional,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import type { CurrentUser } from './current-user.interface.js';
 
@@ -13,7 +18,22 @@ const UUID_REGEX =
 
 @Injectable()
 export class DevHeaderUserProvider implements CurrentUserProvider {
+  constructor(
+    @Optional()
+    private readonly configService?: ConfigService,
+  ) {}
+
   resolveUser(request: Request): CurrentUser {
+    const isProduction =
+      process.env.NODE_ENV === 'production' ||
+      this.configService?.get<string>('NODE_ENV') === 'production';
+
+    if (isProduction) {
+      throw new UnauthorizedException(
+        'Development identity provider ("x-user-id" header) is strictly forbidden in production environment.',
+      );
+    }
+
     const headerValue = request.headers['x-user-id'];
 
     if (!headerValue || typeof headerValue !== 'string' || !headerValue.trim()) {

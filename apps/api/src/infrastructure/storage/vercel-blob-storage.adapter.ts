@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { put, del, head } from '@vercel/blob';
+import { del, head, put } from '@vercel/blob';
 import { generateClientTokenFromReadWriteToken } from '@vercel/blob/client';
 import type {
   GenerateUploadTokenOptions,
@@ -13,12 +13,26 @@ import type {
 } from './object-storage.port.js';
 
 @Injectable()
-export class VercelBlobStorageAdapter implements ObjectStoragePort {
+export class VercelBlobStorageAdapter
+  implements ObjectStoragePort, OnModuleInit
+{
   private readonly logger = new Logger(VercelBlobStorageAdapter.name);
   private readonly token?: string;
 
   constructor(private readonly configService: ConfigService) {
     this.token = this.configService.get<string>('BLOB_READ_WRITE_TOKEN');
+  }
+
+  onModuleInit(): void {
+    const isTestEnv =
+      process.env.NODE_ENV === 'test' ||
+      this.configService.get<string>('NODE_ENV') === 'test';
+
+    if (!isTestEnv && !this.token) {
+      throw new Error(
+        'BLOB_READ_WRITE_TOKEN environment variable is required when VercelBlobStorageAdapter is enabled.',
+      );
+    }
   }
 
   async upload(
@@ -30,7 +44,7 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
 
     try {
       const blob = await put(pathname, body as Parameters<typeof put>[1], {
-        access: options?.access ?? 'public',
+        access: options?.access ?? 'private',
         contentType: options?.contentType,
         token: this.token,
       });
@@ -48,16 +62,16 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
     }
   }
 
-  async delete(url: string): Promise<void> {
-    this.logger.debug(`Deleting file from Vercel Blob: ${url}`);
+  async delete(storageKey: string): Promise<void> {
+    this.logger.debug(`Deleting file from Vercel Blob: ${storageKey}`);
 
     try {
-      await del(url, {
+      await del(storageKey, {
         token: this.token,
       });
     } catch (error) {
       this.logger.error(
-        `Failed to delete file from Vercel Blob at "${url}": ${(error as Error).message}`,
+        `Failed to delete file from Vercel Blob at "${storageKey}": ${(error as Error).message}`,
       );
       throw error;
     }
@@ -87,11 +101,11 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
     }
   }
 
-  async head(url: string): Promise<StorageMetadata | null> {
-    this.logger.debug(`Fetching metadata for Vercel Blob: ${url}`);
+  async head(storageKey: string): Promise<StorageMetadata | null> {
+    this.logger.debug(`Fetching metadata for Vercel Blob: ${storageKey}`);
 
     try {
-      const metadata = await head(url, {
+      const metadata = await head(storageKey, {
         token: this.token,
       });
 
@@ -111,14 +125,14 @@ export class VercelBlobStorageAdapter implements ObjectStoragePort {
         return null;
       }
       this.logger.error(
-        `Failed to fetch metadata for Vercel Blob at "${url}": ${(error as Error).message}`,
+        `Failed to fetch metadata for Vercel Blob at "${storageKey}": ${(error as Error).message}`,
       );
       throw error;
     }
   }
 
-  async exists(url: string): Promise<boolean> {
-    const metadata = await this.head(url);
+  async exists(storageKey: string): Promise<boolean> {
+    const metadata = await this.head(storageKey);
     return metadata !== null;
   }
 }

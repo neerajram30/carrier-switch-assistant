@@ -2,9 +2,9 @@ import { put } from '@vercel/blob/client';
 
 export interface UploadResumeResult {
   resumeId: string;
-  blobUrl: string;
   storageKey: string;
   status: 'UPLOADED';
+  blobUrl?: string;
 }
 
 export async function uploadResumeDirectly(
@@ -41,13 +41,20 @@ export async function uploadResumeDirectly(
 
   const { resumeId, clientToken, storageKey } = await intentResponse.json();
 
-  // Step 2: Perform direct client upload to Vercel Blob using scoped clientToken
-  const blobResult = await put(storageKey, file, {
-    access: 'public',
-    token: clientToken,
-  });
+  // Step 2: Perform direct client upload to Vercel Blob with private access
+  let blobResult;
+  try {
+    blobResult = await put(storageKey, file, {
+      access: 'private',
+      token: clientToken,
+    });
+  } catch (error) {
+    throw new Error(
+      `Failed to upload resume to storage: ${(error as Error).message}`,
+    );
+  }
 
-  // Step 3: Notify backend to verify storage existence and transition status to UPLOADED
+  // Step 3: Notify backend to canonically verify stored object and transition status to UPLOADED
   const completeResponse = await fetch(
     `${apiUrl}/api/v1/resumes/${resumeId}/complete`,
     {
@@ -56,9 +63,7 @@ export async function uploadResumeDirectly(
         'Content-Type': 'application/json',
         'x-user-id': userId,
       },
-      body: JSON.stringify({
-        blobUrl: blobResult.url,
-      }),
+      body: JSON.stringify({}),
     },
   );
 
@@ -73,8 +78,8 @@ export async function uploadResumeDirectly(
 
   return {
     resumeId,
-    blobUrl: blobResult.url,
     storageKey: completeData.storageKey || storageKey,
     status: completeData.status || 'UPLOADED',
+    blobUrl: blobResult?.url,
   };
 }

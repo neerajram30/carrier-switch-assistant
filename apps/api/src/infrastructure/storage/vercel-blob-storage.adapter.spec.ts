@@ -26,8 +26,28 @@ describe('VercelBlobStorageAdapter', () => {
     adapter = new VercelBlobStorageAdapter(configService);
   });
 
+  describe('onModuleInit', () => {
+    it('succeeds when token is present', () => {
+      expect(() => adapter.onModuleInit()).not.toThrow();
+    });
+
+    it('throws error when token is missing in non-test environment', () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      try {
+        const emptyConfigService = new ConfigService({});
+        const invalidAdapter = new VercelBlobStorageAdapter(emptyConfigService);
+        expect(() => invalidAdapter.onModuleInit()).toThrow(
+          /BLOB_READ_WRITE_TOKEN environment variable is required/i,
+        );
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+  });
+
   describe('upload', () => {
-    it('uploads a file with configured token and default public access', async () => {
+    it('uploads a file with configured token and default private access', async () => {
       // 1. ARRANGE
       const mockResult = {
         url: 'https://store.public.blob.vercel-storage.com/resumes/my-resume.pdf',
@@ -48,7 +68,7 @@ describe('VercelBlobStorageAdapter', () => {
         'resumes/my-resume.pdf',
         buffer,
         {
-          access: 'public',
+          access: 'private',
           contentType: 'application/pdf',
           token: 'mock-token-xyz',
         },
@@ -78,7 +98,7 @@ describe('VercelBlobStorageAdapter', () => {
         'resumes/my-resume.pdf',
         buffer,
         {
-          access: 'public',
+          access: 'private',
           contentType: 'application/pdf',
           token: 'mock-token-xyz',
         },
@@ -87,16 +107,16 @@ describe('VercelBlobStorageAdapter', () => {
   });
 
   describe('delete', () => {
-    it('deletes a file with the configured token', async () => {
+    it('deletes a file with the configured token and storage key', async () => {
       // 1. ARRANGE
       vi.mocked(vercelBlob.del).mockResolvedValue(undefined as never);
-      const url = 'https://store.public.blob.vercel-storage.com/resumes/my-resume.pdf';
+      const storageKey = 'users/u1/resumes/res-1/original';
 
       // 2. ACT
-      await adapter.delete(url);
+      await adapter.delete(storageKey);
 
       // 3. ASSERT
-      expect(vercelBlob.del).toHaveBeenCalledWith(url, {
+      expect(vercelBlob.del).toHaveBeenCalledWith(storageKey, {
         token: 'mock-token-xyz',
       });
     });
@@ -105,14 +125,14 @@ describe('VercelBlobStorageAdapter', () => {
       // 1. ARRANGE
       const deleteError = new Error('Vercel Blob delete failed: Blob not found');
       vi.mocked(vercelBlob.del).mockRejectedValue(deleteError as never);
-      const url = 'https://store.public.blob.vercel-storage.com/resumes/my-resume.pdf';
+      const storageKey = 'users/u1/resumes/res-1/original';
 
       // 2. ACT & ASSERT
-      await expect(adapter.delete(url)).rejects.toThrow(
+      await expect(adapter.delete(storageKey)).rejects.toThrow(
         'Vercel Blob delete failed: Blob not found',
       );
 
-      expect(vercelBlob.del).toHaveBeenCalledWith(url, {
+      expect(vercelBlob.del).toHaveBeenCalledWith(storageKey, {
         token: 'mock-token-xyz',
       });
     });
@@ -162,47 +182,47 @@ describe('VercelBlobStorageAdapter', () => {
   });
 
   describe('head and exists', () => {
-    it('returns metadata when blob exists', async () => {
+    it('returns metadata when blob exists using storageKey', async () => {
+      const storageKey = 'users/u1/resumes/res-1/original';
       const mockMeta = {
         url: 'https://store.public.blob.vercel-storage.com/file.pdf',
-        pathname: 'file.pdf',
+        pathname: storageKey,
         size: 1024,
         contentType: 'application/pdf',
         uploadedAt: new Date('2026-10-09T00:00:00Z'),
       };
       vi.mocked(vercelBlob.head).mockResolvedValue(mockMeta as never);
 
-      const result = await adapter.head('https://store.public.blob.vercel-storage.com/file.pdf');
+      const result = await adapter.head(storageKey);
 
-      expect(vercelBlob.head).toHaveBeenCalledWith(
-        'https://store.public.blob.vercel-storage.com/file.pdf',
-        { token: 'mock-token-xyz' },
-      );
+      expect(vercelBlob.head).toHaveBeenCalledWith(storageKey, {
+        token: 'mock-token-xyz',
+      });
       expect(result).toEqual(mockMeta);
 
-      const exists = await adapter.exists('https://store.public.blob.vercel-storage.com/file.pdf');
+      const exists = await adapter.exists(storageKey);
       expect(exists).toBe(true);
     });
 
     it('returns null and exists false when blob is not found', async () => {
+      const storageKey = 'users/u1/resumes/missing/original';
       const notFoundError = new Error('The requested blob does not exist or was not found');
       notFoundError.name = 'BlobNotFoundError';
       vi.mocked(vercelBlob.head).mockRejectedValue(notFoundError as never);
 
-      const result = await adapter.head('https://store.public.blob.vercel-storage.com/missing.pdf');
+      const result = await adapter.head(storageKey);
       expect(result).toBeNull();
 
-      const exists = await adapter.exists('https://store.public.blob.vercel-storage.com/missing.pdf');
+      const exists = await adapter.exists(storageKey);
       expect(exists).toBe(false);
     });
 
     it('rethrows on unexpected errors in head', async () => {
+      const storageKey = 'users/u1/resumes/res-1/original';
       const networkError = new Error('Connection refused');
       vi.mocked(vercelBlob.head).mockRejectedValue(networkError as never);
 
-      await expect(
-        adapter.head('https://store.public.blob.vercel-storage.com/file.pdf'),
-      ).rejects.toThrow('Connection refused');
+      await expect(adapter.head(storageKey)).rejects.toThrow('Connection refused');
     });
   });
 });

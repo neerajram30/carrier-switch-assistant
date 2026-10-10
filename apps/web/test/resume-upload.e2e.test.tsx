@@ -159,7 +159,7 @@ describe('Resume Upload E2E Journey', () => {
       'users/dev-user-123/resumes/resume-e2e-uuid-42/original',
       resumeFile,
       {
-        access: 'public',
+        access: 'private',
         token: 'scoped-client-token-xyz',
       },
     );
@@ -174,10 +174,7 @@ describe('Resume Upload E2E Journey', () => {
           'Content-Type': 'application/json',
           'x-user-id': '00000000-0000-0000-0000-000000000001',
         }),
-        body: JSON.stringify({
-          blobUrl:
-            'https://store.public.blob.vercel-storage.com/users/dev-user-123/resumes/resume-e2e-uuid-42/original',
-        }),
+        body: JSON.stringify({}),
       }),
     );
   });

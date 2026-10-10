@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { CurrentUser } from '../common/auth/current-user.interface.js';
@@ -63,19 +64,15 @@ export class ResumeService {
   ): Promise<UploadIntentResponse> {
     this.validateFileMetadata(dto);
 
-    // Ensure user exists in database to satisfy foreign key constraint
-    let dbUser = await this.prisma.user.findUnique({
+    // Enforce identity existence: unauthenticated user manufacturing is forbidden
+    const dbUser = await this.prisma.user.findUnique({
       where: { id: user.id },
     });
 
     if (!dbUser) {
-      dbUser = await this.prisma.user.create({
-        data: {
-          id: user.id,
-          email: `${user.id}@dev.local`,
-          name: 'Current User',
-        },
-      });
+      throw new UnauthorizedException(
+        `User account with ID "${user.id}" does not exist in the database. Auto-provisioning is forbidden.`,
+      );
     }
 
     const resumeId = randomUUID();
@@ -101,6 +98,7 @@ export class ResumeService {
       pathname: storageKey,
       contentType: dto.contentType.trim(),
       maximumSizeInBytes: MAX_FILE_SIZE_BYTES,
+      access: 'private',
     });
 
     return {
@@ -114,7 +112,7 @@ export class ResumeService {
   async completeUpload(
     user: CurrentUser,
     resumeId: string,
-    dto: CompleteResumeUploadDto,
+    _dto?: CompleteResumeUploadDto,
   ): Promise<ResumeResponse> {
     const resume = await this.prisma.resume.findUnique({
       where: { id: resumeId },
@@ -130,23 +128,54 @@ export class ResumeService {
       );
     }
 
-    // Verify that the object actually exists in object storage before updating state
-    const objectExists = await this.storage.exists(dto.blobUrl);
-    if (!objectExists) {
+    // Idempotency: repeating completion on an already confirmed upload succeeds safely
+    if (resume.status === 'UPLOADED') {
+      this.logger.debug(
+        `Resume "${resumeId}" is already UPLOADED. Returning existing record idempotently.`,
+      );
+      return {
+        id: resume.id,
+        userId: resume.userId,
+        originalFileName: resume.originalFileName,
+        contentType: resume.contentType,
+        fileSize: resume.fileSize,
+        storageKey: resume.storageKey,
+        status: resume.status,
+        createdAt: resume.createdAt,
+        updatedAt: resume.updatedAt,
+      };
+    }
+
+    // Canonical verification: query storage using server-derived immutable storageKey
+    const metadata = await this.storage.head(resume.storageKey);
+    if (!metadata) {
       throw new BadRequestException(
-        `Cannot mark resume as UPLOADED: the uploaded object at "${dto.blobUrl}" does not exist in storage.`,
+        `Cannot mark resume as UPLOADED: the object at canonical storage path "${resume.storageKey}" does not exist in storage.`,
+      );
+    }
+
+    // Verify stored object's reported size matches the recorded intent metadata
+    if (metadata.size !== resume.fileSize) {
+      throw new BadRequestException(
+        `Stored object size (${metadata.size} bytes) does not match expected file size (${resume.fileSize} bytes).`,
+      );
+    }
+
+    // Verify stored object's content type matches the recorded intent metadata
+    if (metadata.contentType !== resume.contentType) {
+      throw new BadRequestException(
+        `Stored object content type "${metadata.contentType}" does not match expected content type "${resume.contentType}".`,
       );
     }
 
     this.logger.debug(
-      `Marking resume "${resumeId}" as UPLOADED after storage verification`,
+      `Marking resume "${resumeId}" as UPLOADED after canonical storage verification`,
     );
 
     const updated = await this.prisma.resume.update({
       where: { id: resumeId },
       data: {
         status: 'UPLOADED',
-        storageKey: dto.blobUrl,
       },
     });
 

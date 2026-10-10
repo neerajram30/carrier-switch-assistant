@@ -324,7 +324,7 @@ describe('ResumeUploadStep Component', () => {
         'users/u1/resumes/res-intent-101/original',
         validPdf,
         expect.objectContaining({
-          access: 'public',
+          access: 'private',
           token: 'client-token-abc',
         }),
       );
@@ -335,9 +335,7 @@ describe('ResumeUploadStep Component', () => {
         expect.stringContaining('/api/v1/resumes/res-intent-101/complete'),
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            blobUrl: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
-          }),
+          body: JSON.stringify({}),
         }),
       );
     });
@@ -397,7 +395,7 @@ describe('ResumeUploadStep Component', () => {
       });
 
       expect(
-        screen.getByText('Network error uploading to Vercel Blob'),
+        screen.getByText(/Network error uploading to Vercel Blob/i),
       ).toBeInTheDocument();
     });
   });

@@ -17,7 +17,7 @@ describe('uploadResumeDirectly Service', () => {
     global.fetch = originalFetch;
   });
 
-  it('completes the 3-step direct upload flow successfully', async () => {
+  it('completes the 3-step direct upload flow successfully with private storage access', async () => {
     const mockFile = new File(['content'], 'my-resume.pdf', {
       type: 'application/pdf',
     });
@@ -39,15 +39,16 @@ describe('uploadResumeDirectly Service', () => {
         json: async () => ({
           id: 'res-uuid-1',
           status: 'UPLOADED',
+          storageKey: 'users/u1/resumes/res-uuid-1/original',
         }),
       });
 
     global.fetch = mockFetch;
 
     vi.mocked(vercelBlobClient.put).mockResolvedValueOnce({
-      url: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+      url: 'https://store.blob.vercel-storage.com/uploaded.pdf',
       downloadUrl:
-        'https://store.public.blob.vercel-storage.com/uploaded.pdf?download=1',
+        'https://store.blob.vercel-storage.com/uploaded.pdf?download=1',
       pathname: 'users/u1/resumes/res-uuid-1/original',
       contentType: 'application/pdf',
       contentDisposition: 'inline',
@@ -78,17 +79,17 @@ describe('uploadResumeDirectly Service', () => {
       }),
     );
 
-    // Verify Step 2: Vercel Blob client upload
+    // Verify Step 2: Vercel Blob client upload with private access
     expect(vercelBlobClient.put).toHaveBeenCalledWith(
       'users/u1/resumes/res-uuid-1/original',
       mockFile,
       {
-        access: 'public',
+        access: 'private',
         token: 'mock-token-xyz',
       },
     );
 
-    // Verify Step 3: complete verification call
+    // Verify Step 3: complete verification call (canonical key verification)
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
       'http://localhost:3001/api/v1/resumes/res-uuid-1/complete',
@@ -98,15 +99,13 @@ describe('uploadResumeDirectly Service', () => {
           'Content-Type': 'application/json',
           'x-user-id': 'dev-user-123',
         },
-        body: JSON.stringify({
-          blobUrl: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
-        }),
+        body: JSON.stringify({}),
       }),
     );
 
     expect(result).toEqual({
       resumeId: 'res-uuid-1',
-      blobUrl: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+      blobUrl: 'https://store.blob.vercel-storage.com/uploaded.pdf',
       storageKey: 'users/u1/resumes/res-uuid-1/original',
       status: 'UPLOADED',
     });
@@ -154,9 +153,9 @@ describe('uploadResumeDirectly Service', () => {
       });
 
     vi.mocked(vercelBlobClient.put).mockResolvedValueOnce({
-      url: 'https://store.public.blob.vercel-storage.com/uploaded.pdf',
+      url: 'https://store.blob.vercel-storage.com/uploaded.pdf',
       downloadUrl:
-        'https://store.public.blob.vercel-storage.com/uploaded.pdf?download=1',
+        'https://store.blob.vercel-storage.com/uploaded.pdf?download=1',
       pathname: 'key',
       contentType: 'application/pdf',
       contentDisposition: 'inline',

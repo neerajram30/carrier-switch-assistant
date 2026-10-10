@@ -10,7 +10,7 @@ export type UploadFileBody =
 
 export interface UploadFileOptions {
   contentType?: string;
-  access?: 'public';
+  access?: 'private' | 'public';
 }
 
 export interface UploadFileResult {
@@ -23,6 +23,7 @@ export interface GenerateUploadTokenOptions {
   pathname: string;
   contentType: string;
   maximumSizeInBytes: number;
+  access?: 'private' | 'public';
 }
 
 export interface UploadTokenResult {
@@ -43,10 +44,10 @@ export interface ObjectStoragePort {
     body: UploadFileBody,
     options?: UploadFileOptions,
   ): Promise<UploadFileResult>;
-  delete(url: string): Promise<void>;
+  delete(storageKey: string): Promise<void>;
   generateUploadToken(
     options: GenerateUploadTokenOptions,
   ): Promise<UploadTokenResult>;
-  exists(url: string): Promise<boolean>;
-  head(url: string): Promise<StorageMetadata | null>;
+  exists(storageKey: string): Promise<boolean>;
+  head(storageKey: string): Promise<StorageMetadata | null>;
 }
