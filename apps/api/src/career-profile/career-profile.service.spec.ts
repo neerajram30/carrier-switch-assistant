@@ -40,10 +40,11 @@ describe('CareerProfileService', () => {
       currentRole: 'Frontend Developer',
       yearsOfExperience: 3,
       targetRole: 'Full Stack Engineer',
+      skills: ['React', 'TypeScript'],
       summary: 'Looking to transition.',
     };
 
-    it('successfully creates a career profile', async () => {
+    it('successfully creates a career profile with skills and targetRole', async () => {
       // 1. ARRANGE
       const mockCreatedProfile = {
         id: 'profile-uuid-1',
@@ -76,7 +77,50 @@ describe('CareerProfileService', () => {
       expect(mockPrismaService.careerProfile.create).toHaveBeenCalledWith({
         data: {
           userId: mockUserId,
-          ...mockDto,
+          currentRole: mockDto.currentRole,
+          yearsOfExperience: mockDto.yearsOfExperience,
+          targetRole: mockDto.targetRole,
+          skills: mockDto.skills,
+          summary: mockDto.summary,
+        },
+      });
+    });
+
+    it('successfully creates a career profile when targetRole and skills are omitted (defaults skills to [])', async () => {
+      const minimalDto = {
+        currentRole: 'Software Engineer',
+        yearsOfExperience: 2,
+      };
+      const mockCreatedProfile = {
+        id: 'profile-uuid-2',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userId: mockUserId,
+        currentRole: minimalDto.currentRole,
+        yearsOfExperience: minimalDto.yearsOfExperience,
+        targetRole: undefined,
+        skills: [],
+        summary: undefined,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: mockUserId,
+        email: 'user@example.com',
+      });
+      mockPrismaService.careerProfile.findUnique.mockResolvedValue(null);
+      mockPrismaService.careerProfile.create.mockResolvedValue(mockCreatedProfile);
+
+      const result = await service.create(mockUserId, minimalDto);
+
+      expect(result).toEqual(mockCreatedProfile);
+      expect(mockPrismaService.careerProfile.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          currentRole: minimalDto.currentRole,
+          yearsOfExperience: minimalDto.yearsOfExperience,
+          targetRole: undefined,
+          skills: [],
+          summary: undefined,
         },
       });
     });
@@ -197,6 +241,43 @@ describe('CareerProfileService', () => {
       expect(mockPrismaService.careerProfile.update).toHaveBeenCalledWith({
         where: { userId },
         data: updateDto,
+      });
+    });
+
+    it('successfully updates career profile skills', async () => {
+      const existingProfile = {
+        id: 'profile-1',
+        userId,
+        currentRole: 'Frontend Developer',
+        yearsOfExperience: 3,
+        targetRole: 'Full Stack Engineer',
+        skills: ['React'],
+        summary: 'Transitioning',
+        user: {
+          id: userId,
+          email: 'user@example.com',
+          name: 'Test User',
+        },
+      };
+
+      const updateSkillsDto = {
+        skills: ['React', 'Next.js', 'NestJS'],
+      };
+
+      const updatedProfile = {
+        ...existingProfile,
+        skills: updateSkillsDto.skills,
+      };
+
+      mockPrismaService.careerProfile.findUnique.mockResolvedValue(existingProfile);
+      mockPrismaService.careerProfile.update.mockResolvedValue(updatedProfile);
+
+      const result = await service.update(userId, updateSkillsDto);
+
+      expect(result.skills).toEqual(updateSkillsDto.skills);
+      expect(mockPrismaService.careerProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: updateSkillsDto,
       });
     });
 

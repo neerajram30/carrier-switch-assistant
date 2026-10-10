@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -27,6 +28,11 @@ export class UpdateCareerProfileDto {
   @MaxLength(100, { message: 'targetRole must not exceed 100 characters' })
   @IsOptional()
   targetRole?: string;
+
+  @IsArray({ message: 'skills must be an array of strings' })
+  @IsString({ each: true, message: 'each skill must be a string' })
+  @IsOptional()
+  skills?: string[];
 
   @IsString({ message: 'summary must be a string' })
   @MaxLength(1000, { message: 'summary must not exceed 1000 characters' })
