@@ -17,6 +17,9 @@ interface ManualEntryStepProps {
   onBack: () => void;
   isSaving?: boolean;
   isLoadingExisting?: boolean;
+  loadError?: string | null;
+  onRetryLoad?: () => void;
+  isSubmissionAllowed?: boolean;
   errorMessage?: string | null;
   onClearError?: () => void;
 }
@@ -27,6 +30,9 @@ export function ManualEntryStep({
   onBack,
   isSaving = false,
   isLoadingExisting = false,
+  loadError = null,
+  onRetryLoad,
+  isSubmissionAllowed = true,
   errorMessage = null,
   onClearError,
 }: ManualEntryStepProps) {
@@ -58,6 +64,8 @@ export function ManualEntryStep({
   };
 
   const handleContinue = () => {
+    if (!isSubmissionAllowed || loadError) return;
+
     let hasError = false;
     if (!currentRole.trim()) {
       setRoleError('Current role is required');
@@ -67,17 +75,18 @@ export function ManualEntryStep({
     }
 
     const trimmedExp = yearsOfExperience.trim();
+    // Enforce decimal precision: non-negative integer or with at most one decimal place (e.g. 3 or 3.5)
+    const EXP_ONE_DECIMAL_REGEX = /^\d+(\.\d)?$/;
     if (!trimmedExp) {
       setExpError('Years of experience is required');
       hasError = true;
+    } else if (!EXP_ONE_DECIMAL_REGEX.test(trimmedExp)) {
+      setExpError(
+        'Years of experience must be a non-negative number with at most one decimal place (e.g. 3 or 3.5)',
+      );
+      hasError = true;
     } else {
-      const parsedExp = Number(trimmedExp);
-      if (isNaN(parsedExp) || parsedExp < 0) {
-        setExpError('Years of experience must be a non-negative number');
-        hasError = true;
-      } else {
-        setExpError(null);
-      }
+      setExpError(null);
     }
 
     if (hasError) return;
@@ -93,6 +102,8 @@ export function ManualEntryStep({
       targetRole: targetRole.trim() || undefined,
     });
   };
+
+  const isFormDisabled = isSaving || isLoadingExisting || Boolean(loadError);
 
   return (
     <VStack gap={5} width="100%">
@@ -113,6 +124,32 @@ export function ManualEntryStep({
               Checking for existing career profile...
             </Text>
           </HStack>
+        </Card>
+      )}
+
+      {loadError && (
+        <Card variant="red" elevation="none">
+          <VStack gap={3} padding={4}>
+            <HStack gap={2} align="center">
+              <StatusDot variant="error" label="Error" />
+              <Heading level={4} weight="medium" style={{ color: 'var(--color-text-red)' }}>
+                Could not verify existing profile status
+              </Heading>
+            </HStack>
+            <Text type="supporting" style={{ color: 'var(--color-text-red)' }}>
+              {loadError}
+            </Text>
+            {onRetryLoad && (
+              <HStack gap={2} paddingBlockStart={1}>
+                <Button
+                  label="Retry check"
+                  variant="secondary"
+                  size="sm"
+                  onClick={onRetryLoad}
+                />
+              </HStack>
+            )}
+          </VStack>
         </Card>
       )}
 
@@ -143,7 +180,7 @@ export function ManualEntryStep({
             if (onClearError) onClearError();
           }}
           status={roleError ? { type: 'error', message: roleError } : undefined}
-          isDisabled={isSaving}
+          isDisabled={isFormDisabled}
           isRequired
         />
 
@@ -157,7 +194,7 @@ export function ManualEntryStep({
             if (onClearError) onClearError();
           }}
           status={expError ? { type: 'error', message: expError } : undefined}
-          isDisabled={isSaving}
+          isDisabled={isFormDisabled}
           isRequired
         />
 
@@ -169,7 +206,7 @@ export function ManualEntryStep({
             setTargetRole(val);
             if (onClearError) onClearError();
           }}
-          isDisabled={isSaving}
+          isDisabled={isFormDisabled}
         />
 
         <TextInput
@@ -180,7 +217,7 @@ export function ManualEntryStep({
             setSummary(val);
             if (onClearError) onClearError();
           }}
-          isDisabled={isSaving}
+          isDisabled={isFormDisabled}
         />
 
         <VStack gap={2}>
@@ -193,7 +230,7 @@ export function ManualEntryStep({
                 key={skill}
                 label={skill}
                 color="blue"
-                onRemove={isSaving ? undefined : () => handleRemoveSkill(skill)}
+                onRemove={isFormDisabled ? undefined : () => handleRemoveSkill(skill)}
               />
             ))}
           </HStack>
@@ -206,14 +243,14 @@ export function ManualEntryStep({
               value={newSkill}
               onChange={setNewSkill}
               onEnter={handleAddSkill}
-              isDisabled={isSaving}
+              isDisabled={isFormDisabled}
             />
             <Button
               label="+ Add"
               variant="secondary"
               size="md"
               onClick={handleAddSkill}
-              isDisabled={isSaving || !newSkill.trim()}
+              isDisabled={isFormDisabled || !newSkill.trim()}
             />
           </HStack>
         </VStack>
@@ -230,7 +267,7 @@ export function ManualEntryStep({
           label={isSaving ? 'Saving...' : 'Continue to Goal →'}
           variant="primary"
           onClick={handleContinue}
-          isDisabled={isSaving || isLoadingExisting}
+          isDisabled={isSaving || isLoadingExisting || Boolean(loadError) || !isSubmissionAllowed}
         />
       </HStack>
     </VStack>

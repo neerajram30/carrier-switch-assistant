@@ -185,6 +185,32 @@ describe('career-profile.service', () => {
         },
       );
     });
+
+    it('sends null for summary and targetRole when they are empty strings to clear them', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...mockProfileResponse, summary: null, targetRole: null }),
+      } as Response);
+
+      await updateCareerProfile(
+        { summary: '   ', targetRole: '' },
+        mockApiUrl,
+        mockUserId,
+      );
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${mockApiUrl}/api/v1/career-profile`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': mockUserId,
+          },
+          body: JSON.stringify({ summary: null, targetRole: null }),
+        },
+      );
+    });
   });
 
   describe('saveCareerProfile', () => {

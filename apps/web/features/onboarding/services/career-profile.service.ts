@@ -62,8 +62,8 @@ export async function createCareerProfile(
     currentRole: data.currentRole.trim(),
     yearsOfExperience: Number(data.yearsOfExperience),
     skills: data.skills ?? [],
-    ...(data.summary?.trim() ? { summary: data.summary.trim() } : {}),
-    ...(data.targetRole?.trim() ? { targetRole: data.targetRole.trim() } : {}),
+    summary: data.summary?.trim() || null,
+    targetRole: data.targetRole?.trim() || null,
   };
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {
@@ -103,10 +103,10 @@ export async function updateCareerProfile(
     payload.skills = data.skills;
   }
   if (data.summary !== undefined) {
-    payload.summary = data.summary.trim() || undefined;
+    payload.summary = data.summary.trim() || null;
   }
   if (data.targetRole !== undefined) {
-    payload.targetRole = data.targetRole.trim() || undefined;
+    payload.targetRole = data.targetRole.trim() || null;
   }
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {

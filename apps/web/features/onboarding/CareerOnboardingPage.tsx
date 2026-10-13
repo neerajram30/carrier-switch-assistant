@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -26,6 +26,13 @@ const INITIAL_PROFILE_STATE: CareerProfileData = {
   summary: '',
 };
 
+type ProfileLoadStatus =
+  | 'unloaded'
+  | 'loading'
+  | 'found'
+  | 'not_found'
+  | 'error';
+
 interface CareerOnboardingPageProps {
   initialStep?: OnboardingStep;
   getProfileFn?: typeof getCareerProfile;
@@ -42,24 +49,31 @@ export default function CareerOnboardingPage({
     INITIAL_PROFILE_STATE,
   );
   const [isExistingProfile, setIsExistingProfile] = useState<boolean>(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
+  const [profileStatus, setProfileStatus] = useState<ProfileLoadStatus>(
+    initialStep === 'manual' ? 'loading' : 'unloaded',
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [, setUploadedFile] = useState<File | null>(null);
   const [, setUploadedResume] = useState<UploadedResumeInfo | null>(null);
 
+  const handleRetryLoad = useCallback(() => {
+    setLoadError(null);
+    setProfileStatus('loading');
+  }, []);
+
   // Fetch existing career profile when user navigates to manual entry
   useEffect(() => {
-    if (step !== 'manual') return;
+    if (step !== 'manual' || profileStatus !== 'loading') return;
 
-    let isCancelled = false;
+    let isMounted = true;
 
-    async function loadExistingProfile() {
-      setIsLoadingProfile(true);
+    async function fetchProfile() {
       try {
         const existing = await getProfileFn();
-        if (isCancelled) return;
+        if (!isMounted) return;
 
         if (existing) {
           setProfileData({
@@ -71,27 +85,27 @@ export default function CareerOnboardingPage({
             targetRole: existing.targetRole ?? '',
           });
           setIsExistingProfile(true);
+          setProfileStatus('found');
         } else {
           setIsExistingProfile(false);
+          setProfileStatus('not_found');
         }
       } catch (err) {
-        if (isCancelled) return;
-        setSaveError(
-          (err as Error).message || 'Could not check existing profile status',
+        if (!isMounted) return;
+        setProfileStatus('error');
+        setLoadError(
+          (err as Error).message ||
+            'Failed to load profile. Please check your connection and retry.',
         );
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingProfile(false);
-        }
       }
     }
 
-    loadExistingProfile();
+    void fetchProfile();
 
     return () => {
-      isCancelled = true;
+      isMounted = false;
     };
-  }, [step, getProfileFn]);
+  }, [step, profileStatus, getProfileFn]);
 
   const handleUploadSuccess = (
     file: File,
@@ -102,6 +116,11 @@ export default function CareerOnboardingPage({
   };
 
   const handleManualEntryComplete = async (profile: CareerProfileData) => {
+    // Only allow submission when profile status has been confirmed (found or not_found)
+    if (profileStatus !== 'found' && profileStatus !== 'not_found') {
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -117,6 +136,7 @@ export default function CareerOnboardingPage({
         targetRole: saved.targetRole ?? '',
       });
       setIsExistingProfile(true);
+      setProfileStatus('found');
       setSaveSuccess(true);
     } catch (err) {
       // Preserve user-entered form data on failure
@@ -164,13 +184,16 @@ export default function CareerOnboardingPage({
               onSwitchToManual={() => {
                 setSaveError(null);
                 setStep('manual');
+                if (profileStatus === 'unloaded') {
+                  setProfileStatus('loading');
+                }
               }}
             />
           )}
 
           {step === 'manual' && (
             <ManualEntryStep
-              key={profileData.id ?? (isLoadingProfile ? 'loading' : 'ready')}
+              key={profileData.id ?? 'new'}
               initialData={profileData}
               onContinue={handleManualEntryComplete}
               onBack={() => {
@@ -178,7 +201,12 @@ export default function CareerOnboardingPage({
                 setStep('upload');
               }}
               isSaving={isSaving}
-              isLoadingExisting={isLoadingProfile}
+              isLoadingExisting={profileStatus === 'loading'}
+              loadError={loadError}
+              onRetryLoad={handleRetryLoad}
+              isSubmissionAllowed={
+                profileStatus === 'found' || profileStatus === 'not_found'
+              }
               errorMessage={saveError}
               onClearError={() => setSaveError(null)}
             />

@@ -175,4 +175,90 @@ describe('CareerOnboardingPage Integration', () => {
     expect(screen.getByDisplayValue('DevOps Specialist')).toBeInTheDocument();
     expect(screen.getByDisplayValue('4')).toBeInTheDocument();
   });
+
+  it('blocks submit and shows retry option when profile fetch fails, then unblocks after retry succeeds', async () => {
+    const mockGetProfile = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Network connection timeout'))
+      .mockResolvedValueOnce(null);
+
+    const mockSaveProfile = vi.fn().mockResolvedValue({
+      id: 'prof-new-1',
+      userId: 'user-1',
+      currentRole: 'Backend Engineer',
+      yearsOfExperience: 3,
+      skills: [],
+      summary: '',
+      targetRole: '',
+      createdAt: '2026-10-10T00:00:00Z',
+      updatedAt: '2026-10-10T00:00:00Z',
+    });
+
+    render(
+      <CareerOnboardingPage
+        getProfileFn={mockGetProfile}
+        saveProfileFn={mockSaveProfile}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Enter details manually →/i }),
+    );
+
+    // Should show error and retry button
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Could not verify existing profile status/i),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText('Network connection timeout'),
+    ).toBeInTheDocument();
+
+    const retryButton = screen.getByRole('button', { name: /Retry check/i });
+    expect(retryButton).toBeInTheDocument();
+
+    const continueBtn = screen.getByRole('button', {
+      name: /Continue to Goal →/i,
+    });
+    expect(continueBtn).toBeDisabled();
+
+    // Now click Retry check
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(mockGetProfile).toHaveBeenCalledTimes(2);
+    });
+
+    // Error is dismissed and continue button is enabled
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Could not verify existing profile status/i),
+      ).not.toBeInTheDocument();
+    });
+
+    // Enter details and submit
+    const roleInput = screen.getByLabelText(/Current Role \*/i);
+    const expInput = screen.getByLabelText(/Years of Experience \*/i);
+
+    fireEvent.change(roleInput, { target: { value: 'Backend Engineer' } });
+    fireEvent.change(expInput, { target: { value: '3' } });
+
+    const submitBtn = screen.getByRole('button', {
+      name: /Continue to Goal →/i,
+    });
+    expect(submitBtn).not.toBeDisabled();
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockSaveProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentRole: 'Backend Engineer',
+          yearsOfExperience: '3',
+        }),
+        false,
+      );
+    });
+  });
 });

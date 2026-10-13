@@ -281,6 +281,46 @@ describe('CareerProfileService', () => {
       });
     });
 
+    it('successfully clears optional fields (targetRole and summary) when set to null', async () => {
+      const existingProfile = {
+        id: 'profile-1',
+        userId,
+        currentRole: 'Frontend Developer',
+        yearsOfExperience: 3,
+        targetRole: 'Full Stack Engineer',
+        summary: 'Transitioning',
+        skills: ['React'],
+        user: {
+          id: userId,
+          email: 'user@example.com',
+          name: 'Test User',
+        },
+      };
+
+      const clearDto = {
+        targetRole: null,
+        summary: null,
+      };
+
+      const updatedProfile = {
+        ...existingProfile,
+        targetRole: null,
+        summary: null,
+      };
+
+      mockPrismaService.careerProfile.findUnique.mockResolvedValue(existingProfile);
+      mockPrismaService.careerProfile.update.mockResolvedValue(updatedProfile);
+
+      const result = await service.update(userId, clearDto);
+
+      expect(result.targetRole).toBeNull();
+      expect(result.summary).toBeNull();
+      expect(mockPrismaService.careerProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: clearDto,
+      });
+    });
+
     it('throws NotFoundException if profile does not exist to update', async () => {
       // 1. ARRANGE
       mockPrismaService.careerProfile.findUnique.mockResolvedValue(null);

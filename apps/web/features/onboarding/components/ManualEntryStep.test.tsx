@@ -64,7 +64,28 @@ describe('ManualEntryStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continue to Goal →/i }));
 
     expect(
-      screen.getByText('Years of experience must be a non-negative number'),
+      screen.getByText(
+        /Years of experience must be a non-negative number/i,
+      ),
+    ).toBeInTheDocument();
+    expect(mockOnContinue).not.toHaveBeenCalled();
+  });
+
+  it('validates that yearsOfExperience has at most one decimal place and rejects multi-decimal values like 3.45', () => {
+    render(
+      <ManualEntryStep
+        initialData={{ currentRole: 'Software Developer', yearsOfExperience: '3.45', skills: [] }}
+        onContinue={mockOnContinue}
+        onBack={mockOnBack}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to Goal →/i }));
+
+    expect(
+      screen.getByText(
+        'Years of experience must be a non-negative number with at most one decimal place (e.g. 3 or 3.5)',
+      ),
     ).toBeInTheDocument();
     expect(mockOnContinue).not.toHaveBeenCalled();
   });
@@ -150,5 +171,38 @@ describe('ManualEntryStep', () => {
     // Form data is preserved
     expect(screen.getByDisplayValue('Backend Engineer')).toBeInTheDocument();
     expect(screen.getByDisplayValue('4')).toBeInTheDocument();
+  });
+
+  it('displays loadError, disables form inputs and continue button, and handles onRetryLoad', () => {
+    const mockOnRetryLoad = vi.fn();
+    render(
+      <ManualEntryStep
+        initialData={defaultInitialData}
+        onContinue={mockOnContinue}
+        onBack={mockOnBack}
+        loadError="API service is temporarily down"
+        onRetryLoad={mockOnRetryLoad}
+        isSubmissionAllowed={false}
+      />,
+    );
+
+    expect(
+      screen.getByText('Could not verify existing profile status'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('API service is temporarily down'),
+    ).toBeInTheDocument();
+
+    const continueBtn = screen.getByRole('button', {
+      name: /Continue to Goal →/i,
+    });
+    expect(continueBtn).toBeDisabled();
+
+    const retryBtn = screen.getByRole('button', { name: /Retry check/i });
+    expect(retryBtn).toBeInTheDocument();
+
+    fireEvent.click(retryBtn);
+    expect(mockOnRetryLoad).toHaveBeenCalledTimes(1);
+    expect(mockOnContinue).not.toHaveBeenCalled();
   });
 });
