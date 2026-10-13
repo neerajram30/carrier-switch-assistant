@@ -282,6 +282,21 @@ Production
 - The Definition of Done includes implementation, tests/validation, security consideration, documentation where needed, review, and passing CI.
 - For changes involving external infrastructure, include a real smoke test when mocks cannot verify the critical behavior.
 
+### 12.1 Local Quality Gates (Husky & lint-staged)
+
+To ensure code consistency and prevent broken code from being committed, local Git hooks are automated with Husky and lint-staged:
+
+- **Lifecycle Hook (`package.json`)**:
+  - `"prepare": "husky"` runs automatically on `npm install` to initialize hooks in `.husky/`.
+- **Pre-commit Hook (`.husky/pre-commit`)**:
+  - Triggers `npx lint-staged` on staged changes before any commit is finalized.
+- **Lint-staged Rules (`.lintstagedrc.json`)**:
+  - `apps/web/**/*.{ts,tsx}`: Runs `eslint -c apps/web/eslint.config.mjs --fix` to enforce web and React standards.
+  - `apps/api/**/*.ts`: Runs `oxlint` for high-performance static analysis across NestJS backend services.
+- **Workflow Principle**:
+  - Staged code must pass local linting before commits are recorded.
+  - This guards against syntax errors, unused variables, and style regressions before changes reach CI.
+
 ## 13. Suggested Product Delivery Sequence
 
 This sequence describes dependencies and intended direction, not a requirement to combine every item into one PR.

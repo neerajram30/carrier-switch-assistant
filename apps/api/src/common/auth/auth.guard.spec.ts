@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
-import type { Request } from 'express';
 import { AuthGuard } from './auth.guard.js';
 import type { CurrentUserProvider } from './current-user.provider.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';

@@ -1,10 +1,13 @@
+import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateCareerProfileDto {
@@ -20,13 +23,23 @@ export class CreateCareerProfileDto {
   @Min(0, { message: 'yearsOfExperience cannot be negative' })
   yearsOfExperience: number;
 
+  @Transform(({ value }: { value: unknown }) => (value === '' ? null : value))
+  @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsString({ message: 'targetRole must be a string' })
   @IsNotEmpty({ message: 'targetRole cannot be empty' })
   @MaxLength(100, { message: 'targetRole must not exceed 100 characters' })
-  targetRole: string;
-
-  @IsString({ message: 'summary must be a string' })
   @IsOptional()
+  targetRole?: string | null;
+
+  @IsArray({ message: 'skills must be an array of strings' })
+  @IsString({ each: true, message: 'each skill must be a string' })
+  @IsOptional()
+  skills?: string[];
+
+  @Transform(({ value }: { value: unknown }) => (value === '' ? null : value))
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsString({ message: 'summary must be a string' })
   @MaxLength(1000, { message: 'summary must not exceed 1000 characters' })
-  summary?: string;
+  @IsOptional()
+  summary?: string | null;
 }

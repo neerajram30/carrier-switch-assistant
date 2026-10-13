@@ -9,10 +9,24 @@ export interface UploadedResumeInfo {
 }
 
 export interface CareerProfileData {
+  id?: string;
   currentRole: string;
   yearsOfExperience: string;
   skills: string[];
   summary: string;
+  targetRole?: string;
+}
+
+export interface CareerProfileApiResponse {
+  id: string;
+  userId: string;
+  currentRole: string;
+  yearsOfExperience: number;
+  skills: string[];
+  summary?: string | null;
+  targetRole?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CareerGoal {

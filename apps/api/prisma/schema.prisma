@@ -29,7 +29,8 @@ model CareerProfile {
   userId            String   @unique // @unique enforces the 1:1 constraint
   currentRole       String
   yearsOfExperience Decimal  @db.Decimal(3, 1)
-  targetRole        String
+  targetRole        String?
+  skills            String[] @default([])
   summary           String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
