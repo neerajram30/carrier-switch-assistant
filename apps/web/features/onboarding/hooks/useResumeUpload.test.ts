@@ -173,4 +173,111 @@ describe('useResumeUpload Hook', () => {
     expect(result.current.uploadedResume).toBeNull();
     expect(result.current.uploadState).toBe('idle');
   });
+
+  it('triggers startProcessing and transitions to processed state on success', async () => {
+    const onSuccess = vi.fn();
+    const onProcessed = vi.fn();
+    const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+    const mockProcessResult = {
+      id: 'res-test-123',
+      userId: 'u1',
+      originalFileName: 'test.pdf',
+      status: 'PROCESSED',
+      extractedText: 'Plain text',
+      characterCount: 10,
+      structuredData: {
+        name: 'Jane Doe',
+        currentRole: 'Backend Dev',
+        yearsOfExperience: 4,
+        skills: ['Go', 'PostgreSQL'],
+        workExperience: [],
+        education: [],
+        projects: [],
+      },
+    };
+    const mockProcessFn = vi.fn().mockResolvedValue(mockProcessResult);
+
+    const { result } = renderHook(() =>
+      useResumeUpload(onSuccess, mockUploadFn, mockProcessFn, onProcessed),
+    );
+
+    const validPdf = new File(['%PDF content'], 'test.pdf', {
+      type: 'application/pdf',
+    });
+
+    await act(async () => {
+      await result.current.handleFileChange(validPdf);
+    });
+
+    expect(result.current.uploadState).toBe('uploaded');
+
+    await act(async () => {
+      await result.current.startProcessing();
+    });
+
+    expect(result.current.uploadState).toBe('processed');
+    expect(result.current.processedResult).toEqual(mockProcessResult);
+    expect(mockProcessFn).toHaveBeenCalledWith('res-test-123');
+    expect(onProcessed).toHaveBeenCalledWith(
+      mockProcessResult.structuredData,
+      mockProcessResult,
+    );
+  });
+
+  it('handles processing failure and allows retry', async () => {
+    const onSuccess = vi.fn();
+    const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+    const mockProcessFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('AI extraction rate limited'))
+      .mockResolvedValueOnce({
+        id: 'res-test-123',
+        userId: 'u1',
+        originalFileName: 'test.pdf',
+        status: 'PROCESSED',
+        extractedText: 'Text',
+        characterCount: 4,
+        structuredData: {
+          name: 'Jane',
+          currentRole: 'Engineer',
+          yearsOfExperience: 2,
+          skills: ['TypeScript'],
+          workExperience: [],
+          education: [],
+          projects: [],
+        },
+      });
+
+    const { result } = renderHook(() =>
+      useResumeUpload(onSuccess, mockUploadFn, mockProcessFn),
+    );
+
+    const validPdf = new File(['%PDF content'], 'test.pdf', {
+      type: 'application/pdf',
+    });
+
+    await act(async () => {
+      await result.current.handleFileChange(validPdf);
+    });
+
+    // First attempt fails
+    await act(async () => {
+      await result.current.startProcessing();
+    });
+
+    expect(result.current.uploadState).toBe('failed');
+    expect(result.current.failureType).toBe('processing_failed');
+    expect(result.current.validationError?.message).toBe(
+      'AI extraction rate limited',
+    );
+
+    // Retry succeeds
+    await act(async () => {
+      await result.current.retryProcessing();
+    });
+
+    expect(result.current.uploadState).toBe('processed');
+    expect(result.current.failureType).toBeNull();
+    expect(result.current.validationError).toBeNull();
+  });
 });

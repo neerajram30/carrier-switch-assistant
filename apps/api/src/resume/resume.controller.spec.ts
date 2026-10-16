@@ -8,6 +8,7 @@ import type { ResumeService } from './resume.service.js';
 describe('ResumeController', () => {
   let controller: ResumeController;
   let mockResumeService: any;
+  let mockResumeProcessingService: any;
 
   const mockUser: CurrentUser = {
     id: 'user-123',
@@ -19,8 +20,13 @@ describe('ResumeController', () => {
       createUploadIntent: vi.fn(),
       completeUpload: vi.fn(),
     };
+    mockResumeProcessingService = {
+      processResume: vi.fn(),
+      getResume: vi.fn(),
+    };
     controller = new ResumeController(
       mockResumeService as unknown as ResumeService,
+      mockResumeProcessingService as unknown as any,
     );
   });
 
@@ -77,6 +83,72 @@ describe('ResumeController', () => {
         dto,
       );
       expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('POST /api/v1/resumes/:id/process', () => {
+    it('delegates to resumeProcessingService.processResume with user and resumeId', async () => {
+      const mockProcessedResponse = {
+        id: 'res-1',
+        userId: 'user-123',
+        originalFileName: 'file.pdf',
+        status: 'PROCESSED',
+        extractedText: 'Extracted plain text content',
+        characterCount: 28,
+        structuredData: {
+          name: 'Jane Doe',
+          currentRole: 'Software Engineer',
+          yearsOfExperience: 3,
+          skills: ['TypeScript'],
+          workExperience: [],
+          education: [],
+          projects: [],
+        },
+        processedAt: new Date(),
+      };
+      mockResumeProcessingService.processResume.mockResolvedValue(
+        mockProcessedResponse,
+      );
+
+      const result = await controller.processResume(mockUser, 'res-1');
+
+      expect(mockResumeProcessingService.processResume).toHaveBeenCalledWith(
+        mockUser,
+        'res-1',
+      );
+      expect(result).toEqual(mockProcessedResponse);
+    });
+  });
+
+  describe('GET /api/v1/resumes/:id', () => {
+    it('delegates to resumeProcessingService.getResume with user and resumeId', async () => {
+      const mockGetResponse = {
+        id: 'res-1',
+        userId: 'user-123',
+        originalFileName: 'file.pdf',
+        status: 'PROCESSED',
+        extractedText: 'Extracted plain text content',
+        characterCount: 28,
+        structuredData: {
+          name: 'Jane Doe',
+          currentRole: 'Software Engineer',
+          yearsOfExperience: 3,
+          skills: ['TypeScript'],
+          workExperience: [],
+          education: [],
+          projects: [],
+        },
+        processedAt: new Date(),
+      };
+      mockResumeProcessingService.getResume.mockResolvedValue(mockGetResponse);
+
+      const result = await controller.getResume(mockUser, 'res-1');
+
+      expect(mockResumeProcessingService.getResume).toHaveBeenCalledWith(
+        mockUser,
+        'res-1',
+      );
+      expect(result).toEqual(mockGetResponse);
     });
   });
 });

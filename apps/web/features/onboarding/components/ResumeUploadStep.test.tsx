@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as vercelBlobClient from '@vercel/blob/client';
 import { ResumeUploadStep } from './ResumeUploadStep';
+import type { ProcessedResumeResult } from '../types';
 
 vi.mock('@vercel/blob/client', () => ({
   put: vi.fn(),
@@ -447,6 +448,163 @@ describe('ResumeUploadStep Component', () => {
         screen.getByText(/Stored object size does not match expected file size/i),
       ).toBeInTheDocument();
       expect(screen.queryByText('Resume uploaded')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Resume Processing States', () => {
+    it('allows starting processing after upload and navigates to review on completion', async () => {
+      const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+      const mockStructuredData = {
+        name: 'Jane Doe',
+        currentRole: 'Staff Software Engineer',
+        yearsOfExperience: 8,
+        skills: ['TypeScript', 'Node.js', 'React'],
+        workExperience: [],
+        education: [],
+        projects: [],
+      };
+      let resolveProcess!: (val: ProcessedResumeResult) => void;
+      const processPromise = new Promise<ProcessedResumeResult>((resolve) => {
+        resolveProcess = resolve;
+      });
+      const mockProcessFn = vi.fn().mockReturnValue(processPromise);
+      const onContinueToReview = vi.fn();
+
+      render(
+        <ResumeUploadStep
+          onSuccess={vi.fn()}
+          onContinueToReview={onContinueToReview}
+          onSwitchToManual={vi.fn()}
+          uploadFn={mockUploadFn}
+          processFn={mockProcessFn}
+        />,
+      );
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'sample.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+      });
+
+      const analyzeBtn = screen.getByRole('button', {
+        name: /Analyze resume with AI →/i,
+      });
+      fireEvent.click(analyzeBtn);
+
+      // Verify processing state
+      expect(
+        screen.getByText('Analyzing your resume with AI...'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Extracting your skills, experience, and current role to prepare your career profile.',
+        ),
+      ).toBeInTheDocument();
+
+      // Resolve processing
+      resolveProcess({
+        id: defaultMockResult.resumeId,
+        userId: 'u1',
+        originalFileName: 'sample.pdf',
+        status: 'PROCESSED',
+        extractedText: 'Full extracted text',
+        characterCount: 19,
+        structuredData: mockStructuredData,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Resume analysis complete')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText(/Detected Role: Staff Software Engineer/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Experience: 8 years/i)).toBeInTheDocument();
+      expect(screen.getByText(/Skills identified: 3/i)).toBeInTheDocument();
+
+      const continueBtn = screen.getByRole('button', {
+        name: /Continue to review extracted data →/i,
+      });
+      fireEvent.click(continueBtn);
+
+      expect(onContinueToReview).toHaveBeenCalledWith(mockStructuredData);
+    });
+
+    it('distinguishes processing failure from upload failure and provides retry option', async () => {
+      const mockUploadFn = vi.fn().mockResolvedValue(defaultMockResult);
+      const mockProcessFn = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error('The uploaded document contains little or no extractable text.'),
+        )
+        .mockResolvedValueOnce({
+          id: defaultMockResult.resumeId,
+          userId: 'u1',
+          originalFileName: 'sample.pdf',
+          status: 'PROCESSED',
+          extractedText: 'Valid text',
+          characterCount: 10,
+          structuredData: {
+            name: 'Jane Doe',
+            currentRole: 'Developer',
+            yearsOfExperience: 2,
+            skills: ['Python'],
+            workExperience: [],
+            education: [],
+            projects: [],
+          },
+        });
+
+      render(
+        <ResumeUploadStep
+          onSuccess={vi.fn()}
+          onContinueToReview={vi.fn()}
+          onSwitchToManual={vi.fn()}
+          uploadFn={mockUploadFn}
+          processFn={mockProcessFn}
+        />,
+      );
+
+      const input = document.querySelector('input[type="file"]')!;
+      const validPdf = new File(['%PDF content'], 'sample.pdf', {
+        type: 'application/pdf',
+      });
+
+      fireEvent.change(input, { target: { files: [validPdf] } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Analyze resume with AI →/i }),
+      );
+
+      // Verify processing failure alert
+      await waitFor(() => {
+        expect(screen.getByText('Resume processing failed')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText(
+          'The uploaded document contains little or no extractable text.',
+        ),
+      ).toBeInTheDocument();
+
+      const retryBtn = screen.getByRole('button', { name: /Retry processing/i });
+      expect(retryBtn).toBeInTheDocument();
+
+      // Click retry
+      fireEvent.click(retryBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Resume analysis complete')).toBeInTheDocument();
+      });
     });
   });
 });

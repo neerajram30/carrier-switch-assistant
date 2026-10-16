@@ -261,4 +261,113 @@ describe('CareerOnboardingPage Integration', () => {
       );
     });
   });
+
+  it('handles resume extraction to review to profile save flow', async () => {
+    const mockSaveProfile = vi.fn().mockResolvedValue({
+      id: 'prof-extracted-1',
+      userId: 'user-1',
+      currentRole: 'Senior Data Engineer',
+      yearsOfExperience: 6,
+      skills: ['Python', 'Spark'],
+      summary: '',
+      targetRole: '',
+      createdAt: '2026-10-15T00:00:00Z',
+      updatedAt: '2026-10-15T00:00:00Z',
+    });
+
+    const mockUploadFn = vi.fn().mockResolvedValue({
+      resumeId: 'res-flow-1',
+      storageKey: 'users/u1/resumes/res-flow-1/original.pdf',
+      status: 'UPLOADED' as const,
+    });
+
+    const mockProcessFn = vi.fn().mockResolvedValue({
+      id: 'res-flow-1',
+      userId: 'user-1',
+      originalFileName: 'resume.pdf',
+      status: 'PROCESSED',
+      extractedText: 'Extracted text',
+      characterCount: 14,
+      structuredData: {
+        name: 'Bob Smith',
+        currentRole: 'Senior Data Engineer',
+        yearsOfExperience: 6,
+        skills: ['Python', 'Spark'],
+        workExperience: [],
+        education: [],
+        projects: [],
+      },
+    });
+
+    render(
+      <CareerOnboardingPage
+        saveProfileFn={mockSaveProfile}
+        uploadFn={mockUploadFn}
+        processFn={mockProcessFn}
+      />,
+    );
+
+    const input = document.querySelector('input[type="file"]')!;
+    const mockPdf = new File(['%PDF content'], 'resume.pdf', {
+      type: 'application/pdf',
+    });
+
+    fireEvent.change(input, { target: { files: [mockPdf] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Resume uploaded')).toBeInTheDocument();
+    });
+
+    // Click analyze
+    fireEvent.click(
+      screen.getByRole('button', { name: /Analyze resume with AI →/i }),
+    );
+
+    // Wait for analysis complete
+    await waitFor(() => {
+      expect(screen.getByText('Resume analysis complete')).toBeInTheDocument();
+    });
+
+    // Click continue to review
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Continue to review extracted data →/i,
+      }),
+    );
+
+    // Verify review screen is rendered with extracted data
+    await waitFor(() => {
+      expect(
+        screen.getByText('Review extracted career data'),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByDisplayValue('Senior Data Engineer'),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue('6')).toBeInTheDocument();
+    expect(screen.getByText('Python')).toBeInTheDocument();
+    expect(screen.getByText('Spark')).toBeInTheDocument();
+
+    // Confirm & Save
+    fireEvent.click(
+      screen.getByRole('button', { name: /Confirm & Save Profile →/i }),
+    );
+
+    await waitFor(() => {
+      expect(mockSaveProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentRole: 'Senior Data Engineer',
+          yearsOfExperience: '6',
+          skills: expect.arrayContaining(['Python', 'Spark']),
+        }),
+        false,
+      );
+    });
+
+    // Success alert displayed
+    expect(
+      screen.getByText(/Career profile saved successfully!/i),
+    ).toBeInTheDocument();
+  });
 });

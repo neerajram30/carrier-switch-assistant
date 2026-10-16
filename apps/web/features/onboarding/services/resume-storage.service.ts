@@ -1,4 +1,5 @@
 import { put } from '@vercel/blob/client';
+import type { ProcessedResumeResult } from '../types';
 
 export interface UploadResumeResult {
   resumeId: string;
@@ -83,4 +84,27 @@ export async function uploadResumeDirectly(
     status: completeData.status || 'UPLOADED',
     blobUrl: blobResult?.url,
   };
+}
+
+export async function processResume(
+  resumeId: string,
+  apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  userId = '00000000-0000-0000-0000-000000000001',
+): Promise<ProcessedResumeResult> {
+  const response = await fetch(`${apiUrl}/api/v1/resumes/${resumeId}/process`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-id': userId,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || 'Failed to analyze resume. Please try again.',
+    );
+  }
+
+  return (await response.json()) as ProcessedResumeResult;
 }
