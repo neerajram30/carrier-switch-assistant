@@ -73,16 +73,40 @@ describe('Resume Document Extraction & Processing Lifecycle (Backend)', () => {
             where,
             data,
           }: {
-            where: { id: string; userId: string; status: { in: string[] } };
+            where: {
+              id: string;
+              userId: string;
+              status?: { in: string[] };
+              OR?: Array<{ status?: { in?: string[] } | string; updatedAt?: { lte?: Date } }>;
+            };
             data: Record<string, any>;
           }) => {
             const existing = mockResumeDb.get(where.id);
-            if (
-              existing &&
-              existing.userId === where.userId &&
-              where.status.in.includes(existing.status)
-            ) {
-              const updated = { ...existing, ...data };
+            if (!existing || existing.userId !== where.userId) {
+              return { count: 0 };
+            }
+
+            let matches = false;
+            if (where.status?.in) {
+              matches = where.status.in.includes(existing.status);
+            } else if (where.OR) {
+              matches = where.OR.some((condition) => {
+                if (condition.status && typeof condition.status === 'object' && condition.status.in) {
+                  return condition.status.in.includes(existing.status);
+                }
+                if (condition.status === existing.status) {
+                  if (condition.updatedAt?.lte) {
+                    const existingTime = new Date(existing.updatedAt || Date.now()).getTime();
+                    return existingTime <= condition.updatedAt.lte.getTime();
+                  }
+                  return true;
+                }
+                return false;
+              });
+            }
+
+            if (matches) {
+              const updated = { ...existing, ...data, updatedAt: new Date() };
               mockResumeDb.set(where.id, updated);
               return { count: 1 };
             }
@@ -313,6 +337,30 @@ describe('Resume Document Extraction & Processing Lifecycle (Backend)', () => {
       await expect(service.processResume(userA, resumeId)).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    it('recovers and allows retry when resume was left stuck in PROCESSING past the lock timeout (> 5 minutes)', async () => {
+      const resumeId = 'res-stuck-processing';
+      const storageKey = `users/${userA.id}/resumes/${resumeId}/resume.pdf`;
+      const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);
+
+      mockResumeDb.set(resumeId, {
+        id: resumeId,
+        userId: userA.id,
+        originalFileName: 'valid-resume.pdf',
+        contentType: 'application/pdf',
+        status: 'PROCESSING',
+        storageKey,
+        updatedAt: sixMinutesAgo,
+      });
+      mockStorageDb.set(storageKey, validPdfBuffer);
+
+      // Should recover from crash/stuck processing and succeed
+      const result = await service.processResume(userA, resumeId);
+
+      expect(result.status).toBe('PROCESSED');
+      expect(result.structuredData?.name).toBe('Jane Doe');
+      expect(result.processingError).toBeNull();
     });
 
     it('returns existing result idempotently when resume is already PROCESSED', async () => {

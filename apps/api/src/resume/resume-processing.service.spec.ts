@@ -38,7 +38,7 @@ describe('ResumeProcessingService', () => {
     processingError: null,
     processedAt: null,
     createdAt: new Date('2026-10-10T00:00:00Z'),
-    updatedAt: new Date('2026-10-10T00:00:00Z'),
+    updatedAt: new Date(),
   };
 
   const sampleExtractedText =
@@ -395,13 +395,41 @@ describe('ResumeProcessingService', () => {
         where: {
           id: failedResume.id,
           userId: mockUser.id,
-          status: { in: ['UPLOADED', 'FAILED'] },
+          OR: [
+            { status: { in: ['UPLOADED', 'FAILED'] } },
+            { status: 'PROCESSING', updatedAt: expect.any(Object) },
+          ],
         },
         data: {
           status: 'PROCESSING',
           processingError: null,
         },
       });
+    });
+
+    it('recovers and allows processing when resume is stuck in PROCESSING beyond the lock timeout', async () => {
+      const stuckResume = {
+        ...mockResume,
+        status: 'PROCESSING',
+        updatedAt: new Date(Date.now() - 6 * 60 * 1000), // 6 minutes ago
+      };
+      mockPrismaService.resume.findUnique.mockResolvedValue(stuckResume);
+      mockPrismaService.resume.updateMany.mockResolvedValue({ count: 1 });
+      const fakeBuffer = Buffer.from('fake-pdf-data');
+      mockStorage.download.mockResolvedValue(fakeBuffer);
+      mockPdfExtractor.supports.mockReturnValue(true);
+      mockPdfExtractor.extract.mockResolvedValue(sampleExtractedText);
+
+      mockPrismaService.resume.update.mockResolvedValue({
+        ...stuckResume,
+        status: 'PROCESSED',
+        extractedText: sampleExtractedText,
+        structuredData: sampleStructuredData,
+        processedAt: new Date(),
+      });
+
+      const result = await service.processResume(mockUser, stuckResume.id);
+      expect(result.status).toBe('PROCESSED');
     });
   });
 

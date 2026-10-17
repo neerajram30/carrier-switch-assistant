@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { validateExtractedCareerData } from './extracted-career-data.dto.js';
+import {
+  CONSTRAINTS,
+  validateExtractedCareerData,
+} from './extracted-career-data.dto.js';
 
 describe('validateExtractedCareerData', () => {
   it('returns empty safe structure with warning when input is null, undefined, or not an object', () => {
@@ -46,6 +49,7 @@ describe('validateExtractedCareerData', () => {
           technologies: [' Python ', 'PyTorch', 'Python'],
         },
       ],
+      extractionMethod: 'ai',
     };
 
     const result = validateExtractedCareerData(raw);
@@ -74,6 +78,7 @@ describe('validateExtractedCareerData', () => {
       description: 'Contextual assistant',
       technologies: ['Python', 'PyTorch'],
     });
+    expect(result.extractionMethod).toBe('ai');
   });
 
   it('supports missing or unknown fields without inventing data', () => {
@@ -107,5 +112,57 @@ describe('validateExtractedCareerData', () => {
 
     expect(result.yearsOfExperience).toBe(4.2);
     expect(result.education[0].graduationYear).toBe(2020);
+  });
+
+  it('strictly rejects malformed numeric strings and out-of-range experience values', () => {
+    // Malformed string with alpha prefix or suffix (previously accepted by parseFloat)
+    expect(validateExtractedCareerData({ yearsOfExperience: '5abc' }).yearsOfExperience).toBeNull();
+    expect(validateExtractedCareerData({ yearsOfExperience: 'abc5' }).yearsOfExperience).toBeNull();
+    expect(validateExtractedCareerData({ yearsOfExperience: '10.5.2' }).yearsOfExperience).toBeNull();
+
+    // Out-of-bounds experience (negative or > 70 years)
+    expect(validateExtractedCareerData({ yearsOfExperience: -2 }).yearsOfExperience).toBeNull();
+    expect(validateExtractedCareerData({ yearsOfExperience: 95 }).yearsOfExperience).toBeNull();
+    expect(validateExtractedCareerData({ yearsOfExperience: '75' }).yearsOfExperience).toBeNull();
+
+    // Valid boundary experience
+    expect(validateExtractedCareerData({ yearsOfExperience: 0 }).yearsOfExperience).toBe(0);
+    expect(validateExtractedCareerData({ yearsOfExperience: 70 }).yearsOfExperience).toBe(70);
+  });
+
+  it('enforces graduation year range constraints (1950 to currentYear + 10)', () => {
+    // Too far in the past
+    expect(validateExtractedCareerData({ education: [{ graduationYear: 1890 }] }).education[0].graduationYear).toBeNull();
+    expect(validateExtractedCareerData({ education: [{ graduationYear: '1949' }] }).education[0].graduationYear).toBeNull();
+
+    // Too far in the future
+    expect(validateExtractedCareerData({ education: [{ graduationYear: 2050 }] }).education[0].graduationYear).toBeNull();
+
+    // Valid years
+    expect(validateExtractedCareerData({ education: [{ graduationYear: 1995 }] }).education[0].graduationYear).toBe(1995);
+    expect(validateExtractedCareerData({ education: [{ graduationYear: '2024' }] }).education[0].graduationYear).toBe(2024);
+  });
+
+  it('bounds string lengths and limits excessive array items to prevent oversized payloads', () => {
+    const overlyLongName = 'A'.repeat(200);
+    const overlyLongRole = 'R'.repeat(300);
+    const overlyLongDescription = 'D'.repeat(5000);
+
+    const manySkills = Array.from({ length: 150 }, (_, i) => `Skill${i}`);
+    const manyWork = Array.from({ length: 50 }, (_, i) => ({ company: `Company${i}`, role: 'Dev' }));
+
+    const result = validateExtractedCareerData({
+      name: overlyLongName,
+      currentRole: overlyLongRole,
+      skills: manySkills,
+      workExperience: manyWork,
+      projects: [{ name: 'Project 1', description: overlyLongDescription, technologies: [] }],
+    });
+
+    expect(result.name?.length).toBe(CONSTRAINTS.MAX_NAME_LENGTH);
+    expect(result.currentRole?.length).toBe(CONSTRAINTS.MAX_ROLE_LENGTH);
+    expect(result.skills.length).toBe(CONSTRAINTS.MAX_SKILLS_COUNT);
+    expect(result.workExperience.length).toBe(CONSTRAINTS.MAX_WORK_ENTRIES);
+    expect(result.projects[0].description?.length).toBe(CONSTRAINTS.MAX_DESCRIPTION_LENGTH);
   });
 });

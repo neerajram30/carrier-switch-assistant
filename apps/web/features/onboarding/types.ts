@@ -45,6 +45,7 @@ export interface ExtractedCareerData {
   workExperience: WorkExperienceItem[];
   education: EducationItem[];
   projects: ProjectItem[];
+  extractionMethod?: 'ai' | 'heuristic';
   warnings?: string[];
 }
 

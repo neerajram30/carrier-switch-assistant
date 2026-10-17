@@ -83,7 +83,10 @@ export class DeterministicCareerDataExtractor implements CareerDataExtractor {
     );
 
     if (!resumeText || !resumeText.trim()) {
-      return validateExtractedCareerData(null);
+      return validateExtractedCareerData({
+        extractionMethod: 'heuristic',
+        warnings: ['Empty document provided to heuristic extractor.'],
+      });
     }
 
     const lines = resumeText
@@ -134,7 +137,6 @@ export class DeterministicCareerDataExtractor implements CareerDataExtractor {
     // 4. Skills extraction
     const skills: string[] = [];
     for (const skill of KNOWN_SKILLS) {
-      // Use boundary check, handling skills with dots like Next.js or Node.js
       const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const skillRegex = new RegExp(`(^|[^a-zA-Z0-9_])${escaped}($|[^a-zA-Z0-9_])`, 'i');
       if (skillRegex.test(resumeText)) {
@@ -150,7 +152,10 @@ export class DeterministicCareerDataExtractor implements CareerDataExtractor {
       workExperience: [],
       education: [],
       projects: [],
-      warnings: ['Extracted via deterministic heuristic fallback.'],
+      extractionMethod: 'heuristic',
+      warnings: [
+        'Extracted via deterministic heuristic fallback. Work experience, education, and projects could not be extracted automatically.',
+      ],
     });
   }
 }

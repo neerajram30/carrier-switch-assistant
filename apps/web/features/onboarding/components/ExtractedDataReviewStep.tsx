@@ -281,6 +281,26 @@ export function ExtractedDataReviewStep({
         </Card>
       )}
 
+      {/* Heuristic Extraction Notice when rule-based fallback was used */}
+      {(initialData.extractionMethod === 'heuristic' ||
+        initialData.warnings?.some((w) =>
+          w.toLowerCase().includes('heuristic'),
+        )) && (
+        <Card variant="default" elevation="none">
+          <VStack gap={1} padding={3}>
+            <HStack gap={2} align="center">
+              <StatusDot variant="neutral" label="Heuristic extraction notice" />
+              <Heading level={4} weight="medium">
+                Heuristic extraction used
+              </Heading>
+            </HStack>
+            <Text type="supporting" color="secondary">
+              Core skills and role were extracted using rule-based parsing because AI extraction was unavailable. Work experience, projects, and education were not automatically populated—please review and fill them in manually below.
+            </Text>
+          </VStack>
+        </Card>
+      )}
+
       {/* Error alert when save/confirmation fails (Task 3.3: Preserves edits) */}
       {saveError && (
         <Card variant="red" elevation="none">

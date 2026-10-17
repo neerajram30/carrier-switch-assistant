@@ -113,7 +113,16 @@ describe('GeminiCareerDataExtractor', () => {
     expect(result.education[0].graduationYear).toBe(2017);
     expect(result.projects).toHaveLength(1);
     expect(result.projects[0].technologies).toEqual(['Go', 'eBPF']);
+    expect(result.extractionMethod).toBe('ai');
     expect(mockFallback.extract).not.toHaveBeenCalled();
+
+    // Verify separation of trusted instructions and untrusted content
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const sentBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(sentBody.systemInstruction).toBeDefined();
+    expect(sentBody.systemInstruction.parts[0].text).toContain('You are a high-precision resume parsing engine');
+    expect(sentBody.contents[0].parts[0].text).toContain('<<<UNTRUSTED_RESUME_TEXT_START>>>');
+    expect(sentBody.contents[0].parts[0].text).not.toContain('You are a high-precision resume parsing engine');
   });
 
   it('falls back to deterministic extractor when Gemini API returns an HTTP error', async () => {

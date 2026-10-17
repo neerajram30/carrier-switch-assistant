@@ -8,7 +8,10 @@ vi.mock('@vercel/blob/client', () => ({
   put: vi.fn(),
 }));
 
-describe('Resume Processing End-to-End Integration Journey', () => {
+// This frontend integration suite exercises the complete client-side journey
+// across upload, processing transitions, review, editing, error preservation,
+// and profile persistence against mocked API and storage client boundaries.
+describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', () => {
   const originalFetch = global.fetch;
 
   beforeEach(() => {

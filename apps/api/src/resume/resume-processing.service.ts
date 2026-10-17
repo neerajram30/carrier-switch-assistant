@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -29,6 +28,7 @@ import type { TextExtractor } from './extractors/text-extractor.interface.js';
 import { normalizeExtractedText } from './extractors/text-normalizer.js';
 
 export const MIN_EXTRACTED_TEXT_LENGTH = 50;
+export const PROCESSING_LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 @Injectable()
 export class ResumeProcessingService {
@@ -75,12 +75,6 @@ export class ResumeProcessingService {
       );
     }
 
-    if (resume.status === 'PROCESSING') {
-      throw new ConflictException(
-        'Resume is currently being processed. Please wait for the current job to finish.',
-      );
-    }
-
     // 3. Idempotent return for already processed resumes
     if (resume.status === 'PROCESSED') {
       this.logger.debug(
@@ -89,12 +83,30 @@ export class ResumeProcessingService {
       return this.formatResponse(resume);
     }
 
-    // 4. Concurrency lock: atomically transition state from UPLOADED or FAILED to PROCESSING
+    // 4. Handle PROCESSING state with crash / timeout recovery
+    if (resume.status === 'PROCESSING') {
+      const timeSinceUpdate = Date.now() - new Date(resume.updatedAt).getTime();
+      if (timeSinceUpdate < PROCESSING_LOCK_TIMEOUT_MS) {
+        throw new ConflictException(
+          'Resume is currently being processed. Please wait for the current job to finish.',
+        );
+      }
+      this.logger.warn(
+        `Resume "${resumeId}" was left in PROCESSING for ${Math.round(timeSinceUpdate / 1000)}s (likely crashed or interrupted). Resetting lock for recovery retry.`,
+      );
+    }
+
+    // 5. Concurrency lock: atomically transition state to PROCESSING
+    // Allows recovery if record was stuck in PROCESSING beyond timeout
+    const staleThreshold = new Date(Date.now() - PROCESSING_LOCK_TIMEOUT_MS);
     const transition = await this.prisma.resume.updateMany({
       where: {
         id: resumeId,
         userId: user.id,
-        status: { in: ['UPLOADED', 'FAILED'] },
+        OR: [
+          { status: { in: ['UPLOADED', 'FAILED'] } },
+          { status: 'PROCESSING', updatedAt: { lte: staleThreshold } },
+        ],
       },
       data: {
         status: 'PROCESSING',
@@ -103,7 +115,6 @@ export class ResumeProcessingService {
     });
 
     if (transition.count === 0) {
-      // Re-fetch current record to provide accurate error response
       const current = await this.prisma.resume.findUnique({
         where: { id: resumeId },
       });
@@ -124,95 +135,100 @@ export class ResumeProcessingService {
       `Starting processing pipeline for resume "${resumeId}" (user: "${user.id}")`,
     );
 
-    // 5. Download file from private object storage via ObjectStoragePort abstraction
-    let buffer: Buffer | null;
+    // 6. Common failure boundary: wraps all processing operations
     try {
-      buffer = await this.storage.download(resume.storageKey);
-    } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Storage error';
-      await this.recordFailure(resumeId, `Failed to retrieve resume from storage: ${msg}`);
-      throw new BadRequestException(
-        `Could not retrieve resume from storage: ${msg}`,
+      // 6A. Download file from private object storage via abstraction
+      let buffer: Buffer | null;
+      try {
+        buffer = await this.storage.download(resume.storageKey);
+      } catch (storageErr: unknown) {
+        throw new BadRequestException(
+          `Failed to retrieve resume from storage: ${(storageErr as Error)?.message || 'Storage error'}`,
+        );
+      }
+
+      if (!buffer || buffer.length === 0) {
+        throw new NotFoundException(
+          'Resume file was not found in storage or is zero bytes.',
+        );
+      }
+
+      // 6B. Select appropriate text extractor
+      const extractor = this.extractors.find((e) =>
+        e.supports(resume.contentType, resume.originalFileName),
       );
-    }
 
-    if (!buffer || buffer.length === 0) {
-      await this.recordFailure(
-        resumeId,
-        'Resume file was not found in storage or is zero bytes.',
-      );
-      throw new NotFoundException(
-        'Resume file was not found in storage or is empty.',
-      );
-    }
+      if (!extractor) {
+        throw new BadRequestException(
+          `Unsupported document format for "${resume.originalFileName}" (${resume.contentType}).`,
+        );
+      }
 
-    // 6. Select appropriate extractor
-    const extractor = this.extractors.find((e) =>
-      e.supports(resume.contentType, resume.originalFileName),
-    );
-
-    if (!extractor) {
-      const err = `Unsupported document format for "${resume.originalFileName}" (${resume.contentType}).`;
-      await this.recordFailure(resumeId, err);
-      throw new BadRequestException(err);
-    }
-
-    // 7. Perform extraction and quality validation
-    let extractedText: string;
-    try {
+      // 6C. Perform document text extraction and quality validation
       const rawText = await extractor.extract(buffer);
-      extractedText = normalizeExtractedText(rawText);
+      const extractedText = normalizeExtractedText(rawText);
 
       if (extractedText.length < MIN_EXTRACTED_TEXT_LENGTH) {
         throw new BadRequestException(
           'The uploaded document contains little or no extractable text. Scanned images and empty documents are not supported. Please upload a text-based PDF or DOCX.',
         );
       }
-    } catch (err: unknown) {
-      const errorMessage =
-        (err as Error)?.message || 'Text extraction failed unexpectedly.';
-      await this.recordFailure(resumeId, errorMessage);
 
-      if (err instanceof HttpException) {
-        throw err;
+      // 6D. Extract structured career data via provider boundary
+      let structuredData: ExtractedCareerData;
+      try {
+        structuredData = await this.careerDataExtractor.extract(extractedText);
+      } catch (extractErr: unknown) {
+        this.logger.warn(
+          `Unexpected error during structured extraction: ${(extractErr as Error)?.message}. Using empty fallback.`,
+        );
+        structuredData = validateExtractedCareerData(null);
       }
-      throw new BadRequestException(errorMessage);
-    }
 
-    // 8. Extract structured career data via provider boundary
-    let structuredData: ExtractedCareerData;
-    try {
-      structuredData = await this.careerDataExtractor.extract(extractedText);
-    } catch (extractErr: unknown) {
-      this.logger.warn(
-        `Unexpected error during structured extraction: ${(extractErr as Error)?.message}. Using empty fallback.`,
+      // 6E. Persist processing results to PostgreSQL
+      const processedAt = new Date();
+      const updated = await this.prisma.resume.update({
+        where: { id: resumeId },
+        data: {
+          status: 'PROCESSED',
+          extractedText,
+          structuredData: structuredData as any,
+          processingError: null,
+          processedAt,
+        },
+      });
+
+      const durationMs = Date.now() - startTime;
+      // Privacy guard: Log safe metrics only (no resume text, no PII)
+      this.logger.log(
+        `Successfully processed resume "${resumeId}": ${extractedText.length} characters extracted, ${structuredData.skills.length} skills identified in ${durationMs}ms`,
       );
-      structuredData = validateExtractedCareerData(null);
+
+      return this.formatResponse(updated);
+    } catch (err: unknown) {
+      // Ensure we do not overwrite a successful result if processing already completed
+      const latest = await this.prisma.resume
+        .findUnique({ where: { id: resumeId } })
+        .catch(() => null);
+
+      if (latest?.status === 'PROCESSED') {
+        this.logger.warn(
+          `Resume "${resumeId}" was already marked PROCESSED; suppressing failure overwrite.`,
+        );
+        return this.formatResponse(latest);
+      }
+
+      // Separate internal diagnostic details from user-facing actionable error
+      const { userFacingMessage, internalDiagnostic } =
+        this.sanitizeErrorMessage(err);
+
+      await this.recordFailure(resumeId, userFacingMessage, internalDiagnostic);
+
+      if (err instanceof NotFoundException) {
+        throw new NotFoundException(userFacingMessage);
+      }
+      throw new BadRequestException(userFacingMessage);
     }
-
-    // 9. Persist processing results
-    // ARCHITECTURAL GUARANTEE (Task 2.3):
-    // Resume processing only updates the Resume record (unconfirmed suggestions).
-    // It NEVER creates, mutates, or silently overwrites the user's confirmed CareerProfile!
-    const processedAt = new Date();
-    const updated = await this.prisma.resume.update({
-      where: { id: resumeId },
-      data: {
-        status: 'PROCESSED',
-        extractedText,
-        structuredData: structuredData as any,
-        processingError: null,
-        processedAt,
-      },
-    });
-
-    const durationMs = Date.now() - startTime;
-    // Privacy guard: Log safe metrics only (no resume text, no PII)
-    this.logger.log(
-      `Successfully processed resume "${resumeId}": ${extractedText.length} characters extracted, ${structuredData.skills.length} skills identified in ${durationMs}ms`,
-    );
-
-    return this.formatResponse(updated);
   }
 
   async getResume(
@@ -236,20 +252,108 @@ export class ResumeProcessingService {
     return this.formatResponse(resume);
   }
 
+  private sanitizeErrorMessage(err: unknown): {
+    userFacingMessage: string;
+    internalDiagnostic: string;
+  } {
+    const rawMessage = (err as Error)?.message || String(err);
+
+    // 1. Scanned / Empty documents
+    if (
+      rawMessage.includes('little or no extractable text') ||
+      rawMessage.includes('Scanned images')
+    ) {
+      return {
+        userFacingMessage:
+          'The uploaded document contains little or no extractable text. Scanned images and empty documents are not supported. Please upload a text-based PDF or DOCX.',
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 2. Unsupported format
+    if (rawMessage.includes('Unsupported document format')) {
+      return {
+        userFacingMessage:
+          'Unsupported document format. Please upload a valid PDF or DOCX file.',
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 3. PDF parsing errors
+    if (
+      rawMessage.toLowerCase().includes('pdf') &&
+      (rawMessage.toLowerCase().includes('parse') ||
+        rawMessage.toLowerCase().includes('invalid') ||
+        rawMessage.toLowerCase().includes('structure') ||
+        rawMessage.toLowerCase().includes('corrupted'))
+    ) {
+      return {
+        userFacingMessage:
+          "Failed to parse PDF document: We couldn't extract readable text from this file. The document may be corrupted or password-protected. Please upload another PDF or DOCX file.",
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 4. DOCX parsing errors
+    if (
+      rawMessage.toLowerCase().includes('docx') &&
+      (rawMessage.toLowerCase().includes('parse') ||
+        rawMessage.toLowerCase().includes('document part') ||
+        rawMessage.toLowerCase().includes('corrupted') ||
+        rawMessage.toLowerCase().includes('zip'))
+    ) {
+      return {
+        userFacingMessage:
+          "Failed to parse DOCX document: We couldn't extract readable text from this file. The document may be corrupted or password-protected. Please upload another PDF or DOCX file.",
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 5. Storage retrieval errors
+    if (rawMessage.toLowerCase().includes('zero bytes')) {
+      return {
+        userFacingMessage:
+          'Resume file was not found in storage or is zero bytes. Please re-upload your resume.',
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    if (
+      rawMessage.toLowerCase().includes('storage') ||
+      rawMessage.toLowerCase().includes('blob') ||
+      rawMessage.toLowerCase().includes('not found')
+    ) {
+      return {
+        userFacingMessage:
+          "We couldn't retrieve your resume file from secure storage. Please try uploading your resume again.",
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 6. Generic safe fallback for internal/unexpected errors
+    return {
+      userFacingMessage:
+        'An unexpected error occurred while processing your resume. Please try again or enter your details manually.',
+      internalDiagnostic: rawMessage,
+    };
+  }
+
   private async recordFailure(
     resumeId: string,
-    errorMessage: string,
+    userFacingMessage: string,
+    internalDiagnostic: string,
   ): Promise<void> {
     try {
       await this.prisma.resume.update({
         where: { id: resumeId },
         data: {
           status: 'FAILED',
-          processingError: errorMessage,
+          processingError: userFacingMessage,
         },
       });
+      // Log diagnostic server-side without leaking resume contents or credentials
       this.logger.warn(
-        `Resume "${resumeId}" marked as FAILED: ${errorMessage}`,
+        `Resume "${resumeId}" marked as FAILED: ${internalDiagnostic}`,
       );
     } catch (dbErr: unknown) {
       this.logger.error(
