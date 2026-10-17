@@ -50,4 +50,5 @@ export interface ObjectStoragePort {
   ): Promise<UploadTokenResult>;
   exists(storageKey: string): Promise<boolean>;
   head(storageKey: string): Promise<StorageMetadata | null>;
+  download(storageKey: string): Promise<Buffer | null>;
 }

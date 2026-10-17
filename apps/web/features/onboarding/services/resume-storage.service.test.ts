@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as vercelBlobClient from '@vercel/blob/client';
-import { uploadResumeDirectly } from './resume-storage.service';
+import { processResume, uploadResumeDirectly } from './resume-storage.service';
 
 vi.mock('@vercel/blob/client', () => ({
   put: vi.fn(),
@@ -166,5 +166,74 @@ describe('uploadResumeDirectly Service', () => {
     await expect(uploadResumeDirectly(mockFile)).rejects.toThrow(
       'Object does not exist in storage',
     );
+  });
+});
+
+describe('processResume Service', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('calls POST /api/v1/resumes/:id/process and returns structured data', async () => {
+    const mockResponse = {
+      id: 'res-uuid-1',
+      userId: 'dev-user-123',
+      originalFileName: 'my-resume.pdf',
+      status: 'PROCESSED',
+      extractedText: 'Extracted plain text resume content',
+      characterCount: 36,
+      structuredData: {
+        name: 'Jane Doe',
+        currentRole: 'Senior Software Engineer',
+        yearsOfExperience: 6,
+        skills: ['TypeScript', 'React'],
+        workExperience: [],
+        education: [],
+        projects: [],
+      },
+      processedAt: '2026-10-15T00:00:00.000Z',
+    };
+
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    const result = await processResume(
+      'res-uuid-1',
+      'http://localhost:3001',
+      'dev-user-123',
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:3001/api/v1/resumes/res-uuid-1/process',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'dev-user-123',
+        },
+      },
+    );
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('throws informative error when extraction fails with error message', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({
+        message: 'Unsupported document format',
+      }),
+    });
+
+    await expect(
+      processResume('res-uuid-1', 'http://localhost:3001', 'dev-user-123'),
+    ).rejects.toThrow('Unsupported document format');
   });
 });

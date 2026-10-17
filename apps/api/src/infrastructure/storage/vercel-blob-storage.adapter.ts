@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { del, head, put } from '@vercel/blob';
+import { del, get, head, put } from '@vercel/blob';
 import { generateClientTokenFromReadWriteToken } from '@vercel/blob/client';
 import type {
   GenerateUploadTokenOptions,
@@ -134,5 +134,41 @@ export class VercelBlobStorageAdapter
   async exists(storageKey: string): Promise<boolean> {
     const metadata = await this.head(storageKey);
     return metadata !== null;
+  }
+
+  async download(storageKey: string): Promise<Buffer | null> {
+    this.logger.debug(`Downloading file from Vercel Blob: ${storageKey}`);
+
+    try {
+      const result = await get(storageKey, {
+        access: 'private',
+        token: this.token,
+      });
+
+      if (!result || result.statusCode === 304 || !result.stream) {
+        return null;
+      }
+
+      const chunks: Uint8Array[] = [];
+      const reader = result.stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      return Buffer.concat(chunks);
+    } catch (error) {
+      if (
+        (error as Error).name === 'BlobNotFoundError' ||
+        (error as Error).message?.includes('could not find') ||
+        (error as Error).message?.toLowerCase().includes('not found')
+      ) {
+        return null;
+      }
+      this.logger.error(
+        `Failed to download file from Vercel Blob at "${storageKey}": ${(error as Error).message}`,
+      );
+      throw error;
+    }
   }
 }
