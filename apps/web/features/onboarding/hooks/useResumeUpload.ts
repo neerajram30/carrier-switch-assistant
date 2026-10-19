@@ -1,8 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import type { FileValidationError, UploadState, UploadedResumeInfo } from '../types';
+import type {
+  ExtractedCareerData,
+  FileValidationError,
+  ProcessedResumeResult,
+  ProcessingFailureType,
+  UploadProcessingState,
+  UploadedResumeInfo,
+} from '../types';
 import {
+  processResume,
   uploadResumeDirectly,
   type UploadResumeResult,
 } from '../services/resume-storage.service';
@@ -13,13 +21,29 @@ const ACCEPTED_EXTENSIONS = ['.pdf', '.docx'];
 export function useResumeUpload(
   onSuccess?: (file: File, resumeInfo: UploadedResumeInfo) => void,
   uploadFn: (file: File) => Promise<UploadResumeResult> = uploadResumeDirectly,
+  processFn: (resumeId: string) => Promise<ProcessedResumeResult> = processResume,
+  onProcessed?: (
+    data: ExtractedCareerData,
+    result: ProcessedResumeResult,
+  ) => void,
+  autoProcess = false,
 ) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [validationError, setValidationError] = useState<FileValidationError | null>(null);
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [uploadedResume, setUploadedResume] = useState<UploadedResumeInfo | null>(null);
+  const [validationError, setValidationError] =
+    useState<FileValidationError | null>(null);
+  const [uploadState, setUploadState] = useState<UploadProcessingState>('idle');
+  const [uploadedResume, setUploadedResume] =
+    useState<UploadedResumeInfo | null>(null);
+  const [failureType, setFailureType] = useState<ProcessingFailureType | null>(
+    null,
+  );
+  const [processedResult, setProcessedResult] =
+    useState<ProcessedResumeResult | null>(null);
 
-  const isProcessing = uploadState === 'validating' || uploadState === 'uploading';
+  const isProcessing =
+    uploadState === 'validating' ||
+    uploadState === 'uploading' ||
+    uploadState === 'processing';
 
   const validateFile = (file: File): FileValidationError | null => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -42,12 +66,57 @@ export function useResumeUpload(
     return null;
   };
 
+  const startProcessing = async (targetResumeId?: string) => {
+    const resumeId = targetResumeId || uploadedResume?.resumeId;
+    if (!resumeId) return;
+
+    setUploadState('processing');
+    setValidationError(null);
+    setFailureType(null);
+
+    try {
+      const result = await processFn(resumeId);
+      setProcessedResult(result);
+      setUploadState('processed');
+
+      const extractedData: ExtractedCareerData = result.structuredData || {
+        name: null,
+        currentRole: null,
+        yearsOfExperience: null,
+        skills: [],
+        workExperience: [],
+        education: [],
+        projects: [],
+      };
+
+      onProcessed?.(extractedData, result);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to analyze resume with AI. Please try again.';
+      setValidationError({
+        fileName: selectedFile?.name || 'Resume',
+        message,
+        reason: 'processing_failed',
+      });
+      setFailureType('processing_failed');
+      setUploadState('failed');
+    }
+  };
+
+  const retryProcessing = async () => {
+    await startProcessing();
+  };
+
   const handleFileChange = async (fileOrFiles: File | File[] | null) => {
     const file = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
     if (!file) {
       setSelectedFile(null);
       setValidationError(null);
       setUploadedResume(null);
+      setProcessedResult(null);
+      setFailureType(null);
       setUploadState('idle');
       return;
     }
@@ -57,11 +126,14 @@ export function useResumeUpload(
       setSelectedFile(null);
       setValidationError(error);
       setUploadedResume(null);
+      setProcessedResult(null);
+      setFailureType(null);
       setUploadState('idle');
       return;
     }
 
     setValidationError(null);
+    setFailureType(null);
     setSelectedFile(file);
     setUploadState('uploading');
 
@@ -75,6 +147,10 @@ export function useResumeUpload(
       setUploadedResume(resumeInfo);
       setUploadState('uploaded');
       onSuccess?.(file, resumeInfo);
+
+      if (autoProcess) {
+        await startProcessing(result.resumeId);
+      }
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -82,6 +158,8 @@ export function useResumeUpload(
           : 'Failed to upload resume. Please try again.';
       setSelectedFile(null);
       setUploadedResume(null);
+      setProcessedResult(null);
+      setFailureType('upload_failed');
       setValidationError({
         fileName: file.name,
         message,
@@ -93,8 +171,10 @@ export function useResumeUpload(
 
   const clearError = () => {
     setValidationError(null);
+    setFailureType(null);
     setSelectedFile(null);
     setUploadedResume(null);
+    setProcessedResult(null);
     setUploadState('idle');
   };
 
@@ -103,8 +183,12 @@ export function useResumeUpload(
     validationError,
     uploadState,
     uploadedResume,
+    processedResult,
+    failureType,
     isProcessing,
     handleFileChange,
+    startProcessing,
+    retryProcessing,
     clearError,
   };
 }

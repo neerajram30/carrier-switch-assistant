@@ -8,6 +8,7 @@ vi.mock('@vercel/blob', () => ({
   put: vi.fn(),
   del: vi.fn(),
   head: vi.fn(),
+  get: vi.fn(),
 }));
 
 vi.mock('@vercel/blob/client', () => ({
@@ -223,6 +224,63 @@ describe('VercelBlobStorageAdapter', () => {
       vi.mocked(vercelBlob.head).mockRejectedValue(networkError as never);
 
       await expect(adapter.head(storageKey)).rejects.toThrow('Connection refused');
+    });
+  });
+
+  describe('download', () => {
+    it('downloads blob content and returns buffer on success', async () => {
+      const storageKey = 'users/u1/resumes/res-1/original.pdf';
+      const fileData = Buffer.from('pdf file binary content');
+
+      // ReadableStream mock
+      const mockStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(fileData));
+          controller.close();
+        },
+      });
+
+      vi.mocked(vercelBlob.get).mockResolvedValue({
+        statusCode: 200,
+        stream: mockStream,
+      } as never);
+
+      const result = await adapter.download(storageKey);
+
+      expect(vercelBlob.get).toHaveBeenCalledWith(storageKey, {
+        access: 'private',
+        token: 'mock-token-xyz',
+      });
+      expect(result).toEqual(fileData);
+    });
+
+    it('returns null when blob is not found (BlobNotFoundError)', async () => {
+      const storageKey = 'users/u1/resumes/missing.pdf';
+      const notFoundError = new Error('Blob not found');
+      notFoundError.name = 'BlobNotFoundError';
+      vi.mocked(vercelBlob.get).mockRejectedValue(notFoundError as never);
+
+      const result = await adapter.download(storageKey);
+      expect(result).toBeNull();
+    });
+
+    it('returns null when result is null or status is 304', async () => {
+      const storageKey = 'users/u1/resumes/cached.pdf';
+      vi.mocked(vercelBlob.get).mockResolvedValue({
+        statusCode: 304,
+        stream: null,
+      } as never);
+
+      const result = await adapter.download(storageKey);
+      expect(result).toBeNull();
+    });
+
+    it('rethrows unexpected errors', async () => {
+      const storageKey = 'users/u1/resumes/res-1/original.pdf';
+      const networkError = new Error('Connection timed out');
+      vi.mocked(vercelBlob.get).mockRejectedValue(networkError as never);
+
+      await expect(adapter.download(storageKey)).rejects.toThrow('Connection timed out');
     });
   });
 });
