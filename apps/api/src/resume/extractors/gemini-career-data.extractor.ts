@@ -155,7 +155,7 @@ export class GeminiCareerDataExtractor implements CareerDataExtractor {
         extractionMethod: 'heuristic',
         warnings: [
           ...(fallbackResult.warnings || []),
-          `AI extraction failed (${errorMsg.slice(0, 100)}); used deterministic heuristic fallback.`,
+          'AI extraction was unavailable. Career information was extracted using a limited heuristic method and may require additional review.',
         ],
       };
     }

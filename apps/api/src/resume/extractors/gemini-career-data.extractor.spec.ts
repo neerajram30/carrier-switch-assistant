@@ -143,7 +143,11 @@ describe('GeminiCareerDataExtractor', () => {
     expect(mockFallback.extract).toHaveBeenCalledWith('Resume content');
     expect(result.name).toBe('Fallback Name');
     expect(result.warnings).toBeDefined();
-    expect(result.warnings?.some((w) => w.includes('HTTP 429'))).toBe(true);
+    expect(
+      result.warnings?.some((w) => w.includes('AI extraction was unavailable')),
+    ).toBe(true);
+    // Verify no raw HTTP error leaked into the warning
+    expect(result.warnings?.some((w) => w.includes('HTTP 429'))).toBe(false);
   });
 
   it('falls back to deterministic extractor when network fetch throws or times out', async () => {
@@ -159,6 +163,13 @@ describe('GeminiCareerDataExtractor', () => {
 
     expect(mockFallback.extract).toHaveBeenCalledWith('Resume content');
     expect(result.name).toBe('Fallback Name');
-    expect(result.warnings?.some((w) => w.includes('Connection timed out'))).toBe(true);
+    expect(result.warnings).toBeDefined();
+    expect(
+      result.warnings?.some((w) => w.includes('AI extraction was unavailable')),
+    ).toBe(true);
+    // Verify no network exception string leaked into the warning
+    expect(
+      result.warnings?.some((w) => w.includes('Connection timed out')),
+    ).toBe(false);
   });
 });

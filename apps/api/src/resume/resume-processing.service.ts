@@ -179,10 +179,28 @@ export class ResumeProcessingService {
       try {
         structuredData = await this.careerDataExtractor.extract(extractedText);
       } catch (extractErr: unknown) {
-        this.logger.warn(
-          `Unexpected error during structured extraction: ${(extractErr as Error)?.message}. Using empty fallback.`,
+        this.logger.error(
+          `Structured career extraction failed unexpectedly: ${(extractErr as Error)?.message}`,
+          (extractErr as Error)?.stack,
         );
-        structuredData = validateExtractedCareerData(null);
+        throw new BadRequestException(
+          "We couldn't extract readable career information from this document. Please upload another PDF or DOCX file or enter your details manually.",
+        );
+      }
+
+      // If the extractor produced no role, no experience, and no skills, represent as partial extraction with a warning
+      if (
+        !structuredData.currentRole &&
+        structuredData.yearsOfExperience === null &&
+        structuredData.skills.length === 0
+      ) {
+        structuredData = {
+          ...structuredData,
+          warnings: [
+            ...(structuredData.warnings || []),
+            'Career information could not be clearly identified from this document. Please review and enter your role and skills manually.',
+          ],
+        };
       }
 
       // 6E. Persist processing results to PostgreSQL
@@ -330,7 +348,16 @@ export class ResumeProcessingService {
       };
     }
 
-    // 6. Generic safe fallback for internal/unexpected errors
+    // 6. Extraction failure
+    if (rawMessage.includes("couldn't extract readable career information")) {
+      return {
+        userFacingMessage:
+          "We couldn't extract readable career information from this document. Please upload another PDF or DOCX file or enter your details manually.",
+        internalDiagnostic: rawMessage,
+      };
+    }
+
+    // 7. Generic safe fallback for internal/unexpected errors
     return {
       userFacingMessage:
         'An unexpected error occurred while processing your resume. Please try again or enter your details manually.',

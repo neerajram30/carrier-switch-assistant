@@ -365,6 +365,63 @@ describe('ResumeProcessingService', () => {
       expect(mockDocxExtractor.extract).toHaveBeenCalledWith(fakeBuffer);
     });
 
+    it('marks resume as FAILED and throws BadRequestException when structured extraction fails unexpectedly', async () => {
+      mockPrismaService.resume.findUnique.mockResolvedValue(mockResume);
+      mockPrismaService.resume.updateMany.mockResolvedValue({ count: 1 });
+      const fakeBuffer = Buffer.from('fake-pdf-data');
+      mockStorage.download.mockResolvedValue(fakeBuffer);
+      mockPdfExtractor.supports.mockReturnValue(true);
+      mockPdfExtractor.extract.mockResolvedValue(sampleExtractedText);
+      mockCareerDataExtractor.extract.mockRejectedValue(
+        new Error('Total AI & heuristic extraction failure'),
+      );
+
+      await expect(
+        service.processResume(mockUser, mockResume.id),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrismaService.resume.update).toHaveBeenCalledWith({
+        where: { id: mockResume.id },
+        data: {
+          status: 'FAILED',
+          processingError: expect.stringContaining(
+            "couldn't extract readable career information",
+          ),
+        },
+      });
+    });
+
+    it('adds partial extraction warning when structured extraction produces no role, experience, or skills', async () => {
+      mockPrismaService.resume.findUnique.mockResolvedValue(mockResume);
+      mockPrismaService.resume.updateMany.mockResolvedValue({ count: 1 });
+      const fakeBuffer = Buffer.from('fake-pdf-data');
+      mockStorage.download.mockResolvedValue(fakeBuffer);
+      mockPdfExtractor.supports.mockReturnValue(true);
+      mockPdfExtractor.extract.mockResolvedValue(sampleExtractedText);
+      mockCareerDataExtractor.extract.mockResolvedValue({
+        name: 'Some Name',
+        currentRole: null,
+        yearsOfExperience: null,
+        skills: [],
+        workExperience: [],
+        education: [],
+        projects: [],
+      });
+
+      mockPrismaService.resume.update.mockImplementation(async ({ data }) => ({
+        ...mockResume,
+        ...data,
+      }));
+
+      const result = await service.processResume(mockUser, mockResume.id);
+      expect(result.status).toBe('PROCESSED');
+      expect(
+        result.structuredData?.warnings?.some((w) =>
+          w.includes('could not be clearly identified'),
+        ),
+      ).toBe(true);
+    });
+
     it('allows retry when resume previous status was FAILED', async () => {
       const failedResume = {
         ...mockResume,
