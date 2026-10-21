@@ -206,31 +206,98 @@ export default function CareerOnboardingPage({
       width="100%"
       minHeight="100vh"
       padding={4}
+      style={{ paddingTop: '3rem', paddingBottom: '3rem' }}
     >
-      <Card maxWidth={720} width="100%" elevation="low" padding={5}>
-        <VStack gap={5} width="100%">
+      <Card
+        maxWidth={step === 'review' ? 1180 : 720}
+        width="100%"
+        elevation="low"
+        padding={step === 'review' ? 4 : 5}
+        style={{
+          transition: 'max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          margin: '1.5rem 0',
+        }}
+      >
+        <VStack gap={4} width="100%">
           <OnboardingHeader currentStep={step === 'upload' ? 1 : 2} />
 
           {saveSuccess && (
-            <Card variant="green" elevation="none">
-              <HStack gap={3} align="center" padding={3}>
-                <StatusDot variant="success" label="Saved" />
-                <VStack gap={1}>
-                  <Heading
-                    level={4}
-                    weight="medium"
-                    style={{ color: 'var(--color-text-green)' }}
-                  >
-                    Career profile saved successfully!
-                  </Heading>
-                  <Text
-                    type="supporting"
-                    style={{ color: 'var(--color-text-green)' }}
-                  >
-                    Your details have been saved to PostgreSQL.
-                  </Text>
-                </VStack>
-              </HStack>
+            <Card
+              variant="green"
+              elevation="none"
+              style={{
+                border: '1px solid var(--color-border-green, rgba(16, 185, 129, 0.3))',
+                background:
+                  'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%)',
+              }}
+            >
+              <VStack gap={4} padding={4}>
+                <HStack gap={3} align="center">
+                  <StatusDot variant="success" label="Trajectory Locked" />
+                  <VStack gap={1}>
+                    <Heading
+                      level={4}
+                      weight="medium"
+                      style={{ color: 'var(--color-text-green)' }}
+                    >
+                      Career profile saved successfully!
+                    </Heading>
+                    <Text
+                      type="supporting"
+                      style={{ color: 'var(--color-text-green)' }}
+                    >
+                      Trajectory locked &amp; baseline established. Your roadmap engine is ready.
+                    </Text>
+                  </VStack>
+                </HStack>
+
+                {/* Trajectory Flight Manifest */}
+                <Card
+                  variant="default"
+                  elevation="none"
+                  style={{
+                    background: 'var(--color-surface-elevated, rgba(255, 255, 255, 0.03))',
+                    border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
+                  }}
+                >
+                  <HStack justify="between" align="center" padding={3} wrap="wrap" gap={3}>
+                    <VStack gap={1}>
+                      <Text type="supporting" color="secondary">
+                        Origin Baseline
+                      </Text>
+                      <Text type="body" weight="semibold">
+                        {profileData.currentRole} ({profileData.yearsOfExperience} yrs)
+                      </Text>
+                    </VStack>
+
+                    <span style={{ color: 'var(--color-text-green, #10b981)', fontSize: '1.2rem' }}>
+                      ──▶
+                    </span>
+
+                    <VStack gap={1}>
+                      <Text type="supporting" color="secondary">
+                        Target Horizon
+                      </Text>
+                      <Text
+                        type="body"
+                        weight="semibold"
+                        style={{ color: 'var(--color-text-green, #10b981)' }}
+                      >
+                        {profileData.targetRole || 'Full Career Potential'}
+                      </Text>
+                    </VStack>
+
+                    <VStack gap={1}>
+                      <Text type="supporting" color="secondary">
+                        Arsenal
+                      </Text>
+                      <Text type="body" weight="semibold">
+                        {profileData.skills.length} competencies locked
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Card>
+              </VStack>
             </Card>
           )}
 

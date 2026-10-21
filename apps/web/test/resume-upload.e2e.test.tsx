@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as vercelBlobClient from '@vercel/blob/client';
-import Home from '../app/page';
+import OnboardingRoute from '../app/onboarding/page';
 
 // Controlled test adapter / mock for external Vercel Blob client boundary
 vi.mock('@vercel/blob/client', () => ({
@@ -70,7 +70,7 @@ describe('Resume Upload E2E Journey', () => {
     // -------------------------------------------------------------------------
     // Step 1: Open / (Mount root Next.js page)
     // -------------------------------------------------------------------------
-    render(<Home />);
+    render(<OnboardingRoute />);
 
     // Verify initial wireframe is present
     expect(

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as vercelBlobClient from '@vercel/blob/client';
-import Home from '../app/page';
+import OnboardingRoute from '../app/onboarding/page';
 
 // Mock the external Vercel Blob client
 vi.mock('@vercel/blob/client', () => ({
@@ -172,7 +172,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
     // -------------------------------------------------------------------------
     // Step 1: Render Home Page
     // -------------------------------------------------------------------------
-    render(<Home />);
+    render(<OnboardingRoute />);
 
     expect(screen.getByText('Build your career baseline')).toBeInTheDocument();
 
@@ -376,7 +376,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
       etag: 'etag-1',
     });
 
-    render(<Home />);
+    render(<OnboardingRoute />);
 
     const fileInput = document.querySelector('input[type="file"]')!;
     fireEvent.change(fileInput, {

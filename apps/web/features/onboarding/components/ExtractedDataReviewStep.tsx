@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Divider } from '@astryxdesign/core/Divider';
@@ -11,6 +11,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Token } from '@astryxdesign/core/Token';
+import { TrajectoryStrengthGauge } from './TrajectoryStrengthGauge';
 import type {
   CareerProfileData,
   EducationItem,
@@ -18,6 +19,21 @@ import type {
   ProjectItem,
   WorkExperienceItem,
 } from '../types';
+
+const SUGGESTED_SKILLS_POOL = [
+  'TypeScript',
+  'React',
+  'Node.js',
+  'Next.js',
+  'Go',
+  'Python',
+  'Docker',
+  'Kubernetes',
+  'AWS',
+  'PostgreSQL',
+  'GraphQL',
+  'System Design',
+];
 
 interface ExtractedDataReviewStepProps {
   initialData: ExtractedCareerData;
@@ -59,6 +75,13 @@ export function ExtractedDataReviewStep({
   // 2. Technical Skills
   const [skills, setSkills] = useState<string[]>(initialData.skills || []);
   const [newSkillInput, setNewSkillInput] = useState('');
+
+  const suggestedSkills = useMemo(() => {
+    const currentLower = new Set(skills.map((s) => s.toLowerCase()));
+    return SUGGESTED_SKILLS_POOL.filter(
+      (s) => !currentLower.has(s.toLowerCase()),
+    ).slice(0, 5);
+  }, [skills]);
 
   // 3. Work Experience
   const [workExperience, setWorkExperience] = useState<WorkExperienceItem[]>(
@@ -242,22 +265,63 @@ export function ExtractedDataReviewStep({
     isIncompleteRole || isIncompleteExp || isIncompleteSkills;
 
   return (
-    <VStack gap={6} width="100%">
-      {/* Step Header */}
-      <VStack gap={2}>
-        <Heading level={1} weight="semibold">
-          Review extracted career data
-        </Heading>
-        <Text type="supporting" color="secondary">
-          We&apos;ve extracted this information from your resume. Review, correct,
-          or enrich the details below to power your personalized career plan.
-        </Text>
-      </VStack>
+    <VStack gap={4} width="100%" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
+      {/* Top Console Bar: Header & Trajectory Flight Path */}
+      <HStack justify="between" align="center" width="100%" wrap="wrap" gap={3}>
+        <VStack gap={1}>
+          <Heading level={1} weight="semibold">
+            Review extracted career data
+          </Heading>
+          <Text type="supporting" color="secondary">
+            Review and calibrate your baseline trajectory to power your personalized career plan.
+          </Text>
+        </VStack>
+
+        {/* Flight Path Pill */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '6px 14px',
+            borderRadius: '9999px',
+            background:
+              'linear-gradient(135deg, rgba(56, 189, 248, 0.06) 0%, rgba(16, 185, 129, 0.06) 100%)',
+            border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.1))',
+            fontSize: '0.85rem',
+          }}
+        >
+          <span style={{ color: 'var(--color-text-secondary)' }}>Origin:</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            {currentRole.trim() || 'Origin Role Pending'}
+          </span>
+          <span style={{ color: 'var(--color-accent, #38bdf8)' }}>──▶</span>
+          <span style={{ color: 'var(--color-text-secondary)' }}>Target:</span>
+          <span
+            style={{
+              fontWeight: 600,
+              color: targetRole.trim()
+                ? 'var(--color-text-green, #10b981)'
+                : 'var(--color-text-secondary)',
+            }}
+          >
+            {targetRole.trim() || 'Select target role below'}
+          </span>
+        </div>
+      </HStack>
+
+      {/* Dynamic Trajectory Strength Gauge */}
+      <TrajectoryStrengthGauge
+        currentRole={currentRole}
+        yearsOfExperience={yearsOfExperience}
+        skillsCount={skills.length}
+        targetRole={targetRole}
+      />
 
       {/* Task 3.3: Incomplete Section Alert / Helper notice */}
       {hasIncompleteItems && (
         <Card variant="cyan" elevation="none">
-          <VStack gap={2} padding={3}>
+          <VStack gap={1} padding={2}>
             <HStack gap={2} align="center">
               <StatusDot variant="accent" label="Notice" />
               <Heading
@@ -281,13 +345,13 @@ export function ExtractedDataReviewStep({
         </Card>
       )}
 
-      {/* Heuristic Extraction Notice when rule-based fallback was used */}
+      {/* Heuristic Extraction Notice */}
       {(initialData.extractionMethod === 'heuristic' ||
         initialData.warnings?.some((w) =>
           w.toLowerCase().includes('heuristic'),
         )) && (
         <Card variant="default" elevation="none">
-          <VStack gap={1} padding={3}>
+          <VStack gap={1} padding={2}>
             <HStack gap={2} align="center">
               <StatusDot variant="neutral" label="Heuristic extraction notice" />
               <Heading level={4} weight="medium">
@@ -301,10 +365,10 @@ export function ExtractedDataReviewStep({
         </Card>
       )}
 
-      {/* Error alert when save/confirmation fails (Task 3.3: Preserves edits) */}
+      {/* Error alert when save/confirmation fails */}
       {saveError && (
         <Card variant="red" elevation="none">
-          <VStack gap={2} padding={3}>
+          <VStack gap={1} padding={2}>
             <HStack gap={2} align="center">
               <StatusDot variant="error" label="Save Error" />
               <Heading
@@ -325,417 +389,534 @@ export function ExtractedDataReviewStep({
         </Card>
       )}
 
-      {/* SECTION 1: Current Role & Experience */}
-      <Card variant="default" elevation="none">
-        <VStack gap={4} padding={4}>
-          <Heading level={3} weight="medium">
-            Current role & experience
-          </Heading>
+      {/* 2-Column Responsive Dashboard Layout */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+          gap: '16px',
+          width: '100%',
+          alignItems: 'start',
+        }}
+      >
+        {/* COLUMN 1: Profile & Skills */}
+        <VStack gap={3} width="100%">
+          {/* Section 1: Current Role, Exp, Target, & Summary */}
+          <Card variant="default" elevation="none">
+            <VStack gap={3} padding={3}>
+              <Heading level={3} weight="medium">
+                Current role &amp; experience
+              </Heading>
 
-          <TextInput
-            label="Current role *"
-            value={currentRole}
-            onChange={(val) => {
-              setCurrentRole(val);
-              if (roleError) setRoleError(null);
-              onClearError?.();
-            }}
-            placeholder="e.g. Senior Frontend Engineer"
-            isRequired
-            status={roleError ? { type: 'error', message: roleError } : undefined}
-          />
-
-          <TextInput
-            label="Years of experience *"
-            value={yearsOfExperience}
-            onChange={(val) => {
-              setYearsOfExperience(val);
-              if (expError) setExpError(null);
-              onClearError?.();
-            }}
-            placeholder="e.g. 5 or 3.5"
-            isRequired
-            status={expError ? { type: 'error', message: expError } : undefined}
-          />
-
-          <TextInput
-            label="Target role (Optional)"
-            value={targetRole}
-            onChange={(val) => {
-              setTargetRole(val);
-              onClearError?.();
-            }}
-            placeholder="e.g. Cloud Architect, Staff Engineer"
-            isOptional
-          />
-        </VStack>
-      </Card>
-
-      {/* SECTION 2: Professional Summary */}
-      <Card variant="default" elevation="none">
-        <VStack gap={3} padding={4}>
-          <Heading level={3} weight="medium">
-            Professional summary
-          </Heading>
-          <TextArea
-            label="Summary"
-            value={summary}
-            onChange={(val) => {
-              setSummary(val);
-              onClearError?.();
-            }}
-            placeholder="Brief summary of your technical background, leadership, or career achievements..."
-            rows={3}
-            isOptional
-          />
-        </VStack>
-      </Card>
-
-      {/* SECTION 3: Technical Skills */}
-      <Card variant="default" elevation="none">
-        <VStack gap={4} padding={4}>
-          <HStack justify="between" align="center">
-            <Heading level={3} weight="medium">
-              Technical skills ({skills.length})
-            </Heading>
-            <Text type="supporting" color="secondary">
-              Click &times; to remove incorrect skills
-            </Text>
-          </HStack>
-
-          <HStack gap={2} wrap="wrap">
-            {skills.map((skill) => (
-              <Token
-                key={skill}
-                label={skill}
-                size="md"
-                onRemove={() => handleRemoveSkill(skill)}
-              />
-            ))}
-            {skills.length === 0 && (
-              <Text type="supporting" color="secondary">
-                No skills detected yet. Add your primary technical skills below.
-              </Text>
-            )}
-          </HStack>
-
-          <HStack gap={2} align="end">
-            <TextInput
-              label="Add a skill"
-              value={newSkillInput}
-              onChange={setNewSkillInput}
-              placeholder="e.g. Docker, TypeScript, Go"
-            />
-            <Button
-              label="Add skill"
-              variant="secondary"
-              onClick={handleAddSkill}
-              isDisabled={!newSkillInput.trim()}
-            />
-          </HStack>
-        </VStack>
-      </Card>
-
-      {/* SECTION 4: Work Experience */}
-      <Card variant="default" elevation="none">
-        <VStack gap={4} padding={4}>
-          <HStack justify="between" align="center">
-            <Heading level={3} weight="medium">
-              Work experience ({workExperience.length})
-            </Heading>
-            {!showAddWork && (
-              <Button
-                label="+ Add experience"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddWork(true)}
-              />
-            )}
-          </HStack>
-
-          {workExperience.map((exp, idx) => (
-            <Card key={idx} variant="default" elevation="none">
-              <VStack gap={2} padding={3}>
-                <HStack justify="between" align="start">
-                  <VStack gap={1}>
-                    <Text type="body" weight="semibold">
-                      {exp.role || 'Role unspecified'}
-                      {exp.company ? ` at ${exp.company}` : ''}
-                    </Text>
-                    {exp.startDate && (
-                      <Text type="supporting" color="secondary">
-                        {exp.startDate}
-                        {exp.endDate ? ` - ${exp.endDate}` : ''}
-                      </Text>
-                    )}
-                  </VStack>
-                  <Button
-                    label="Remove"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveWork(idx)}
+              {/* Side-by-Side Role and Experience */}
+              <HStack gap={3} align="start" width="100%">
+                <div style={{ flex: 1.5 }}>
+                  <TextInput
+                    label="Current role *"
+                    value={currentRole}
+                    onChange={(val) => {
+                      setCurrentRole(val);
+                      if (roleError) setRoleError(null);
+                      onClearError?.();
+                    }}
+                    placeholder="e.g. Senior Frontend Engineer"
+                    isRequired
+                    status={
+                      roleError ? { type: 'error', message: roleError } : undefined
+                    }
                   />
-                </HStack>
-                {exp.description && (
-                  <Text type="supporting" color="secondary">
-                    {exp.description}
-                  </Text>
-                )}
-              </VStack>
-            </Card>
-          ))}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <TextInput
+                    label="Years of experience *"
+                    value={yearsOfExperience}
+                    onChange={(val) => {
+                      setYearsOfExperience(val);
+                      if (expError) setExpError(null);
+                      onClearError?.();
+                    }}
+                    placeholder="e.g. 5 or 3.5"
+                    isRequired
+                    status={
+                      expError ? { type: 'error', message: expError } : undefined
+                    }
+                  />
+                </div>
+              </HStack>
 
-          {workExperience.length === 0 && !showAddWork && (
-            <Text type="supporting" color="secondary">
-              No previous work experience extracted. You can add positions or skip
-              this section.
-            </Text>
-          )}
+              <TextInput
+                label="Target role (Optional)"
+                value={targetRole}
+                onChange={(val) => {
+                  setTargetRole(val);
+                  onClearError?.();
+                }}
+                placeholder="e.g. Cloud Architect, Staff Engineer"
+                isOptional
+              />
 
-          {showAddWork && (
-            <Card variant="cyan" elevation="none">
-              <VStack gap={3} padding={3}>
-                <Heading level={4} weight="medium">
-                  Add work experience
+              <TextArea
+                label="Summary"
+                value={summary}
+                onChange={(val) => {
+                  setSummary(val);
+                  onClearError?.();
+                }}
+                placeholder="Brief summary of your technical background, leadership, or career achievements..."
+                rows={2}
+                isOptional
+              />
+            </VStack>
+          </Card>
+
+          {/* Section 2: Technical Skills */}
+          <Card variant="default" elevation="none">
+            <VStack gap={3} padding={3}>
+              <HStack justify="between" align="center">
+                <Heading level={3} weight="medium">
+                  Technical skills ({skills.length})
                 </Heading>
-                <TextInput
-                  label="Company"
-                  value={newCompany}
-                  onChange={setNewCompany}
-                  placeholder="e.g. Acme Tech"
-                />
-                <TextInput
-                  label="Role / Title"
-                  value={newRole}
-                  onChange={setNewRole}
-                  placeholder="e.g. Senior Software Engineer"
-                />
-                <TextInput
-                  label="Dates"
-                  value={newDates}
-                  onChange={setNewDates}
-                  placeholder="e.g. 2021 - 2024"
-                />
-                <TextArea
-                  label="Description"
-                  value={newWorkDesc}
-                  onChange={setNewWorkDesc}
-                  placeholder="Key responsibilities and achievements..."
-                  rows={2}
-                />
-                <HStack gap={2} justify="end">
-                  <Button
-                    label="Cancel"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddWork(false)}
-                  />
-                  <Button
-                    label="Save entry"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleAddWorkExperience}
-                    isDisabled={!newCompany.trim() && !newRole.trim()}
-                  />
-                </HStack>
-              </VStack>
-            </Card>
-          )}
-        </VStack>
-      </Card>
+                <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
+                  Click &times; to remove incorrect skills
+                </Text>
+              </HStack>
 
-      {/* SECTION 5: Projects */}
-      <Card variant="default" elevation="none">
-        <VStack gap={4} padding={4}>
-          <HStack justify="between" align="center">
-            <Heading level={3} weight="medium">
-              Projects ({projects.length})
-            </Heading>
-            {!showAddProject && (
-              <Button
-                label="+ Add project"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddProject(true)}
-              />
-            )}
-          </HStack>
-
-          {projects.map((proj, idx) => (
-            <Card key={idx} variant="default" elevation="none">
-              <VStack gap={2} padding={3}>
-                <HStack justify="between" align="start">
-                  <Text type="body" weight="semibold">
-                    {proj.name || 'Untitled Project'}
-                  </Text>
-                  <Button
-                    label="Remove"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveProject(idx)}
+              {/* Scrollable skill chips container */}
+              <div
+                style={{
+                  maxHeight: '110px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  padding: '2px',
+                }}
+              >
+                {skills.map((skill) => (
+                  <Token
+                    key={skill}
+                    label={skill}
+                    size="md"
+                    onRemove={() => handleRemoveSkill(skill)}
                   />
-                </HStack>
-                {proj.description && (
+                ))}
+                {skills.length === 0 && (
                   <Text type="supporting" color="secondary">
-                    {proj.description}
+                    No skills detected yet. Add your primary technical skills below.
                   </Text>
                 )}
-                {proj.technologies && proj.technologies.length > 0 && (
-                  <HStack gap={1} wrap="wrap">
-                    {proj.technologies.map((tech) => (
-                      <Token key={tech} label={tech} size="sm" />
+              </div>
+
+              <HStack gap={2} align="end">
+                <div style={{ flex: 1 }}>
+                  <TextInput
+                    label="Add a skill"
+                    value={newSkillInput}
+                    onChange={setNewSkillInput}
+                    placeholder="e.g. Docker, TypeScript, Go"
+                  />
+                </div>
+                <Button
+                  label="Add skill"
+                  variant="secondary"
+                  onClick={handleAddSkill}
+                  isDisabled={!newSkillInput.trim()}
+                />
+              </HStack>
+
+              {/* Suggested competencies */}
+              {suggestedSkills.length > 0 && (
+                <VStack gap={1} style={{ marginTop: 2 }}>
+                  <Text type="supporting" color="secondary" style={{ fontSize: '0.75rem' }}>
+                    Suggested competencies:
+                  </Text>
+                  <HStack gap={2} wrap="wrap">
+                    {suggestedSkills.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          if (!skills.includes(s)) {
+                            setSkills((prev) => [...prev, s]);
+                          }
+                        }}
+                        style={{
+                          background:
+                            'var(--color-surface-elevated, rgba(255, 255, 255, 0.05))',
+                          border:
+                            '1px dashed var(--color-border-subtle, rgba(255, 255, 255, 0.2))',
+                          color: 'var(--color-text-primary, #e2e8f0)',
+                          borderRadius: 9999,
+                          padding: '2px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        + {s}
+                      </button>
                     ))}
                   </HStack>
+                </VStack>
+              )}
+            </VStack>
+          </Card>
+        </VStack>
+
+        {/* COLUMN 2: Background Milestones */}
+        <VStack gap={3} width="100%">
+          {/* Work Experience */}
+          <Card variant="default" elevation="none">
+            <VStack gap={2} padding={3}>
+              <HStack justify="between" align="center">
+                <Heading level={3} weight="medium">
+                  Work experience ({workExperience.length})
+                </Heading>
+                {!showAddWork && (
+                  <Button
+                    label="+ Add experience"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddWork(true)}
+                  />
                 )}
-              </VStack>
-            </Card>
-          ))}
+              </HStack>
 
-          {projects.length === 0 && !showAddProject && (
-            <Text type="supporting" color="secondary">
-              No technical projects detected. You can add personal or open source
-              projects here or skip.
-            </Text>
-          )}
+              <div
+                style={{
+                  maxHeight: '135px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                {workExperience.map((exp, idx) => (
+                  <Card
+                    key={idx}
+                    variant="default"
+                    elevation="none"
+                    style={{
+                      padding: '8px 12px',
+                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                    }}
+                  >
+                    <VStack gap={1}>
+                      <HStack justify="between" align="start">
+                        <VStack gap={0}>
+                          <Text type="body" weight="semibold">
+                            {exp.role || 'Role unspecified'}
+                            {exp.company ? ` at ${exp.company}` : ''}
+                          </Text>
+                          {exp.startDate && (
+                            <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
+                              {exp.startDate}
+                              {exp.endDate ? ` - ${exp.endDate}` : ''}
+                            </Text>
+                          )}
+                        </VStack>
+                        <Button
+                          label="Remove"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveWork(idx)}
+                        />
+                      </HStack>
+                      {exp.description && (
+                        <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
+                          {exp.description}
+                        </Text>
+                      )}
+                    </VStack>
+                  </Card>
+                ))}
 
-          {showAddProject && (
-            <Card variant="cyan" elevation="none">
-              <VStack gap={3} padding={3}>
-                <Heading level={4} weight="medium">
-                  Add project
-                </Heading>
-                <TextInput
-                  label="Project name"
-                  value={newProjName}
-                  onChange={setNewProjName}
-                  placeholder="e.g. Cloud Storage CLI"
-                />
-                <TextArea
-                  label="Description"
-                  value={newProjDesc}
-                  onChange={setNewProjDesc}
-                  placeholder="What this project does and architectural highlights..."
-                  rows={2}
-                />
-                <TextInput
-                  label="Technologies (comma separated)"
-                  value={newProjTech}
-                  onChange={setNewProjTech}
-                  placeholder="e.g. Go, AWS S3, gRPC"
-                />
-                <HStack gap={2} justify="end">
-                  <Button
-                    label="Cancel"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddProject(false)}
-                  />
-                  <Button
-                    label="Save project"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleAddProject}
-                    isDisabled={!newProjName.trim()}
-                  />
-                </HStack>
-              </VStack>
-            </Card>
-          )}
-        </VStack>
-      </Card>
+                {workExperience.length === 0 && !showAddWork && (
+                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
+                    No previous work experience extracted. You can add positions or skip this section.
+                  </Text>
+                )}
+              </div>
 
-      {/* SECTION 6: Education */}
-      <Card variant="default" elevation="none">
-        <VStack gap={4} padding={4}>
-          <HStack justify="between" align="center">
-            <Heading level={3} weight="medium">
-              Education & certifications ({education.length})
-            </Heading>
-            {!showAddEdu && (
-              <Button
-                label="+ Add education"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddEdu(true)}
-              />
-            )}
-          </HStack>
-
-          {education.map((edu, idx) => (
-            <Card key={idx} variant="default" elevation="none">
-              <VStack gap={1} padding={3}>
-                <HStack justify="between" align="start">
-                  <VStack gap={1}>
-                    <Text type="body" weight="semibold">
-                      {edu.qualification || 'Degree / Certificate'}
-                    </Text>
-                    <Text type="supporting" color="secondary">
-                      {edu.institution || 'Institution'}
-                      {edu.graduationYear ? ` • ${edu.graduationYear}` : ''}
-                    </Text>
+              {showAddWork && (
+                <Card variant="cyan" elevation="none">
+                  <VStack gap={2} padding={3}>
+                    <Heading level={4} weight="medium">
+                      Add work experience
+                    </Heading>
+                    <TextInput
+                      label="Company"
+                      value={newCompany}
+                      onChange={setNewCompany}
+                      placeholder="e.g. Acme Tech"
+                    />
+                    <TextInput
+                      label="Role / Title"
+                      value={newRole}
+                      onChange={setNewRole}
+                      placeholder="e.g. Senior Software Engineer"
+                    />
+                    <TextInput
+                      label="Dates"
+                      value={newDates}
+                      onChange={setNewDates}
+                      placeholder="e.g. 2021 - 2024"
+                    />
+                    <TextArea
+                      label="Description"
+                      value={newWorkDesc}
+                      onChange={setNewWorkDesc}
+                      placeholder="Key responsibilities and achievements..."
+                      rows={2}
+                    />
+                    <HStack gap={2} justify="end">
+                      <Button
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddWork(false)}
+                      />
+                      <Button
+                        label="Save entry"
+                        variant="primary"
+                        size="sm"
+                        onClick={handleAddWorkExperience}
+                        isDisabled={!newCompany.trim() && !newRole.trim()}
+                      />
+                    </HStack>
                   </VStack>
-                  <Button
-                    label="Remove"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveEducation(idx)}
-                  />
-                </HStack>
-              </VStack>
-            </Card>
-          ))}
+                </Card>
+              )}
+            </VStack>
+          </Card>
 
-          {education.length === 0 && !showAddEdu && (
-            <Text type="supporting" color="secondary">
-              No education history detected. You can add degrees or certifications
-              here or skip.
-            </Text>
-          )}
-
-          {showAddEdu && (
-            <Card variant="cyan" elevation="none">
-              <VStack gap={3} padding={3}>
-                <Heading level={4} weight="medium">
-                  Add education
+          {/* Projects */}
+          <Card variant="default" elevation="none">
+            <VStack gap={2} padding={3}>
+              <HStack justify="between" align="center">
+                <Heading level={3} weight="medium">
+                  Projects ({projects.length})
                 </Heading>
-                <TextInput
-                  label="Institution"
-                  value={newInstitution}
-                  onChange={setNewInstitution}
-                  placeholder="e.g. Stanford University"
-                />
-                <TextInput
-                  label="Degree / Qualification"
-                  value={newQualification}
-                  onChange={setNewQualification}
-                  placeholder="e.g. B.S. in Computer Science"
-                />
-                <TextInput
-                  label="Graduation Year"
-                  value={newGradYear}
-                  onChange={setNewGradYear}
-                  placeholder="e.g. 2020"
-                />
-                <HStack gap={2} justify="end">
+                {!showAddProject && (
                   <Button
-                    label="Cancel"
+                    label="+ Add project"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowAddEdu(false)}
+                    onClick={() => setShowAddProject(true)}
                   />
+                )}
+              </HStack>
+
+              <div
+                style={{
+                  maxHeight: '120px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                {projects.map((proj, idx) => (
+                  <Card
+                    key={idx}
+                    variant="default"
+                    elevation="none"
+                    style={{
+                      padding: '8px 12px',
+                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                    }}
+                  >
+                    <VStack gap={1}>
+                      <HStack justify="between" align="start">
+                        <Text type="body" weight="semibold">
+                          {proj.name || 'Untitled Project'}
+                        </Text>
+                        <Button
+                          label="Remove"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveProject(idx)}
+                        />
+                      </HStack>
+                      {proj.description && (
+                        <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
+                          {proj.description}
+                        </Text>
+                      )}
+                      {proj.technologies && proj.technologies.length > 0 && (
+                        <HStack gap={1} wrap="wrap">
+                          {proj.technologies.map((tech) => (
+                            <Token key={tech} label={tech} size="sm" />
+                          ))}
+                        </HStack>
+                      )}
+                    </VStack>
+                  </Card>
+                ))}
+
+                {projects.length === 0 && !showAddProject && (
+                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
+                    No technical projects detected. You can add personal or open source projects here or skip.
+                  </Text>
+                )}
+              </div>
+
+              {showAddProject && (
+                <Card variant="cyan" elevation="none">
+                  <VStack gap={2} padding={3}>
+                    <Heading level={4} weight="medium">
+                      Add project
+                    </Heading>
+                    <TextInput
+                      label="Project name"
+                      value={newProjName}
+                      onChange={setNewProjName}
+                      placeholder="e.g. Cloud Storage CLI"
+                    />
+                    <TextArea
+                      label="Description"
+                      value={newProjDesc}
+                      onChange={setNewProjDesc}
+                      placeholder="What this project does and architectural highlights..."
+                      rows={2}
+                    />
+                    <TextInput
+                      label="Technologies (comma separated)"
+                      value={newProjTech}
+                      onChange={setNewProjTech}
+                      placeholder="e.g. Go, AWS S3, gRPC"
+                    />
+                    <HStack gap={2} justify="end">
+                      <Button
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddProject(false)}
+                      />
+                      <Button
+                        label="Save project"
+                        variant="primary"
+                        size="sm"
+                        onClick={handleAddProject}
+                        isDisabled={!newProjName.trim()}
+                      />
+                    </HStack>
+                  </VStack>
+                </Card>
+              )}
+            </VStack>
+          </Card>
+
+          {/* Education */}
+          <Card variant="default" elevation="none">
+            <VStack gap={2} padding={3}>
+              <HStack justify="between" align="center">
+                <Heading level={3} weight="medium">
+                  Education &amp; certifications ({education.length})
+                </Heading>
+                {!showAddEdu && (
                   <Button
-                    label="Save education"
-                    variant="primary"
+                    label="+ Add education"
+                    variant="ghost"
                     size="sm"
-                    onClick={handleAddEducation}
-                    isDisabled={!newInstitution.trim() && !newQualification.trim()}
+                    onClick={() => setShowAddEdu(true)}
                   />
-                </HStack>
-              </VStack>
-            </Card>
-          )}
+                )}
+              </HStack>
+
+              <div
+                style={{
+                  maxHeight: '105px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                {education.map((edu, idx) => (
+                  <Card
+                    key={idx}
+                    variant="default"
+                    elevation="none"
+                    style={{
+                      padding: '8px 12px',
+                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                    }}
+                  >
+                    <HStack justify="between" align="start">
+                      <VStack gap={0}>
+                        <Text type="body" weight="semibold">
+                          {edu.qualification || 'Degree / Certificate'}
+                        </Text>
+                        <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
+                          {edu.institution || 'Institution'}
+                          {edu.graduationYear ? ` • ${edu.graduationYear}` : ''}
+                        </Text>
+                      </VStack>
+                      <Button
+                        label="Remove"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveEducation(idx)}
+                      />
+                    </HStack>
+                  </Card>
+                ))}
+
+                {education.length === 0 && !showAddEdu && (
+                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
+                    No education history detected. You can add degrees or certifications here or skip.
+                  </Text>
+                )}
+              </div>
+
+              {showAddEdu && (
+                <Card variant="cyan" elevation="none">
+                  <VStack gap={2} padding={3}>
+                    <Heading level={4} weight="medium">
+                      Add education
+                    </Heading>
+                    <TextInput
+                      label="Institution"
+                      value={newInstitution}
+                      onChange={setNewInstitution}
+                      placeholder="e.g. Stanford University"
+                    />
+                    <TextInput
+                      label="Degree / Qualification"
+                      value={newQualification}
+                      onChange={setNewQualification}
+                      placeholder="e.g. B.S. in Computer Science"
+                    />
+                    <TextInput
+                      label="Graduation Year"
+                      value={newGradYear}
+                      onChange={setNewGradYear}
+                      placeholder="e.g. 2020"
+                    />
+                    <HStack gap={2} justify="end">
+                      <Button
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddEdu(false)}
+                      />
+                      <Button
+                        label="Save education"
+                        variant="primary"
+                        size="sm"
+                        onClick={handleAddEducation}
+                        isDisabled={!newInstitution.trim() && !newQualification.trim()}
+                      />
+                    </HStack>
+                  </VStack>
+                </Card>
+              )}
+            </VStack>
+          </Card>
         </VStack>
-      </Card>
+      </div>
 
       <Divider />
 

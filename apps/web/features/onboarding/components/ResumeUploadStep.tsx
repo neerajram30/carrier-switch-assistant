@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Divider } from "@astryxdesign/core/Divider";
@@ -8,6 +9,7 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { HStack, VStack } from "@astryxdesign/core/Stack";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Text } from "@astryxdesign/core/Text";
+import { Token } from "@astryxdesign/core/Token";
 import { useResumeUpload } from "../hooks/useResumeUpload";
 import type {
   ExtractedCareerData,
@@ -19,6 +21,13 @@ import {
   uploadResumeDirectly,
   type UploadResumeResult,
 } from "../services/resume-storage.service";
+
+const TELEMETRY_STAGES = [
+  "Scanning document structure & career timeline",
+  "Extracting core role & competencies",
+  "Decoding technical skills & proficiency signals",
+  "Calibrating baseline telemetry",
+];
 
 interface ResumeUploadStepProps {
   onSuccess?: (file: File, resumeInfo: UploadedResumeInfo) => void;
@@ -37,6 +46,8 @@ export function ResumeUploadStep({
   processFn = processResume,
   autoProcess = false,
 }: ResumeUploadStepProps) {
+  const [telemetryStepIndex, setTelemetryStepIndex] = useState(0);
+
   const {
     selectedFile,
     validationError,
@@ -58,6 +69,19 @@ export function ResumeUploadStep({
     },
     autoProcess,
   );
+
+  useEffect(() => {
+    if (uploadState !== "processing") {
+      return;
+    }
+    const interval = setInterval(() => {
+      setTelemetryStepIndex((prev) => Math.min(prev + 1, TELEMETRY_STAGES.length - 1));
+    }, 700);
+    return () => {
+      clearInterval(interval);
+      setTelemetryStepIndex(0);
+    };
+  }, [uploadState]);
 
   const structured = processedResult?.structuredData;
 
@@ -118,8 +142,8 @@ export function ResumeUploadStep({
 
       {/* Screen 1C: Processed Success State */}
       {uploadState === "processed" && selectedFile ? (
-        <Card variant="default" elevation="none">
-          <VStack gap={4} align="center" padding={6}>
+        <Card variant="default" elevation="none" style={{ border: '1px solid var(--color-border-subtle, rgba(255,255,255,0.1))' }}>
+          <VStack gap={5} align="center" padding={6}>
             <StatusDot variant="success" label="Analysis Complete" />
             <VStack gap={1} align="center">
               <Heading level={3} weight="medium">
@@ -132,7 +156,7 @@ export function ResumeUploadStep({
             </VStack>
 
             {/* Quick summary of extraction metrics */}
-            <VStack gap={1} align="center">
+            <VStack gap={2} align="center" style={{ width: '100%' }}>
               {structured?.currentRole && (
                 <Text type="body" weight="medium">
                   Detected Role: {structured.currentRole}
@@ -148,6 +172,20 @@ export function ResumeUploadStep({
                 <Text type="supporting" color="secondary">
                   Skills identified: {structured.skills.length}
                 </Text>
+              )}
+
+              {/* Decoded Skill Arsenal Preview */}
+              {structured?.skills && structured.skills.length > 0 && (
+                <HStack gap={2} justify="center" wrap="wrap" style={{ maxWidth: 460, marginTop: 4 }}>
+                  {structured.skills.slice(0, 6).map((skill) => (
+                    <Token key={skill} label={skill} size="sm" />
+                  ))}
+                  {structured.skills.length > 6 && (
+                    <Text type="supporting" color="secondary">
+                      +{structured.skills.length - 6} more
+                    </Text>
+                  )}
+                </HStack>
               )}
             </VStack>
 
@@ -191,6 +229,49 @@ export function ResumeUploadStep({
                 your career profile.
               </Text>
             </VStack>
+
+            {/* Simulated Live Telemetry Stages */}
+            <VStack gap={2} width="100%" style={{ maxWidth: 440, margin: '4px 0' }}>
+              {TELEMETRY_STAGES.map((stage, idx) => {
+                const isDone = idx < telemetryStepIndex;
+                const isCurrent = idx === telemetryStepIndex;
+                return (
+                  <HStack
+                    key={stage}
+                    gap={2}
+                    align="center"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      background: isCurrent
+                        ? 'var(--color-surface-elevated, rgba(6, 182, 212, 0.08))'
+                        : 'transparent',
+                      border: isCurrent
+                        ? '1px solid var(--color-border-cyan, rgba(6, 182, 212, 0.25))'
+                        : '1px solid transparent',
+                      opacity: isDone ? 0.75 : isCurrent ? 1 : 0.4,
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.85rem' }}>
+                      {isDone ? '✓' : isCurrent ? '●' : '○'}
+                    </span>
+                    <Text
+                      type="supporting"
+                      weight={isCurrent ? 'medium' : undefined}
+                      style={{
+                        color: isCurrent
+                          ? 'var(--color-text-cyan, #06b6d4)'
+                          : 'var(--color-text-secondary, #94a3b8)',
+                      }}
+                    >
+                      {stage}
+                    </Text>
+                  </HStack>
+                );
+              })}
+            </VStack>
+
             <Text type="supporting" color="secondary">
               File: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}{" "}
               KB)
