@@ -32,11 +32,27 @@ export class ResumeController {
     return this.resumeService.completeUpload(user, resumeId, dto);
   }
 
+  @Post('analyze-prompt')
+  analyzePrompt(
+    @CurrentUser() user: ICurrentUser,
+    @Body() body: { prompt: string },
+  ) {
+    return this.resumeProcessingService.analyzePrompt(user, body.prompt);
+  }
+
   @Post(':id/process')
   processResume(
     @CurrentUser() user: ICurrentUser,
     @Param('id') resumeId: string,
+    @Body() body?: { userPrompt?: string },
   ) {
+    if (body?.userPrompt) {
+      return this.resumeProcessingService.processResume(
+        user,
+        resumeId,
+        body.userPrompt,
+      );
+    }
     return this.resumeProcessingService.processResume(user, resumeId);
   }
 

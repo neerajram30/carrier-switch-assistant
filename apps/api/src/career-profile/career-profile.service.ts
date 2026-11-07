@@ -44,6 +44,11 @@ export class CareerProfileService {
         targetRole: createCareerProfileDto.targetRole,
         skills: createCareerProfileDto.skills ?? [],
         summary: createCareerProfileDto.summary,
+        userPrompt: createCareerProfileDto.userPrompt,
+        workExperience: createCareerProfileDto.workExperience as any,
+        education: createCareerProfileDto.education as any,
+        projects: createCareerProfileDto.projects as any,
+        suggestedPaths: createCareerProfileDto.suggestedPaths as any,
       },
     });
 
@@ -61,6 +66,15 @@ export class CareerProfileService {
             name: true,
           },
         },
+        roadmaps: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            milestones: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
       },
     });
     if (!profile) {
@@ -76,7 +90,7 @@ export class CareerProfileService {
     await this.findByUserId(userId);
     const updated = await this.prisma.careerProfile.update({
       where: { userId },
-      data: dto,
+      data: dto as any,
     });
     return this.serializeProfile(updated);
   }

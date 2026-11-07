@@ -36,14 +36,10 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
+        initialStep="manual"
         getProfileFn={mockGetProfile}
         saveProfileFn={mockSaveProfile}
       />,
-    );
-
-    // Switch to manual entry
-    fireEvent.click(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
     );
 
     // Profile check completed
@@ -90,14 +86,10 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
+        initialStep="manual"
         getProfileFn={mockGetProfile}
         saveProfileFn={mockSaveProfile}
       />,
-    );
-
-    // Switch to manual entry
-    fireEvent.click(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
     );
 
     // Verify existing profile values were pre-populated after API loads
@@ -143,13 +135,10 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
+        initialStep="manual"
         getProfileFn={mockGetProfile}
         saveProfileFn={mockSaveProfile}
       />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
     );
 
     await waitFor(() => {
@@ -196,13 +185,10 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
+        initialStep="manual"
         getProfileFn={mockGetProfile}
         saveProfileFn={mockSaveProfile}
       />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
     );
 
     // Should show error and retry button
@@ -301,6 +287,7 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
+        initialStep="upload"
         saveProfileFn={mockSaveProfile}
         uploadFn={mockUploadFn}
         processFn={mockProcessFn}
@@ -370,4 +357,94 @@ describe('CareerOnboardingPage Integration', () => {
       screen.getByText(/Career profile saved successfully!/i),
     ).toBeInTheDocument();
   });
+
+
+
+  it('navigates to guided manual entry and collects details step-by-step', async () => {
+    const mockSaveProfile = vi.fn().mockResolvedValue({
+      id: 'prof-guided-1',
+      userId: 'user-1',
+      currentRole: 'Software Engineer',
+      yearsOfExperience: 3,
+      skills: ['TypeScript', 'React'],
+      summary: '',
+      targetRole: 'AI Engineer',
+      createdAt: '2026-10-15T00:00:00Z',
+      updatedAt: '2026-10-15T00:00:00Z',
+    });
+
+    render(
+      <CareerOnboardingPage
+        initialStep="upload"
+        saveProfileFn={mockSaveProfile}
+      />,
+    );
+
+    // Switch to manual entry
+    fireEvent.click(
+      screen.getByRole('button', { name: /Enter details manually →/i }),
+    );
+
+    // Step 1: Role & Experience
+    expect(
+      screen.getByText(/What is your current role & background\?/i),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Current role \*/i), {
+      target: { value: 'Software Engineer' },
+    });
+    fireEvent.change(screen.getByLabelText(/Years of experience \*/i), {
+      target: { value: '3' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to Goal →/i }));
+
+    // Step 2: Target Role
+    expect(
+      screen.getByText(/Where do you want to switch to\?/i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /AI \/ ML Platform Engineer/i }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /Continue to Skills →/i }),
+    );
+
+    // Step 3: Core Skills
+    expect(
+      screen.getByText(/What are your core technical skills\?/i),
+    ).toBeInTheDocument();
+
+    // Tap popular skill suggestions
+    fireEvent.click(screen.getByRole('button', { name: /\+ TypeScript/i }));
+    fireEvent.click(screen.getByRole('button', { name: /\+ React/i }));
+
+    // Submit profile
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Lock Baseline & Go to Dashboard →/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockSaveProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentRole: 'Software Engineer',
+          yearsOfExperience: '3',
+          targetRole: 'AI / ML Platform Engineer',
+          skills: expect.arrayContaining(['TypeScript', 'React']),
+        }),
+        false,
+      );
+    });
+
+    // Success banner displayed
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Career profile saved successfully!/i),
+      ).toBeInTheDocument();
+    });
+  });
 });
+

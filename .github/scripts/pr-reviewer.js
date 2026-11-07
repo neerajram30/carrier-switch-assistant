@@ -1,14 +1,11 @@
 // .github/scripts/pr-reviewer.js
-const fs = require("fs");
-const path = require("path");
-
 const token = process.env.GITHUB_TOKEN;
 const rawApiKey = process.env.GEMINI_API_KEY || "";
 const apiKey = rawApiKey.trim();
 const repo = process.env.REPOSITORY;
 const prNumber = process.env.PR_NUMBER;
 
-const BOT_SIGNATURE = "### 🤖 Senior Engineer AI Review";
+const BOT_SIGNATURE = "### 🤖 Senior Full-Stack Engineer AI Review";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -119,12 +116,12 @@ async function postOrUpdateComment(content) {
 async function callGemini(prompt) {
   const candidateModels = [
     process.env.GEMINI_MODEL,
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-flash-latest",
     "gemini-3.8-flash",
     "gemini-3.6-flash",
     "gemini-flash-lite-latest",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-    "gemini-3.5-flash",
   ].filter(Boolean);
 
   const models = [...new Set(candidateModels)];
@@ -149,7 +146,7 @@ async function callGemini(prompt) {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.2,
-              maxOutputTokens: 2500,
+              maxOutputTokens: 3000,
             },
           }),
         });
@@ -189,7 +186,6 @@ async function callGemini(prompt) {
             continue;
           }
 
-          // Otherwise break to try next model
           break;
         }
 
@@ -234,7 +230,7 @@ async function callGemini(prompt) {
 
 async function run() {
   console.log(
-    `Starting Senior Engineer AI Review for ${repo} PR #${prNumber}...`,
+    `Starting Senior Full-Stack Engineer AI Review for ${repo} PR #${prNumber}...`,
   );
 
   if (!token) {
@@ -251,21 +247,7 @@ async function run() {
     process.exit(1);
   }
 
-  // 1. Read project context dynamically from the repository
-  let projectContext = "No explicit project context found.";
-  const contextPath = path.join(process.cwd(), "career-switch-context-v2.md");
-  if (fs.existsSync(contextPath)) {
-    projectContext = fs.readFileSync(contextPath, "utf8");
-    console.log(
-      "Successfully loaded project working context for review guidelines.",
-    );
-  } else {
-    console.warn(
-      "Project context file not found at root, proceeding with default rules.",
-    );
-  }
-
-  // 2. Fetch PR Diff from GitHub API
+  // 1. Fetch PR Diff from GitHub API
   const rawDiff = await fetchDiff();
   if (!rawDiff || !rawDiff.trim()) {
     console.log("Empty diff, skipping review.");
@@ -273,36 +255,83 @@ async function run() {
   }
 
   const cleanedDiff = cleanDiff(rawDiff);
-  const maxDiffLength = 60000;
+  const maxDiffLength = 65000;
   const truncatedDiff =
     cleanedDiff.length > maxDiffLength
       ? cleanedDiff.slice(0, maxDiffLength) +
         "\n\n[Diff truncated for context limits...]"
       : cleanedDiff;
 
-  // 3. Construct Prompt combining Project Working Context + Cleaned Diff
+  // 2. Construct Specialized Prompt with Full-Stack Monorepo Review Criteria
   const prompt = `
-You are a strict, pragmatic Senior Staff Software Engineer and Product Architect reviewing a Pull Request.
-Evaluate the following pull request code changes against our project's working context, rules, and current milestone expectations.
+You are a pragmatic, battle-tested Senior Staff Software Engineer and Full-Stack Architect conducting a comprehensive code review for a TypeScript Monorepo (Next.js web frontend + NestJS API backend).
 
---- PROJECT WORKING CONTEXT ---
-${projectContext}
--------------------------------
+Evaluate the following pull request code changes against the five core engineering pillars below:
 
-Instructions for your review:
-1. Check for architectural boundary violations (e.g., modular monolith rules, domain logic leaking into frameworks).
-2. Ensure no out-of-scope code or premature complexity (like unapproved infrastructure or tech stacks) has leaked into the current milestone.
-3. Validate type safety, potential bug risks, and adherence to engineering standards.
-4. Keep your feedback concise, actionable, and formatted in professional bullet points.
-5. If the code meets all requirements and engineering standards without issues, summarize what was reviewed and give an explicit approval recommendation.
+---
+### 1. Framework-Specific Expertise
+- **Next.js Optimization:**
+  - Audit App Router vs. Pages Router architectures.
+  - Distinguish Server Components from Client Components. Ask: *"Did you mark this component with 'use client' unnecessarily?"* (Ensure components stay Server Components unless they need interactive hooks like useState, useEffect, or browser APIs).
+  - Check data fetching strategies (fetch caching, ISR, SSR, revalidation).
+  - Verify optimization of Core Web Vitals (proper use of Next.js Image, Font, and Script components).
+- **NestJS Architecture:**
+  - Enforce clean NestJS design patterns: proper Dependency Injection (DI), modularization via @Module(), dedicated Controllers, and injectable Services.
+  - Check correct usage of Guards (authentication/authorization), Interceptors (logging/transforming/caching), and Pipes (validation/transformation).
+
+### 2. Language & Full-Stack Synergy
+- **TypeScript Mastery:**
+  - Enforce strict type safety across packages and workspaces.
+  - Flag any use of 'any', improper type assertions ('as any'), or missing generic constraints.
+  - Check for rigorous type alignment between frontend models and backend contracts.
+- **Shared Contract & E2E Validation:**
+  - Verify that backend API changes in NestJS do not break the Next.js frontend.
+  - Ask: *"Did you change a backend DTO/endpoint response without updating the matching frontend API call or client type?"*
+  - Ensure shared Monorepo DTOs or OpenAPI/Swagger/TRPC contracts are maintained.
+
+### 3. Data, State, & Performance
+- **State Management Audit:**
+  - Review state management choices in Next.js (Zustand, Redux, React Context, or local component state) to prevent unnecessary cascading re-renders.
+- **Database & ORM Efficiency:**
+  - In NestJS database interactions (Prisma / TypeORM / Raw SQL), catch N+1 query patterns, missing database indexes on foreign keys and filter columns, unhandled migrations, and improper connection pooling.
+  - Ask: *"Will this database query block the event loop under heavy load?"*
+- **Validation & Serialization:**
+  - Ask: *"Does this NestJS controller validate the request body before passing it to the service?"*
+  - Ensure incoming payloads are strictly validated using class-validator decorators (@IsString, @IsNotEmpty, etc.) and class-transformer (ValidationPipe with whitelist/transform: true).
+
+### 4. Security & Authentication
+- **Next.js Security:**
+  - Audit for XSS vulnerabilities, unsanitized HTML injections, and insecure cookie handling (enforce HttpOnly, SameSite, Secure).
+  - Verify sensitive secrets and environment variables are NEVER exposed to client bundles (catch missing or misplaced NEXT_PUBLIC_ prefixes).
+- **NestJS Security:**
+  - Ensure endpoints are explicitly protected with appropriate authentication guards (JWT, AuthGuard, API keys).
+  - Verify Role-Based Access Control (RBAC) and resource ownership boundaries (prevent IDOR vulnerabilities).
+
+### 5. Code Quality & Testing Strategies
+- **Testing Conventions:**
+  - Verify adequate test coverage: unit/integration tests with Vitest/Jest for NestJS services/controllers, and unit/component/E2E tests (Vitest, Testing Library, Playwright, Cypress) for Next.js.
+- **Error Handling & Resilience:**
+  - Catch unhandled promises and missing try/catch blocks in backend asynchronous logic.
+  - Ensure Next.js applications leverage proper error boundaries (error.tsx / error.js) and suspense fallbacks (loading.tsx) to prevent full application crashes.
+---
+
+### Review Output Format:
+Structure your response clearly with these sections:
+1. **Summary of Changes**: 2-3 sentence overview of what this PR introduces.
+2. **Critical Issues / Blockers**: Bugs, security vulnerabilities, breaking contract changes, or architectural violations (if none, explicitly state "None identified").
+3. **Optimizations & Architecture Feedback**: Concrete suggestions organized by Next.js / NestJS / TypeScript / Database / Security. Include specific file references and code snippets where applicable.
+4. **Testing & Resilience Verification**: Observations regarding test coverage and edge-case handling.
+5. **Verdict**: Explicit recommendation (**LGTM / Approve**, **Approve with Suggestions**, or **Request Changes**).
+
+Keep your tone direct, constructive, and actionable.
 
 --- GIT DIFF ---
 \`\`\`diff
 ${truncatedDiff}
 \`\`\`
-  `.trim();
+`.trim();
 
-  console.log("Sending code diff and project context to Gemini API...");
+  console.log("Sending code diff to Gemini API for full-stack review...");
 
   let reviewComment;
   try {
@@ -313,7 +342,7 @@ ${truncatedDiff}
     throw err;
   }
 
-  // 4. Post or update the review feedback on the PR
+  // 3. Post or update the review feedback on the PR
   await postOrUpdateComment(reviewComment);
   console.log("AI Code Review completed and posted successfully!");
 }

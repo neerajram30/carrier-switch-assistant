@@ -50,6 +50,7 @@ export class ResumeProcessingService {
   async processResume(
     user: CurrentUser,
     resumeId: string,
+    userPrompt?: string,
   ): Promise<ResumeProcessResponseDto> {
     const startTime = Date.now();
 
@@ -76,7 +77,7 @@ export class ResumeProcessingService {
     }
 
     // 3. Idempotent return for already processed resumes
-    if (resume.status === 'PROCESSED') {
+    if (resume.status === 'PROCESSED' && !userPrompt) {
       this.logger.debug(
         `Resume "${resumeId}" is already PROCESSED. Returning existing result.`,
       );
@@ -175,9 +176,15 @@ export class ResumeProcessingService {
       }
 
       // 6D. Extract structured career data via provider boundary
+      const effectivePrompt = userPrompt || resume.userPrompt || undefined;
       let structuredData: ExtractedCareerData;
       try {
-        structuredData = await this.careerDataExtractor.extract(extractedText);
+        structuredData = effectivePrompt
+          ? await this.careerDataExtractor.extract(
+              extractedText,
+              effectivePrompt,
+            )
+          : await this.careerDataExtractor.extract(extractedText);
       } catch (extractErr: unknown) {
         this.logger.error(
           `Structured career extraction failed unexpectedly: ${(extractErr as Error)?.message}`,
@@ -211,10 +218,55 @@ export class ResumeProcessingService {
           status: 'PROCESSED',
           extractedText,
           structuredData: structuredData as any,
+          ...(effectivePrompt ? { userPrompt: effectivePrompt } : {}),
           processingError: null,
           processedAt,
         },
       });
+
+      // 6F. Automatically upsert user CareerProfile with structured data and suggested trajectories
+      if (this.prisma.careerProfile?.upsert) {
+        await this.prisma.careerProfile
+          .upsert({
+            where: { userId: user.id },
+            create: {
+              userId: user.id,
+              currentRole: structuredData.currentRole || 'Software Engineer',
+              yearsOfExperience: structuredData.yearsOfExperience ?? 3,
+              targetRole: structuredData.targetRole || null,
+              skills: structuredData.skills,
+              summary: structuredData.summary || null,
+              userPrompt: effectivePrompt || null,
+              workExperience: structuredData.workExperience as any,
+              education: structuredData.education as any,
+              projects: structuredData.projects as any,
+              suggestedPaths: structuredData.suggestedPaths as any,
+            },
+            update: {
+              currentRole: structuredData.currentRole || undefined,
+              yearsOfExperience:
+                structuredData.yearsOfExperience !== null
+                  ? structuredData.yearsOfExperience
+                  : undefined,
+              targetRole: structuredData.targetRole || undefined,
+              skills:
+                structuredData.skills.length > 0
+                  ? structuredData.skills
+                  : undefined,
+              summary: structuredData.summary || undefined,
+              userPrompt: effectivePrompt || undefined,
+              workExperience: structuredData.workExperience as any,
+              education: structuredData.education as any,
+              projects: structuredData.projects as any,
+              suggestedPaths: structuredData.suggestedPaths as any,
+            },
+          })
+          .catch((profileErr: unknown) => {
+            this.logger.warn(
+              `Could not auto-upsert career profile from resume: ${(profileErr as Error)?.message}`,
+            );
+          });
+      }
 
       const durationMs = Date.now() - startTime;
       // Privacy guard: Log safe metrics only (no resume text, no PII)
@@ -268,6 +320,64 @@ export class ResumeProcessingService {
     }
 
     return this.formatResponse(resume);
+  }
+
+  async analyzePrompt(
+    user: CurrentUser,
+    prompt: string,
+  ): Promise<ExtractedCareerData> {
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      throw new BadRequestException(
+        'A non-empty prompt describing your experience or target role is required.',
+      );
+    }
+
+    const trimmed = prompt.trim();
+    this.logger.debug(`Analyzing career prompt for user "${user.id}"`);
+    const structuredData = await this.careerDataExtractor.extract('', trimmed);
+
+    await this.prisma.careerProfile
+      .upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          currentRole: structuredData.currentRole || 'Software Engineer',
+          yearsOfExperience: structuredData.yearsOfExperience ?? 3,
+          targetRole: structuredData.targetRole || null,
+          skills: structuredData.skills,
+          summary: structuredData.summary || trimmed,
+          userPrompt: trimmed,
+          workExperience: structuredData.workExperience as any,
+          education: structuredData.education as any,
+          projects: structuredData.projects as any,
+          suggestedPaths: structuredData.suggestedPaths as any,
+        },
+        update: {
+          currentRole: structuredData.currentRole || undefined,
+          yearsOfExperience:
+            structuredData.yearsOfExperience !== null
+              ? structuredData.yearsOfExperience
+              : undefined,
+          targetRole: structuredData.targetRole || undefined,
+          skills:
+            structuredData.skills.length > 0
+              ? structuredData.skills
+              : undefined,
+          summary: structuredData.summary || trimmed,
+          userPrompt: trimmed,
+          workExperience: structuredData.workExperience as any,
+          education: structuredData.education as any,
+          projects: structuredData.projects as any,
+          suggestedPaths: structuredData.suggestedPaths as any,
+        },
+      })
+      .catch((profileErr: unknown) => {
+        this.logger.warn(
+          `Could not auto-upsert career profile from prompt: ${(profileErr as Error)?.message}`,
+        );
+      });
+
+    return structuredData;
   }
 
   private sanitizeErrorMessage(err: unknown): {

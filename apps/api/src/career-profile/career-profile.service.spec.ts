@@ -187,6 +187,15 @@ describe('CareerProfileService', () => {
               name: true,
             },
           },
+          roadmaps: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              milestones: {
+                orderBy: { order: 'asc' },
+              },
+            },
+          },
         },
       });
     });

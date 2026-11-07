@@ -26,6 +26,9 @@ export interface ExtractedCareerData {
   workExperience: WorkExperienceItem[];
   education: EducationItem[];
   projects: ProjectItem[];
+  summary?: string | null;
+  targetRole?: string | null;
+  suggestedPaths?: unknown[];
   extractionMethod?: 'ai' | 'heuristic';
   warnings?: string[];
 }
@@ -211,6 +214,10 @@ export function validateExtractedCareerData(raw: unknown): ExtractedCareerData {
         ? 'heuristic'
         : undefined;
 
+  const summary = sanitizeString(obj.summary, 2000);
+  const targetRole = sanitizeString(obj.targetRole, CONSTRAINTS.MAX_ROLE_LENGTH);
+  const suggestedPaths = Array.isArray(obj.suggestedPaths) ? obj.suggestedPaths : undefined;
+
   return {
     name,
     currentRole,
@@ -219,6 +226,9 @@ export function validateExtractedCareerData(raw: unknown): ExtractedCareerData {
     workExperience,
     education,
     projects,
+    ...(summary ? { summary } : {}),
+    ...(targetRole ? { targetRole } : {}),
+    ...(suggestedPaths ? { suggestedPaths } : {}),
     ...(extractionMethod ? { extractionMethod } : {}),
     ...(warnings.length > 0 ? { warnings } : {}),
   };

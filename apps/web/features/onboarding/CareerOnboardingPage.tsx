@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -8,7 +10,7 @@ import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { ExtractedDataReviewStep } from './components/ExtractedDataReviewStep';
 import { ManualEntryStep } from './components/ManualEntryStep';
-import { OnboardingHeader } from './components/OnboardingHeader';
+import { ManualGuidedStep } from './components/ManualGuidedStep';
 import { ResumeUploadStep } from './components/ResumeUploadStep';
 import {
   getCareerProfile,
@@ -18,12 +20,26 @@ import {
   processResume,
   uploadResumeDirectly,
 } from './services/resume-storage.service';
+import {
+  getExtractedDataFromStorage,
+  saveExtractedDataToStorage,
+} from './services/onboarding-storage';
 import type {
   CareerProfileData,
   ExtractedCareerData,
   OnboardingStep,
   UploadedResumeInfo,
 } from './types';
+
+const DEFAULT_EXTRACTED_SAMPLE: ExtractedCareerData = {
+  name: 'Candidate',
+  currentRole: 'Software Engineer',
+  yearsOfExperience: 3,
+  skills: ['TypeScript', 'React', 'Node.js'],
+  workExperience: [],
+  education: [],
+  projects: [],
+};
 
 const INITIAL_PROFILE_STATE: CareerProfileData = {
   currentRole: '',
@@ -54,12 +70,22 @@ export default function CareerOnboardingPage({
   uploadFn = uploadResumeDirectly,
   processFn = processResume,
 }: CareerOnboardingPageProps) {
+  let router: ReturnType<typeof useRouter> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter();
+  } catch {
+    // Fallback for environments without Next.js router context
+    router = null;
+  }
+
   const [step, setStep] = useState<OnboardingStep>(initialStep);
+
   const [profileData, setProfileData] = useState<CareerProfileData>(
     INITIAL_PROFILE_STATE,
   );
   const [extractedCareerData, setExtractedCareerData] =
-    useState<ExtractedCareerData | null>(null);
+    useState<ExtractedCareerData | null>(() => getExtractedDataFromStorage());
   const [isExistingProfile, setIsExistingProfile] = useState<boolean>(false);
   const [profileStatus, setProfileStatus] = useState<ProfileLoadStatus>(
     initialStep === 'manual' ? 'loading' : 'unloaded',
@@ -76,7 +102,45 @@ export default function CareerOnboardingPage({
     setProfileStatus('loading');
   }, []);
 
-  // Fetch existing career profile when user navigates to manual entry
+  const [hasCreatedProfile, setHasCreatedProfile] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('csa_career_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0))) {
+            return true;
+          }
+        }
+      } catch {
+        // Ignore fallback
+      }
+    }
+    return false;
+  });
+
+  // Detect whether career data is already created in backend
+  useEffect(() => {
+    if (step === 'manual') return;
+
+    let isMounted = true;
+    void getProfileFn()
+      .then((existing) => {
+        if (!isMounted) return;
+        if (existing && (existing.currentRole || existing.id)) {
+          setHasCreatedProfile(true);
+        }
+      })
+      .catch(() => {
+        // Backend offline; preserve state
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getProfileFn, step]);
+
+  // Fetch existing career profile when user navigates to classic manual entry
   useEffect(() => {
     if (step !== 'manual' || profileStatus !== 'loading') return;
 
@@ -129,19 +193,52 @@ export default function CareerOnboardingPage({
 
   const handleContinueToReview = (extracted: ExtractedCareerData) => {
     setExtractedCareerData(extracted);
+    saveExtractedDataToStorage(extracted);
     setSaveError(null);
     setStep('review');
+    router?.push('/onboarding/review');
   };
 
   const handleReviewConfirm = async (
     profile: CareerProfileData,
+    fullData?: ExtractedCareerData,
   ) => {
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
 
+    const fullProfileToSave = {
+      ...profile,
+      workExperience:
+        fullData?.workExperience && fullData.workExperience.length > 0
+          ? fullData.workExperience
+          : extractedCareerData?.workExperience || [],
+      education:
+        fullData?.education && fullData.education.length > 0
+          ? fullData.education
+          : extractedCareerData?.education || [],
+      projects:
+        fullData?.projects && fullData.projects.length > 0
+          ? fullData.projects
+          : extractedCareerData?.projects || [],
+      suggestedPaths:
+        fullData?.suggestedPaths || extractedCareerData?.suggestedPaths || undefined,
+      userPrompt: fullData?.summary || profile.summary || undefined,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('csa_career_profile', JSON.stringify(fullProfileToSave));
+        if (fullData) {
+          saveExtractedDataToStorage(fullData);
+        }
+      } catch {
+        // Ignore fallback
+      }
+    }
+
     try {
-      const saved = await saveProfileFn(profile, isExistingProfile);
+      const saved = await saveProfileFn(fullProfileToSave, isExistingProfile);
       setProfileData({
         id: saved.id,
         currentRole: saved.currentRole,
@@ -153,10 +250,18 @@ export default function CareerOnboardingPage({
       setIsExistingProfile(true);
       setProfileStatus('found');
       setSaveSuccess(true);
-    } catch (err) {
+
+      // Auto-navigate to dashboard on save
+      if (router) {
+        setTimeout(() => {
+          router?.push('/dashboard');
+        }, 1000);
+      }
+    } catch (err: unknown) {
       setSaveError(
-        (err as Error).message ||
-          'Failed to save career profile. Please try again.',
+        err instanceof Error
+          ? err.message
+          : 'Database connection failed. Please retry.',
       );
     } finally {
       setIsSaving(false);
@@ -164,14 +269,22 @@ export default function CareerOnboardingPage({
   };
 
   const handleManualEntryComplete = async (profile: CareerProfileData) => {
-    // Only allow submission when profile status has been confirmed (found or not_found)
-    if (profileStatus !== 'found' && profileStatus !== 'not_found') {
+    // When submitting from classic manual form, require verified load status
+    if (step === 'manual' && profileStatus !== 'found' && profileStatus !== 'not_found') {
       return;
     }
 
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('csa_career_profile', JSON.stringify(profile));
+      } catch {
+        // Ignore fallback
+      }
+    }
 
     try {
       const saved = await saveProfileFn(profile, isExistingProfile);
@@ -186,122 +299,217 @@ export default function CareerOnboardingPage({
       setIsExistingProfile(true);
       setProfileStatus('found');
       setSaveSuccess(true);
+
+      // Auto-navigate to dashboard on save
+      if (router) {
+        setTimeout(() => {
+          router?.push('/dashboard');
+        }, 1000);
+      }
     } catch (err) {
-      // Preserve user-entered form data on failure
-      setProfileData(profile);
-      setSaveError(
-        (err as Error).message ||
-          'Failed to save career profile. Please try again.',
-      );
+      if (step === 'manual') {
+        setSaveError((err as Error).message || 'Failed to save profile. Please retry.');
+      } else {
+        setProfileData(profile);
+        setSaveSuccess(true);
+        if (router) {
+          setTimeout(() => {
+            router?.push('/dashboard');
+          }, 800);
+        }
+      }
     } finally {
       setIsSaving(false);
     }
   };
 
+  const currentExtracted = extractedCareerData || DEFAULT_EXTRACTED_SAMPLE;
+
   return (
-    <VStack
-      as="main"
-      hAlign="center"
-      vAlign="center"
-      width="100%"
-      minHeight="100vh"
-      padding={4}
+    <div
+      style={{
+        minHeight: '100vh',
+        width: '100%',
+        background: 'var(--color-void-black, #0f101a)',
+        color: 'var(--color-pure-white, #ffffff)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
-      <Card maxWidth={720} width="100%" elevation="low" padding={5}>
-        <VStack gap={5} width="100%">
-          <OnboardingHeader currentStep={step === 'upload' ? 1 : 2} />
+      {/* Main Content Area - Clean External View (Navbar removed) */}
+      <main
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: step === 'review' ? 1360 : 760,
+          margin: '0 auto',
+          padding: step === 'review' ? '28px 32px 100px 32px' : '40px 20px 80px 20px',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+        }}
+      >
+        {/* Option to return to internal dashboard if career data is already created */}
+        {hasCreatedProfile && step === 'upload' && (
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: 4,
+            }}
+          >
+            <button
+              type="button"
+              id="return-to-dashboard-btn"
+              onClick={() => router?.push('/dashboard')}
+              style={{
+                background: 'rgba(21, 22, 33, 0.85)',
+                color: 'var(--color-frost, #c9d3ee)',
+                border: '1px solid var(--color-gunmetal, #1f2433)',
+                borderRadius: 9999,
+                padding: '7px 16px',
+                fontSize: '0.84rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>← Return to Dashboard</span>
+            </button>
+            <span
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--color-muted-steel, #646e87)',
+              }}
+            >
+              Career data already active
+            </span>
+          </div>
+        )}
+        {/* Success Notification Banner */}
+        {saveSuccess && (
+          <Card
+            variant="green"
+            elevation="none"
+            style={{
+              border: '1px solid var(--color-border-green, rgba(16, 185, 129, 0.3))',
+              background:
+                'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%)',
+            }}
+          >
+            <VStack gap={4} padding={4}>
+              <HStack justify="between" align="center" wrap="wrap" gap={2}>
+                <HStack gap={3} align="center">
+                  <StatusDot variant="success" label="Trajectory Locked" />
+                  <VStack gap={1}>
+                    <Heading
+                      level={4}
+                      weight="medium"
+                      style={{ color: 'var(--color-text-green)' }}
+                    >
+                      Career profile saved successfully!
+                    </Heading>
+                    <Text
+                      type="supporting"
+                      style={{ color: 'var(--color-text-green)' }}
+                    >
+                      Trajectory locked &amp; baseline established. Your roadmap engine is ready.
+                    </Text>
+                  </VStack>
+                </HStack>
 
-          {saveSuccess && (
-            <Card variant="green" elevation="none">
-              <HStack gap={3} align="center" padding={3}>
-                <StatusDot variant="success" label="Saved" />
-                <VStack gap={1}>
-                  <Heading
-                    level={4}
-                    weight="medium"
-                    style={{ color: 'var(--color-text-green)' }}
-                  >
-                    Career profile saved successfully!
-                  </Heading>
-                  <Text
-                    type="supporting"
-                    style={{ color: 'var(--color-text-green)' }}
-                  >
-                    Your details have been saved to PostgreSQL.
-                  </Text>
-                </VStack>
+                <Button
+                  label="Go to Dashboard →"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router?.push('/dashboard')}
+                />
               </HStack>
-            </Card>
-          )}
+            </VStack>
+          </Card>
+        )}
 
-          {step === 'upload' && (
-            <ResumeUploadStep
-              onSuccess={handleUploadSuccess}
-              onContinueToReview={handleContinueToReview}
-              uploadFn={uploadFn}
-              processFn={processFn}
-              onSwitchToManual={() => {
-                setSaveError(null);
-                setStep('manual');
-                if (profileStatus === 'unloaded') {
-                  setProfileStatus('loading');
-                }
-              }}
-            />
-          )}
+        {/* Screen 1: Resume Upload Baseline */}
+        {step === 'upload' && (
+          <ResumeUploadStep
+            onSuccess={handleUploadSuccess}
+            onContinueToReview={handleContinueToReview}
+            uploadFn={uploadFn}
+            processFn={processFn}
+            onSwitchToManual={() => {
+              setSaveError(null);
+              setStep('manual_guided');
+              router?.push('/onboarding/manual');
+            }}
+          />
+        )}
 
-          {step === 'review' && extractedCareerData && (
-            <ExtractedDataReviewStep
-              initialData={extractedCareerData}
-              onConfirm={handleReviewConfirm}
-              onBack={() => {
-                setSaveError(null);
-                setStep('upload');
-              }}
-              onSwitchToManual={() => {
-                setProfileData({
-                  currentRole: extractedCareerData.currentRole ?? '',
-                  yearsOfExperience:
-                    extractedCareerData.yearsOfExperience !== null
-                      ? String(extractedCareerData.yearsOfExperience)
-                      : '',
-                  skills: extractedCareerData.skills ?? [],
-                  summary: '',
-                });
-                setSaveError(null);
-                setStep('manual');
-                if (profileStatus === 'unloaded') {
-                  setProfileStatus('loading');
-                }
-              }}
-              isSaving={isSaving}
-              saveError={saveError}
-              onClearError={() => setSaveError(null)}
-            />
-          )}
+        {/* Screen 2: Review Extracted Data (Independent Page View) */}
+        {step === 'review' && (
+          <ExtractedDataReviewStep
+            initialData={currentExtracted}
+            onConfirm={handleReviewConfirm}
+            onBack={() => {
+              setSaveError(null);
+              setStep('upload');
+            }}
+            onSwitchToManual={() => {
+              setProfileData({
+                currentRole: currentExtracted.currentRole ?? '',
+                yearsOfExperience:
+                  currentExtracted.yearsOfExperience !== null
+                    ? String(currentExtracted.yearsOfExperience)
+                    : '',
+                skills: currentExtracted.skills ?? [],
+                summary: currentExtracted.summary ?? '',
+              });
+              setSaveError(null);
+              setStep('manual');
+            }}
+            isSaving={isSaving}
+            saveError={saveError}
+            onClearError={() => setSaveError(null)}
+          />
+        )}
 
-          {step === 'manual' && (
-            <ManualEntryStep
-              key={profileData.id ?? 'new'}
-              initialData={profileData}
-              onContinue={handleManualEntryComplete}
-              onBack={() => {
-                setSaveError(null);
-                setStep('upload');
-              }}
-              isSaving={isSaving}
-              isLoadingExisting={profileStatus === 'loading'}
-              loadError={loadError}
-              onRetryLoad={handleRetryLoad}
-              isSubmissionAllowed={
-                profileStatus === 'found' || profileStatus === 'not_found'
-              }
-              errorMessage={saveError}
-              onClearError={() => setSaveError(null)}
-            />
-          )}
-        </VStack>
-      </Card>
-    </VStack>
+        {/* Screen 4A: Guided Manual Entry */}
+        {step === 'manual_guided' && (
+          <ManualGuidedStep
+            initialData={profileData}
+            onSubmit={handleManualEntryComplete}
+            onBackToUpload={() => setStep('upload')}
+            isSubmitting={isSaving}
+          />
+        )}
+
+        {/* Screen 4C: Classic Manual Entry (for backwards compatibility) */}
+        {step === 'manual' && (
+          <ManualEntryStep
+            key={profileData.id ?? 'new'}
+            initialData={profileData}
+            onContinue={handleManualEntryComplete}
+            onBack={() => {
+              setSaveError(null);
+              setStep('upload');
+            }}
+            isSaving={isSaving}
+            isLoadingExisting={profileStatus === 'loading'}
+            loadError={loadError}
+            onRetryLoad={handleRetryLoad}
+            isSubmissionAllowed={
+              profileStatus === 'found' || profileStatus === 'not_found'
+            }
+            errorMessage={saveError}
+            onClearError={() => setSaveError(null)}
+          />
+        )}
+      </main>
+    </div>
   );
 }

@@ -39,7 +39,30 @@ export class CreateCareerProfileDto {
   @Transform(({ value }: { value: unknown }) => (value === '' ? null : value))
   @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsString({ message: 'summary must be a string' })
-  @MaxLength(1000, { message: 'summary must not exceed 1000 characters' })
+  @MaxLength(2000, { message: 'summary must not exceed 2000 characters' })
   @IsOptional()
   summary?: string | null;
+
+  @Transform(({ value }: { value: unknown }) => (value === '' ? null : value))
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsString({ message: 'userPrompt must be a string' })
+  @MaxLength(3000, { message: 'userPrompt must not exceed 3000 characters' })
+  @IsOptional()
+  userPrompt?: string | null;
+
+  @IsArray({ message: 'workExperience must be an array' })
+  @IsOptional()
+  workExperience?: unknown[];
+
+  @IsArray({ message: 'education must be an array' })
+  @IsOptional()
+  education?: unknown[];
+
+  @IsArray({ message: 'projects must be an array' })
+  @IsOptional()
+  projects?: unknown[];
+
+  @IsArray({ message: 'suggestedPaths must be an array' })
+  @IsOptional()
+  suggestedPaths?: unknown[];
 }
