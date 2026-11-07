@@ -58,13 +58,29 @@ export async function createCareerProfile(
   apiUrl = DEFAULT_API_URL,
   userId = DEFAULT_DEV_USER_ID,
 ): Promise<CareerProfileApiResponse> {
-  const payload = {
+  const payload: Record<string, unknown> = {
     currentRole: data.currentRole.trim(),
     yearsOfExperience: Number(data.yearsOfExperience),
     skills: data.skills ?? [],
     summary: data.summary?.trim() || null,
     targetRole: data.targetRole?.trim() || null,
   };
+
+  if (data.userPrompt) {
+    payload.userPrompt = data.userPrompt;
+  }
+  if (data.workExperience !== undefined) {
+    payload.workExperience = data.workExperience;
+  }
+  if (data.education !== undefined) {
+    payload.education = data.education;
+  }
+  if (data.projects !== undefined) {
+    payload.projects = data.projects;
+  }
+  if (data.suggestedPaths !== undefined) {
+    payload.suggestedPaths = data.suggestedPaths;
+  }
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {
     method: 'POST',
@@ -107,6 +123,21 @@ export async function updateCareerProfile(
   }
   if (data.targetRole !== undefined) {
     payload.targetRole = data.targetRole.trim() || null;
+  }
+  if (data.userPrompt !== undefined) {
+    payload.userPrompt = data.userPrompt;
+  }
+  if (data.workExperience !== undefined) {
+    payload.workExperience = data.workExperience;
+  }
+  if (data.education !== undefined) {
+    payload.education = data.education;
+  }
+  if (data.projects !== undefined) {
+    payload.projects = data.projects;
+  }
+  if (data.suggestedPaths !== undefined) {
+    payload.suggestedPaths = data.suggestedPaths;
   }
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {

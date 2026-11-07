@@ -21,7 +21,12 @@ const ACCEPTED_EXTENSIONS = ['.pdf', '.docx'];
 export function useResumeUpload(
   onSuccess?: (file: File, resumeInfo: UploadedResumeInfo) => void,
   uploadFn: (file: File) => Promise<UploadResumeResult> = uploadResumeDirectly,
-  processFn: (resumeId: string) => Promise<ProcessedResumeResult> = processResume,
+  processFn: (
+    resumeId: string,
+    apiUrl?: string,
+    userId?: string,
+    userPrompt?: string,
+  ) => Promise<ProcessedResumeResult> = processResume,
   onProcessed?: (
     data: ExtractedCareerData,
     result: ProcessedResumeResult,
@@ -66,7 +71,7 @@ export function useResumeUpload(
     return null;
   };
 
-  const startProcessing = async (targetResumeId?: string) => {
+  const startProcessing = async (targetResumeId?: string, userPrompt?: string) => {
     const resumeId = targetResumeId || uploadedResume?.resumeId;
     if (!resumeId) return;
 
@@ -75,7 +80,9 @@ export function useResumeUpload(
     setFailureType(null);
 
     try {
-      const result = await processFn(resumeId);
+      const result = userPrompt
+        ? await processFn(resumeId, undefined, undefined, userPrompt)
+        : await processFn(resumeId);
       setProcessedResult(result);
       setUploadState('processed');
 

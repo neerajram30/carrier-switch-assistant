@@ -1,41 +1,53 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { Button } from '@astryxdesign/core/Button';
-import { Card } from '@astryxdesign/core/Card';
-import { Divider } from '@astryxdesign/core/Divider';
-import { Heading } from '@astryxdesign/core/Heading';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
-import { Text } from '@astryxdesign/core/Text';
-import { TextArea } from '@astryxdesign/core/TextArea';
-import { TextInput } from '@astryxdesign/core/TextInput';
-import { Token } from '@astryxdesign/core/Token';
-import { TrajectoryStrengthGauge } from './TrajectoryStrengthGauge';
+import { useMemo, useState } from "react";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Heading } from "@astryxdesign/core/Heading";
+import { HStack, VStack } from "@astryxdesign/core/Stack";
+import { StatusDot } from "@astryxdesign/core/StatusDot";
+import { Text } from "@astryxdesign/core/Text";
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Token } from "@astryxdesign/core/Token";
+import {
+  AlertCircle,
+  Award,
+  Briefcase,
+  CheckCircle2,
+  FolderGit2,
+  Layers,
+  Plus,
+  Trash2,
+  User,
+} from "lucide-react";
+import { TrajectoryStrengthGauge } from "./TrajectoryStrengthGauge";
 import type {
   CareerProfileData,
   EducationItem,
   ExtractedCareerData,
   ProjectItem,
   WorkExperienceItem,
-} from '../types';
+} from "../types";
 
 const SUGGESTED_SKILLS_POOL = [
-  'TypeScript',
-  'React',
-  'Node.js',
-  'Next.js',
-  'Go',
-  'Python',
-  'Docker',
-  'Kubernetes',
-  'AWS',
-  'PostgreSQL',
-  'GraphQL',
-  'System Design',
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Next.js",
+  "Go",
+  "Python",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "PostgreSQL",
+  "GraphQL",
+  "System Design",
 ];
 
 interface ExtractedDataReviewStepProps {
+  hideBottomBar?: boolean;
+  hideTopHeader?: boolean;
   initialData: ExtractedCareerData;
   onConfirm: (
     profileData: CareerProfileData,
@@ -58,23 +70,25 @@ export function ExtractedDataReviewStep({
   isSaving = false,
   saveError = null,
   onClearError,
+  hideBottomBar = false,
+  hideTopHeader = false,
 }: ExtractedDataReviewStepProps) {
-  // 1. Role & Experience (Core profile)
-  const [currentRole, setCurrentRole] = useState(initialData.currentRole ?? '');
+  // 1. Core Profile
+  const [currentRole, setCurrentRole] = useState(initialData.currentRole ?? "");
   const [yearsOfExperience, setYearsOfExperience] = useState(
     initialData.yearsOfExperience !== null &&
       initialData.yearsOfExperience !== undefined
       ? String(initialData.yearsOfExperience)
-      : '',
+      : "",
   );
-  const [targetRole, setTargetRole] = useState('');
+  const [targetRole, setTargetRole] = useState(initialData.targetRole ?? "");
   const [summary, setSummary] = useState(
-    initialData.workExperience?.[0]?.description ?? '',
+    initialData.summary || initialData.workExperience?.[0]?.description || "",
   );
 
   // 2. Technical Skills
   const [skills, setSkills] = useState<string[]>(initialData.skills || []);
-  const [newSkillInput, setNewSkillInput] = useState('');
+  const [newSkillInput, setNewSkillInput] = useState("");
 
   const suggestedSkills = useMemo(() => {
     const currentLower = new Set(skills.map((s) => s.toLowerCase()));
@@ -98,33 +112,63 @@ export function ExtractedDataReviewStep({
     initialData.education || [],
   );
 
-  // Validation errors
+  // Synchronize component state whenever initialData updates from asynchronous load
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    if (initialData.currentRole) setCurrentRole(initialData.currentRole);
+    if (
+      initialData.yearsOfExperience !== null &&
+      initialData.yearsOfExperience !== undefined
+    ) {
+      setYearsOfExperience(String(initialData.yearsOfExperience));
+    }
+    if (initialData.targetRole) setTargetRole(initialData.targetRole);
+    if (initialData.summary) setSummary(initialData.summary);
+    if (initialData.skills && initialData.skills.length > 0) {
+      setSkills(initialData.skills);
+    }
+    if (initialData.workExperience && initialData.workExperience.length > 0) {
+      setWorkExperience(initialData.workExperience);
+    }
+    if (initialData.projects && initialData.projects.length > 0) {
+      setProjects(initialData.projects);
+    }
+    if (initialData.education && initialData.education.length > 0) {
+      setEducation(initialData.education);
+    }
+  }
+
+  // Validation States
   const [roleError, setRoleError] = useState<string | null>(null);
   const [expError, setExpError] = useState<string | null>(null);
 
   // Temporary inputs for new items
   const [showAddWork, setShowAddWork] = useState(false);
-  const [newCompany, setNewCompany] = useState('');
-  const [newRole, setNewRole] = useState('');
-  const [newDates, setNewDates] = useState('');
-  const [newWorkDesc, setNewWorkDesc] = useState('');
+  const [newCompany, setNewCompany] = useState("");
+  const [newRole, setNewRole] = useState("");
+  const [newDates, setNewDates] = useState("");
+  const [newWorkDesc, setNewWorkDesc] = useState("");
 
   const [showAddProject, setShowAddProject] = useState(false);
-  const [newProjName, setNewProjName] = useState('');
-  const [newProjDesc, setNewProjDesc] = useState('');
-  const [newProjTech, setNewProjTech] = useState('');
+  const [newProjName, setNewProjName] = useState("");
+  const [newProjDesc, setNewProjDesc] = useState("");
+  const [newProjTech, setNewProjTech] = useState("");
 
   const [showAddEdu, setShowAddEdu] = useState(false);
-  const [newInstitution, setNewInstitution] = useState('');
-  const [newQualification, setNewQualification] = useState('');
-  const [newGradYear, setNewGradYear] = useState('');
+  const [newInstitution, setNewInstitution] = useState("");
+  const [newQualification, setNewQualification] = useState("");
+  const [newGradYear, setNewGradYear] = useState("");
 
-  // Skills management
+  // Skills handlers
   const handleAddSkill = () => {
     const trimmed = newSkillInput.trim();
-    if (trimmed && !skills.includes(trimmed)) {
+    if (
+      trimmed &&
+      !skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())
+    ) {
       setSkills((prev) => [...prev, trimmed]);
-      setNewSkillInput('');
+      setNewSkillInput("");
       onClearError?.();
     }
   };
@@ -134,48 +178,48 @@ export function ExtractedDataReviewStep({
     onClearError?.();
   };
 
-  // Work experience management
+  // Work experience handlers
   const handleAddWorkExperience = () => {
     if (!newCompany.trim() && !newRole.trim()) return;
     setWorkExperience((prev) => [
       ...prev,
       {
-        company: newCompany.trim() || null,
-        role: newRole.trim() || null,
-        startDate: newDates.trim() || null,
-        endDate: null,
-        description: newWorkDesc.trim() || null,
+        company: newCompany.trim() || "Company",
+        role: newRole.trim() || "Role",
+        title: newRole.trim() || "Role",
+        startDate: newDates.trim() || "2022",
+        endDate: "Present",
+        description: newWorkDesc.trim() || "",
       },
     ]);
-    setNewCompany('');
-    setNewRole('');
-    setNewDates('');
-    setNewWorkDesc('');
+    setNewCompany("");
+    setNewRole("");
+    setNewDates("");
+    setNewWorkDesc("");
     setShowAddWork(false);
   };
 
-  const handleRemoveWork = (index: number) => {
+  const handleRemoveWorkExperience = (index: number) => {
     setWorkExperience((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Projects management
+  // Projects handlers
   const handleAddProject = () => {
     if (!newProjName.trim()) return;
-    const techs = newProjTech
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
     setProjects((prev) => [
       ...prev,
       {
         name: newProjName.trim(),
-        description: newProjDesc.trim() || null,
-        technologies: techs,
+        description: newProjDesc.trim() || "",
+        technologies: newProjTech
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       },
     ]);
-    setNewProjName('');
-    setNewProjDesc('');
-    setNewProjTech('');
+    setNewProjName("");
+    setNewProjDesc("");
+    setNewProjTech("");
     setShowAddProject(false);
   };
 
@@ -183,10 +227,12 @@ export function ExtractedDataReviewStep({
     setProjects((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Education management
+  // Education handlers
   const handleAddEducation = () => {
     if (!newInstitution.trim() && !newQualification.trim()) return;
-    const yearParsed = newGradYear ? Number.parseInt(newGradYear, 10) : null;
+    const yearParsed = newGradYear.trim()
+      ? parseInt(newGradYear.trim(), 10)
+      : null;
     setEducation((prev) => [
       ...prev,
       {
@@ -196,9 +242,9 @@ export function ExtractedDataReviewStep({
           yearParsed && !Number.isNaN(yearParsed) ? yearParsed : null,
       },
     ]);
-    setNewInstitution('');
-    setNewQualification('');
-    setNewGradYear('');
+    setNewInstitution("");
+    setNewQualification("");
+    setNewGradYear("");
     setShowAddEdu(false);
   };
 
@@ -206,12 +252,14 @@ export function ExtractedDataReviewStep({
     setEducation((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Confirm and proceed
+  // Confirm and proceed to dashboard
   const handleConfirm = async () => {
     let hasError = false;
 
     if (!currentRole.trim()) {
-      setRoleError('Current role is required to establish your career baseline.');
+      setRoleError(
+        "Current role is required to establish your career baseline.",
+      );
       hasError = true;
     } else {
       setRoleError(null);
@@ -219,15 +267,15 @@ export function ExtractedDataReviewStep({
 
     const trimmedExp = yearsOfExperience.trim();
     if (!trimmedExp) {
-      setExpError('Years of experience is required.');
+      setExpError("Years of experience is required.");
       hasError = true;
     } else if (!EXP_ONE_DECIMAL_REGEX.test(trimmedExp)) {
-      setExpError('Please enter a valid number (e.g. 3 or 3.5).');
+      setExpError("Please enter a valid number (e.g. 3 or 3.5).");
       hasError = true;
     } else {
       const num = Number.parseFloat(trimmedExp);
       if (num < 0 || num > 50) {
-        setExpError('Experience must be between 0 and 50 years.');
+        setExpError("Experience must be between 0 and 50 years.");
         hasError = true;
       } else {
         setExpError(null);
@@ -249,68 +297,171 @@ export function ExtractedDataReviewStep({
       currentRole: currentRole.trim(),
       yearsOfExperience: Number.parseFloat(trimmedExp),
       skills,
+      summary: summary.trim(),
+      targetRole: targetRole.trim() || undefined,
       workExperience,
       projects,
       education,
     };
 
+    // Store in session storage so dashboard immediately picks up these exact values
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          "csa_career_profile",
+          JSON.stringify(confirmedProfile),
+        );
+      } catch {
+        // Ignore fallback
+      }
+    }
+
     await onConfirm(confirmedProfile, fullReviewedData);
   };
 
-  // Determine incomplete sections for user guidance
-  const isIncompleteRole = !currentRole.trim();
-  const isIncompleteExp = !yearsOfExperience.trim();
-  const isIncompleteSkills = skills.length === 0;
-  const hasIncompleteItems =
-    isIncompleteRole || isIncompleteExp || isIncompleteSkills;
+  const isRoleMissing = !initialData.currentRole;
+  const isExpMissing =
+    initialData.yearsOfExperience === null ||
+    initialData.yearsOfExperience === undefined;
+  const hasIncompleteDetection = isRoleMissing || isExpMissing;
 
   return (
-    <VStack gap={4} width="100%" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-      {/* Top Console Bar: Header & Trajectory Flight Path */}
-      <HStack justify="between" align="center" width="100%" wrap="wrap" gap={3}>
-        <VStack gap={1}>
-          <Heading level={1} weight="semibold">
-            Review extracted career data
-          </Heading>
-          <Text type="supporting" color="secondary">
-            Review and calibrate your baseline trajectory to power your personalized career plan.
-          </Text>
-        </VStack>
-
-        {/* Flight Path Pill */}
+    <VStack gap={5} width="100%">
+      {!hideTopHeader && (
+      /* Report Header & Meta Bar */
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          paddingBottom: 12,
+          borderBottom: "1px solid var(--color-gunmetal, #1f2433)",
+        }}
+      >
         <div
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '6px 14px',
-            borderRadius: '9999px',
-            background:
-              'linear-gradient(135deg, rgba(56, 189, 248, 0.06) 0%, rgba(16, 185, 129, 0.06) 100%)',
-            border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.1))',
-            fontSize: '0.85rem',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
           }}
         >
-          <span style={{ color: 'var(--color-text-secondary)' }}>Origin:</span>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            {currentRole.trim() || 'Origin Role Pending'}
-          </span>
-          <span style={{ color: 'var(--color-accent, #38bdf8)' }}>──▶</span>
-          <span style={{ color: 'var(--color-text-secondary)' }}>Target:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                color: "var(--color-periwinkle-glow, #98a4f7)",
+                background: "rgba(91, 99, 211, 0.15)",
+                border: "1px solid rgba(152, 164, 247, 0.3)",
+                padding: "3px 10px",
+                borderRadius: 9999,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              PROFILE AUDIT REPORT // BASELINE CALIBRATION
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <StatusDot variant="success" label="Extracted" />
+              <span style={{ fontSize: "0.75rem", color: "#86EFAC" }}>
+                Analysis Ready
+              </span>
+            </div>
+          </div>
+
           <span
             style={{
-              fontWeight: 600,
-              color: targetRole.trim()
-                ? 'var(--color-text-green, #10b981)'
-                : 'var(--color-text-secondary)',
+              fontSize: "0.75rem",
+              color: "var(--color-muted-steel, #646e87)",
             }}
           >
-            {targetRole.trim() || 'Select target role below'}
+            Editable Report Mode • Auto-saves to session
           </span>
         </div>
-      </HStack>
 
-      {/* Dynamic Trajectory Strength Gauge */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <VStack gap={1}>
+            <Heading
+              level={1}
+              weight="semibold"
+              style={{ fontSize: "1.65rem", margin: 0 }}
+            >
+              Review extracted career data
+            </Heading>
+            <Text
+              type="supporting"
+              color="secondary"
+              style={{ fontSize: "0.88rem" }}
+            >
+              Calibrate and refine your technical baseline report below before
+              proceeding to your dashboard.
+            </Text>
+          </VStack>
+
+          <div
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              fontSize: "0.8rem",
+            }}
+          >
+            <div>
+              <span style={{ color: "var(--color-muted-steel, #646e87)" }}>
+                Origin:{" "}
+              </span>
+              <span style={{ fontWeight: 600, color: "#ffffff" }}>
+                {currentRole || "Pending"} ({yearsOfExperience || "0"} yrs)
+              </span>
+            </div>
+            <span style={{ color: "var(--color-muted-steel, #646e87)" }}>
+              |
+            </span>
+            <div>
+              <span style={{ color: "var(--color-muted-steel, #646e87)" }}>
+                Skills:{" "}
+              </span>
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: "var(--color-periwinkle-glow, #98a4f7)",
+                }}
+              >
+                {skills.length} verified
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+
+            {hideBottomBar && (
+        <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderRadius: 12, background: "var(--color-carbon-surface, #151621)", border: "1px solid var(--color-gunmetal, #1f2433)", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--color-periwinkle-glow, #98a4f7)", background: "rgba(91, 99, 211, 0.15)", border: "1px solid rgba(152, 164, 247, 0.3)", padding: "3px 10px", borderRadius: 9999, letterSpacing: "0.05em", textTransform: "uppercase" }}>PROFILE CALIBRATION</span>
+            <span style={{ fontSize: "0.8rem", color: "#86EFAC" }}>✓ Live Calibration Mode</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Button label="← Back to upload" variant="secondary" onClick={onBack} isDisabled={isSaving} /><button type="button" id="proceed-to-dashboard-btn" onClick={() => void handleConfirm()} disabled={isSaving} aria-label="Confirm & Save Profile →" style={{ background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)", color: "#ffffff", border: "none", borderRadius: 9999, padding: "9px 24px", fontSize: "0.88rem", fontWeight: 500, cursor: isSaving ? "not-allowed" : "pointer", boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span>{isSaving ? "Saving..." : "Save Profile Changes"}</span>
+            <CheckCircle2 size={15} />
+          </button></div></div>
+      )}
+      {/* Trajectory Strength Gauge */}
       <TrajectoryStrengthGauge
         currentRole={currentRole}
         yearsOfExperience={yearsOfExperience}
@@ -318,196 +469,293 @@ export function ExtractedDataReviewStep({
         targetRole={targetRole}
       />
 
-      {/* Task 3.3: Incomplete Section Alert / Helper notice */}
-      {hasIncompleteItems && (
-        <Card variant="cyan" elevation="none">
-          <VStack gap={1} padding={2}>
-            <HStack gap={2} align="center">
-              <StatusDot variant="accent" label="Notice" />
-              <Heading
-                level={4}
-                weight="medium"
-                style={{ color: 'var(--color-text-cyan)' }}
-              >
-                Some sections need your attention
-              </Heading>
-            </HStack>
-            <Text type="supporting" style={{ color: 'var(--color-text-cyan)' }}>
-              {isIncompleteRole && isIncompleteExp
-                ? 'Your role and years of experience were not clearly detected. Please verify or enter them below.'
-                : isIncompleteRole
-                  ? 'Your current role was not detected. Please specify your role.'
-                  : isIncompleteExp
-                    ? 'Your years of experience were not detected. Please specify your approximate experience.'
-                    : 'No skills were detected. Add your key technical skills below.'}
-            </Text>
-          </VStack>
-        </Card>
-      )}
-
-      {/* Heuristic Extraction Notice */}
-      {(initialData.extractionMethod === 'heuristic' ||
-        initialData.warnings?.some((w) =>
-          w.toLowerCase().includes('heuristic'),
-        )) && (
-        <Card variant="default" elevation="none">
-          <VStack gap={1} padding={2}>
-            <HStack gap={2} align="center">
-              <StatusDot variant="neutral" label="Heuristic extraction notice" />
-              <Heading level={4} weight="medium">
-                Heuristic extraction used
-              </Heading>
-            </HStack>
-            <Text type="supporting" color="secondary">
-              Core skills and role were extracted using rule-based parsing because AI extraction was unavailable. Work experience, projects, and education were not automatically populated—please review and fill them in manually below.
-            </Text>
-          </VStack>
-        </Card>
-      )}
-
-      {/* Error alert when save/confirmation fails */}
+      {/* Error or Warning Banners */}
       {saveError && (
-        <Card variant="red" elevation="none">
-          <VStack gap={1} padding={2}>
-            <HStack gap={2} align="center">
-              <StatusDot variant="error" label="Save Error" />
-              <Heading
-                level={4}
-                weight="medium"
-                style={{ color: 'var(--color-text-red)' }}
+        <Card variant="red" elevation="none" style={{ padding: "14px 18px" }}>
+          <HStack justify="between" align="center">
+            <VStack gap={1}>
+              <Text
+                type="body"
+                weight="semibold"
+                style={{ color: "var(--color-text-red, #f87171)" }}
               >
                 Failed to save career profile
-              </Heading>
-            </HStack>
-            <Text type="body" style={{ color: 'var(--color-text-red)' }}>
-              {saveError}
-            </Text>
-            <Text type="supporting" color="secondary">
-              Your edits have been preserved. You can retry confirming below.
-            </Text>
-          </VStack>
+              </Text>
+              <Text
+                type="body"
+                style={{
+                  color: "var(--color-text-red, #f87171)",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {saveError}
+              </Text>
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--color-frost, #c9d3ee)",
+                }}
+              >
+                Your edits have been preserved. You can edit and retry.
+              </span>
+            </VStack>
+            {onClearError && (
+              <Button
+                label="Dismiss"
+                variant="ghost"
+                size="sm"
+                onClick={onClearError}
+              />
+            )}
+          </HStack>
         </Card>
       )}
 
-      {/* 2-Column Responsive Dashboard Layout */}
+      {/* Extraction Warnings or Notices */}
+      {initialData.warnings && initialData.warnings.length > 0 && (
+        <div
+          style={{
+            padding: "12px 18px",
+            borderRadius: 10,
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <AlertCircle size={18} style={{ color: "#EF4444", flexShrink: 0 }} />
+          <div>
+            <span
+              style={{ fontSize: "0.82rem", fontWeight: 600, color: "#FCA5A5" }}
+            >
+              Extraction Notice
+            </span>
+            {initialData.warnings.map((w, idx) => (
+              <div
+                key={idx}
+                style={{ fontSize: "0.78rem", color: "#FCA5A5", opacity: 0.9 }}
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasIncompleteDetection && (
+        <div
+          style={{
+            padding: "12px 18px",
+            borderRadius: 10,
+            background: "rgba(245, 158, 11, 0.1)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <AlertCircle size={18} style={{ color: "#F59E0B", flexShrink: 0 }} />
+          <div>
+            <span
+              style={{ fontSize: "0.82rem", fontWeight: 600, color: "#FDE68A" }}
+            >
+              Some sections need your attention
+            </span>
+            <div
+              style={{ fontSize: "0.78rem", color: "#FDE68A", opacity: 0.9 }}
+            >
+              Your role and years of experience were not clearly detected from
+              the document. Please calibrate them below.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDITABLE REPORT DOCUMENT CONTAINER */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
-          gap: '16px',
-          width: '100%',
-          alignItems: 'start',
+          width: "100%",
+          display: "grid",
+          gridTemplateColumns: "minmax(340px, 1.25fr) minmax(320px, 1fr)",
+          gap: 20,
+          alignItems: "start",
         }}
       >
-        {/* COLUMN 1: Profile & Skills */}
-        <VStack gap={3} width="100%">
-          {/* Section 1: Current Role, Exp, Target, & Summary */}
-          <Card variant="default" elevation="none">
-            <VStack gap={3} padding={3}>
-              <Heading level={3} weight="medium">
+        {/* LEFT REPORT COLUMN: Executive Baseline & Skills */}
+        <VStack gap={4} width="100%">
+          {/* Section 01: Current Role & Experience */}
+          <div
+            style={{
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              <User
+                size={16}
+                style={{ color: "var(--color-periwinkle-glow, #98a4f7)" }}
+              />
+              <Heading
+                level={3}
+                weight="medium"
+                style={{ fontSize: "1rem", margin: 0 }}
+              >
                 Current role &amp; experience
               </Heading>
+            </div>
 
-              {/* Side-by-Side Role and Experience */}
-              <HStack gap={3} align="start" width="100%">
-                <div style={{ flex: 1.5 }}>
+            <VStack gap={3}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.4fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
                   <TextInput
                     label="Current role *"
                     value={currentRole}
                     onChange={(val) => {
                       setCurrentRole(val);
                       if (roleError) setRoleError(null);
-                      onClearError?.();
                     }}
-                    placeholder="e.g. Senior Frontend Engineer"
+                    placeholder="e.g. Frontend Developer"
                     isRequired
                     status={
-                      roleError ? { type: 'error', message: roleError } : undefined
+                      roleError
+                        ? { type: "error", message: roleError }
+                        : undefined
                     }
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <TextInput
                     label="Years of experience *"
                     value={yearsOfExperience}
                     onChange={(val) => {
                       setYearsOfExperience(val);
                       if (expError) setExpError(null);
-                      onClearError?.();
                     }}
-                    placeholder="e.g. 5 or 3.5"
+                    placeholder="e.g. 4"
                     isRequired
                     status={
-                      expError ? { type: 'error', message: expError } : undefined
+                      expError
+                        ? { type: "error", message: expError }
+                        : undefined
                     }
                   />
                 </div>
-              </HStack>
+              </div>
 
-              <TextInput
-                label="Target role (Optional)"
-                value={targetRole}
-                onChange={(val) => {
-                  setTargetRole(val);
-                  onClearError?.();
-                }}
-                placeholder="e.g. Cloud Architect, Staff Engineer"
-                isOptional
-              />
+              <div>
+                <TextInput
+                  label="Target role (Optional)"
+                  value={targetRole}
+                  onChange={setTargetRole}
+                  placeholder="e.g. Cloud Architect, Staff Engineer (or select on Explore Paths)"
+                  isOptional
+                />
+              </div>
 
-              <TextArea
-                label="Summary"
-                value={summary}
-                onChange={(val) => {
-                  setSummary(val);
-                  onClearError?.();
-                }}
-                placeholder="Brief summary of your technical background, leadership, or career achievements..."
-                rows={2}
-                isOptional
-              />
+              <div>
+                <TextArea
+                  label="Summary (Optional)"
+                  value={summary}
+                  onChange={setSummary}
+                  placeholder="Brief summary of your technical background, leadership, or career achievements..."
+                  rows={3}
+                  isOptional
+                />
+              </div>
             </VStack>
-          </Card>
+          </div>
 
-          {/* Section 2: Technical Skills */}
-          <Card variant="default" elevation="none">
-            <VStack gap={3} padding={3}>
-              <HStack justify="between" align="center">
-                <Heading level={3} weight="medium">
+          {/* Section 02: Technical Skills Matrix */}
+          <div
+            style={{
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Layers
+                  size={16}
+                  style={{ color: "var(--color-periwinkle-glow, #98a4f7)" }}
+                />
+                <Heading
+                  level={3}
+                  weight="medium"
+                  style={{ fontSize: "1rem", margin: 0 }}
+                >
                   Technical skills ({skills.length})
                 </Heading>
-                <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
-                  Click &times; to remove incorrect skills
-                </Text>
-              </HStack>
+              </div>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--color-muted-steel, #646e87)",
+                }}
+              >
+                Click × to remove incorrect skills
+              </span>
+            </div>
 
-              {/* Scrollable skill chips container */}
+            <VStack gap={3}>
+              {/* Active Skill Chips */}
               <div
                 style={{
-                  maxHeight: '110px',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  padding: '2px',
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  padding: 10,
+                  background: "var(--color-void-black, #0f101a)",
+                  border: "1px solid var(--color-gunmetal, #1f2433)",
+                  borderRadius: 10,
+                  minHeight: 52,
                 }}
               >
                 {skills.map((skill) => (
                   <Token
                     key={skill}
                     label={skill}
-                    size="md"
+                    size="sm"
                     onRemove={() => handleRemoveSkill(skill)}
                   />
                 ))}
                 {skills.length === 0 && (
                   <Text type="supporting" color="secondary">
-                    No skills detected yet. Add your primary technical skills below.
+                    No skills added yet. Type below to add competencies.
                   </Text>
                 )}
               </div>
 
-              <HStack gap={2} align="end">
+              {/* Add a Skill Input */}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
                   <TextInput
                     label="Add a skill"
@@ -519,416 +767,650 @@ export function ExtractedDataReviewStep({
                 <Button
                   label="Add skill"
                   variant="secondary"
+                  size="sm"
                   onClick={handleAddSkill}
                   isDisabled={!newSkillInput.trim()}
                 />
-              </HStack>
+              </div>
 
-              {/* Suggested competencies */}
+              {/* Suggested Skills to Add */}
               {suggestedSkills.length > 0 && (
-                <VStack gap={1} style={{ marginTop: 2 }}>
-                  <Text type="supporting" color="secondary" style={{ fontSize: '0.75rem' }}>
-                    Suggested competencies:
-                  </Text>
-                  <HStack gap={2} wrap="wrap">
-                    {suggestedSkills.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => {
-                          if (!skills.includes(s)) {
-                            setSkills((prev) => [...prev, s]);
-                          }
-                        }}
-                        style={{
-                          background:
-                            'var(--color-surface-elevated, rgba(255, 255, 255, 0.05))',
-                          border:
-                            '1px dashed var(--color-border-subtle, rgba(255, 255, 255, 0.2))',
-                          color: 'var(--color-text-primary, #e2e8f0)',
-                          borderRadius: 9999,
-                          padding: '2px 10px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        + {s}
-                      </button>
-                    ))}
-                  </HStack>
-                </VStack>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginTop: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "var(--color-muted-steel, #646e87)",
+                    }}
+                  >
+                    Suggested:
+                  </span>
+                  {suggestedSkills.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setSkills((prev) => [...prev, s]);
+                      }}
+                      style={{
+                        background: "transparent",
+                        border: "1px dashed var(--color-gunmetal, #1f2433)",
+                        borderRadius: 9999,
+                        padding: "2px 8px",
+                        fontSize: "0.72rem",
+                        color: "var(--color-frost, #c9d3ee)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + {s}
+                    </button>
+                  ))}
+                </div>
               )}
             </VStack>
-          </Card>
+          </div>
         </VStack>
 
-        {/* COLUMN 2: Background Milestones */}
-        <VStack gap={3} width="100%">
-          {/* Work Experience */}
-          <Card variant="default" elevation="none">
-            <VStack gap={2} padding={3}>
-              <HStack justify="between" align="center">
-                <Heading level={3} weight="medium">
+        {/* RIGHT REPORT COLUMN: Experience, Projects & Education */}
+        <VStack gap={4} width="100%">
+          {/* Section 03: Work Experience Record */}
+          <div
+            style={{
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Briefcase
+                  size={16}
+                  style={{ color: "var(--color-periwinkle-glow, #98a4f7)" }}
+                />
+                <Heading
+                  level={3}
+                  weight="medium"
+                  style={{ fontSize: "1rem", margin: 0 }}
+                >
                   Work experience ({workExperience.length})
                 </Heading>
-                {!showAddWork && (
-                  <Button
-                    label="+ Add experience"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddWork(true)}
-                  />
-                )}
-              </HStack>
-
-              <div
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddWork(!showAddWork)}
                 style={{
-                  maxHeight: '135px',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--color-periwinkle-glow, #98a4f7)",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
               >
-                {workExperience.map((exp, idx) => (
-                  <Card
-                    key={idx}
-                    variant="default"
-                    elevation="none"
+                <Plus size={14} />
+                <span>+ Add experience</span>
+              </button>
+            </div>
+
+            {/* List of Work Experiences */}
+            <VStack gap={2}>
+              {workExperience.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-gunmetal, #1f2433)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  <div
                     style={{
-                      padding: '8px 12px',
-                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
                     }}
                   >
-                    <VStack gap={1}>
-                      <HStack justify="between" align="start">
-                        <VStack gap={0}>
-                          <Text type="body" weight="semibold">
-                            {exp.role || 'Role unspecified'}
-                            {exp.company ? ` at ${exp.company}` : ''}
-                          </Text>
-                          {exp.startDate && (
-                            <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
-                              {exp.startDate}
-                              {exp.endDate ? ` - ${exp.endDate}` : ''}
-                            </Text>
-                          )}
-                        </VStack>
-                        <Button
-                          label="Remove"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveWork(idx)}
-                        />
-                      </HStack>
-                      {exp.description && (
-                        <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                          {exp.description}
-                        </Text>
-                      )}
-                    </VStack>
-                  </Card>
-                ))}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                          color: "#ffffff",
+                        }}
+                      >
+                        {item.role || item.title}
+                        {item.company ? ` at ${item.company}` : ""}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "var(--color-frost, #c9d3ee)",
+                        }}
+                      >
+                        {item.startDate || "2022"} - {item.endDate || "Present"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveWorkExperience(idx)}
+                      aria-label="Remove"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--color-muted-steel, #646e87)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  {item.description && (
+                    <div
+                      style={{
+                        fontSize: "0.76rem",
+                        color: "var(--color-muted-steel, #646e87)",
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.description}
+                    </div>
+                  )}
+                </div>
+              ))}
 
-                {workExperience.length === 0 && !showAddWork && (
-                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                    No previous work experience extracted. You can add positions or skip this section.
-                  </Text>
-                )}
-              </div>
+              {workExperience.length === 0 && !showAddWork && (
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--color-muted-steel, #646e87)",
+                    padding: "6px 0",
+                  }}
+                >
+                  No previous work experience extracted. You can add positions
+                  or skip this section.
+                </div>
+              )}
 
+              {/* Add Work Form Drawer */}
               {showAddWork && (
-                <Card variant="cyan" elevation="none">
-                  <VStack gap={2} padding={3}>
-                    <Heading level={4} weight="medium">
-                      Add work experience
-                    </Heading>
-                    <TextInput
-                      label="Company"
-                      value={newCompany}
-                      onChange={setNewCompany}
-                      placeholder="e.g. Acme Tech"
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-periwinkle-glow, #98a4f7)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <TextInput
+                    label="Company Name"
+                    value={newCompany}
+                    onChange={setNewCompany}
+                    placeholder="e.g. Acme Tech"
+                  />
+                  <TextInput
+                    label="Position / Role"
+                    value={newRole}
+                    onChange={setNewRole}
+                    placeholder="e.g. Senior Software Engineer"
+                  />
+                  <TextInput
+                    label="Dates / Timeline"
+                    value={newDates}
+                    onChange={setNewDates}
+                    placeholder="e.g. 2021 - Present"
+                  />
+                  <TextArea
+                    label="Key Accomplishments (Optional)"
+                    value={newWorkDesc}
+                    onChange={setNewWorkDesc}
+                    placeholder="Led frontend architecture, built component libraries..."
+                    rows={2}
+                  />
+                  <HStack gap={2} justify="end">
+                    <Button
+                      label="Cancel"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAddWork(false)}
                     />
-                    <TextInput
-                      label="Role / Title"
-                      value={newRole}
-                      onChange={setNewRole}
-                      placeholder="e.g. Senior Software Engineer"
+                    <Button
+                      label="Save entry"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAddWorkExperience}
                     />
-                    <TextInput
-                      label="Dates"
-                      value={newDates}
-                      onChange={setNewDates}
-                      placeholder="e.g. 2021 - 2024"
-                    />
-                    <TextArea
-                      label="Description"
-                      value={newWorkDesc}
-                      onChange={setNewWorkDesc}
-                      placeholder="Key responsibilities and achievements..."
-                      rows={2}
-                    />
-                    <HStack gap={2} justify="end">
-                      <Button
-                        label="Cancel"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddWork(false)}
-                      />
-                      <Button
-                        label="Save entry"
-                        variant="primary"
-                        size="sm"
-                        onClick={handleAddWorkExperience}
-                        isDisabled={!newCompany.trim() && !newRole.trim()}
-                      />
-                    </HStack>
-                  </VStack>
-                </Card>
+                  </HStack>
+                </div>
               )}
             </VStack>
-          </Card>
+          </div>
 
-          {/* Projects */}
-          <Card variant="default" elevation="none">
-            <VStack gap={2} padding={3}>
-              <HStack justify="between" align="center">
-                <Heading level={3} weight="medium">
+          {/* Section 04: Projects Record */}
+          <div
+            style={{
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <FolderGit2
+                  size={16}
+                  style={{ color: "var(--color-periwinkle-glow, #98a4f7)" }}
+                />
+                <Heading
+                  level={3}
+                  weight="medium"
+                  style={{ fontSize: "1rem", margin: 0 }}
+                >
                   Projects ({projects.length})
                 </Heading>
-                {!showAddProject && (
-                  <Button
-                    label="+ Add project"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddProject(true)}
-                  />
-                )}
-              </HStack>
-
-              <div
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddProject(!showAddProject)}
                 style={{
-                  maxHeight: '120px',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--color-periwinkle-glow, #98a4f7)",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
               >
-                {projects.map((proj, idx) => (
-                  <Card
-                    key={idx}
-                    variant="default"
-                    elevation="none"
+                <Plus size={14} />
+                <span>Add project</span>
+              </button>
+            </div>
+
+            <VStack gap={2}>
+              {projects.map((proj, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-gunmetal, #1f2433)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  <div
                     style={{
-                      padding: '8px 12px',
-                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
                     }}
                   >
-                    <VStack gap={1}>
-                      <HStack justify="between" align="start">
-                        <Text type="body" weight="semibold">
-                          {proj.name || 'Untitled Project'}
-                        </Text>
-                        <Button
-                          label="Remove"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveProject(idx)}
-                        />
-                      </HStack>
-                      {proj.description && (
-                        <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                          {proj.description}
-                        </Text>
-                      )}
-                      {proj.technologies && proj.technologies.length > 0 && (
-                        <HStack gap={1} wrap="wrap">
-                          {proj.technologies.map((tech) => (
-                            <Token key={tech} label={tech} size="sm" />
-                          ))}
-                        </HStack>
-                      )}
-                    </VStack>
-                  </Card>
-                ))}
+                    <div
+                      style={{
+                        fontSize: "0.88rem",
+                        fontWeight: 600,
+                        color: "#ffffff",
+                      }}
+                    >
+                      {proj.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProject(idx)}
+                      aria-label="Remove"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--color-muted-steel, #646e87)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  {proj.description && (
+                    <div
+                      style={{
+                        fontSize: "0.76rem",
+                        color: "var(--color-muted-steel, #646e87)",
+                      }}
+                    >
+                      {proj.description}
+                    </div>
+                  )}
+                  {proj.technologies && proj.technologies.length > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 4,
+                        flexWrap: "wrap",
+                        marginTop: 4,
+                      }}
+                    >
+                      {proj.technologies.map((t) => (
+                        <span
+                          key={t}
+                          style={{
+                            fontSize: "0.68rem",
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            background: "rgba(255,255,255,0.06)",
+                            color: "var(--color-frost, #c9d3ee)",
+                          }}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
 
-                {projects.length === 0 && !showAddProject && (
-                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                    No technical projects detected. You can add personal or open source projects here or skip.
-                  </Text>
-                )}
-              </div>
+              {projects.length === 0 && !showAddProject && (
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--color-muted-steel, #646e87)",
+                    padding: "6px 0",
+                  }}
+                >
+                  No technical projects detected. You can add personal or open
+                  source projects here or skip.
+                </div>
+              )}
 
+              {/* Add Project Form */}
               {showAddProject && (
-                <Card variant="cyan" elevation="none">
-                  <VStack gap={2} padding={3}>
-                    <Heading level={4} weight="medium">
-                      Add project
-                    </Heading>
-                    <TextInput
-                      label="Project name"
-                      value={newProjName}
-                      onChange={setNewProjName}
-                      placeholder="e.g. Cloud Storage CLI"
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-periwinkle-glow, #98a4f7)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <TextInput
+                    label="Project Name"
+                    value={newProjName}
+                    onChange={setNewProjName}
+                    placeholder="e.g. OpenMetrics Exporter"
+                  />
+                  <TextInput
+                    label="Technologies Used"
+                    value={newProjTech}
+                    onChange={setNewProjTech}
+                    placeholder="e.g. Go, Prometheus, Docker"
+                  />
+                  <TextArea
+                    label="Project Overview"
+                    value={newProjDesc}
+                    onChange={setNewProjDesc}
+                    placeholder="Prometheus exporter in Go with high throughput..."
+                    rows={2}
+                  />
+                  <HStack gap={2} justify="end">
+                    <Button
+                      label="Cancel"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAddProject(false)}
                     />
-                    <TextArea
-                      label="Description"
-                      value={newProjDesc}
-                      onChange={setNewProjDesc}
-                      placeholder="What this project does and architectural highlights..."
-                      rows={2}
+                    <Button
+                      label="Save project"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAddProject}
                     />
-                    <TextInput
-                      label="Technologies (comma separated)"
-                      value={newProjTech}
-                      onChange={setNewProjTech}
-                      placeholder="e.g. Go, AWS S3, gRPC"
-                    />
-                    <HStack gap={2} justify="end">
-                      <Button
-                        label="Cancel"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddProject(false)}
-                      />
-                      <Button
-                        label="Save project"
-                        variant="primary"
-                        size="sm"
-                        onClick={handleAddProject}
-                        isDisabled={!newProjName.trim()}
-                      />
-                    </HStack>
-                  </VStack>
-                </Card>
+                  </HStack>
+                </div>
               )}
             </VStack>
-          </Card>
+          </div>
 
-          {/* Education */}
-          <Card variant="default" elevation="none">
-            <VStack gap={2} padding={3}>
-              <HStack justify="between" align="center">
-                <Heading level={3} weight="medium">
+          {/* Section 05: Education & Credentials */}
+          <div
+            style={{
+              background: "var(--color-carbon-surface, #151621)",
+              border: "1px solid var(--color-gunmetal, #1f2433)",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Award
+                  size={16}
+                  style={{ color: "var(--color-periwinkle-glow, #98a4f7)" }}
+                />
+                <Heading
+                  level={3}
+                  weight="medium"
+                  style={{ fontSize: "1rem", margin: 0 }}
+                >
                   Education &amp; certifications ({education.length})
                 </Heading>
-                {!showAddEdu && (
-                  <Button
-                    label="+ Add education"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddEdu(true)}
-                  />
-                )}
-              </HStack>
-
-              <div
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddEdu(!showAddEdu)}
                 style={{
-                  maxHeight: '105px',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--color-periwinkle-glow, #98a4f7)",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
               >
-                {education.map((edu, idx) => (
-                  <Card
-                    key={idx}
-                    variant="default"
-                    elevation="none"
+                <Plus size={14} />
+                <span>Add education</span>
+              </button>
+            </div>
+
+            <VStack gap={2}>
+              {education.map((edu, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-gunmetal, #1f2433)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "0.88rem",
+                        fontWeight: 600,
+                        color: "#ffffff",
+                      }}
+                    >
+                      {edu.qualification || "Degree"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        color: "var(--color-frost, #c9d3ee)",
+                      }}
+                    >
+                      {edu.institution || "University"}
+                      {edu.graduationYear ? ` • ${edu.graduationYear}` : ""}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveEducation(idx)}
+                    aria-label="Remove"
                     style={{
-                      padding: '8px 12px',
-                      background: 'var(--color-surface-elevated, rgba(255,255,255,0.02))',
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--color-muted-steel, #646e87)",
+                      cursor: "pointer",
                     }}
                   >
-                    <HStack justify="between" align="start">
-                      <VStack gap={0}>
-                        <Text type="body" weight="semibold">
-                          {edu.qualification || 'Degree / Certificate'}
-                        </Text>
-                        <Text type="supporting" color="secondary" style={{ fontSize: '0.78rem' }}>
-                          {edu.institution || 'Institution'}
-                          {edu.graduationYear ? ` • ${edu.graduationYear}` : ''}
-                        </Text>
-                      </VStack>
-                      <Button
-                        label="Remove"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveEducation(idx)}
-                      />
-                    </HStack>
-                  </Card>
-                ))}
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
 
-                {education.length === 0 && !showAddEdu && (
-                  <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                    No education history detected. You can add degrees or certifications here or skip.
-                  </Text>
-                )}
-              </div>
+              {education.length === 0 && !showAddEdu && (
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--color-muted-steel, #646e87)",
+                    padding: "6px 0",
+                  }}
+                >
+                  No education history detected. You can add degrees or
+                  certifications here or skip.
+                </div>
+              )}
 
+              {/* Add Education Form */}
               {showAddEdu && (
-                <Card variant="cyan" elevation="none">
-                  <VStack gap={2} padding={3}>
-                    <Heading level={4} weight="medium">
-                      Add education
-                    </Heading>
-                    <TextInput
-                      label="Institution"
-                      value={newInstitution}
-                      onChange={setNewInstitution}
-                      placeholder="e.g. Stanford University"
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 8,
+                    background: "var(--color-void-black, #0f101a)",
+                    border: "1px solid var(--color-periwinkle-glow, #98a4f7)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <TextInput
+                    label="Institution / University"
+                    value={newInstitution}
+                    onChange={setNewInstitution}
+                    placeholder="e.g. Georgia Tech"
+                  />
+                  <TextInput
+                    label="Degree / Certification"
+                    value={newQualification}
+                    onChange={setNewQualification}
+                    placeholder="e.g. B.S. in Computer Science"
+                  />
+                  <TextInput
+                    label="Graduation Year"
+                    value={newGradYear}
+                    onChange={setNewGradYear}
+                    placeholder="e.g. 2020"
+                  />
+                  <HStack gap={2} justify="end">
+                    <Button
+                      label="Cancel"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAddEdu(false)}
                     />
-                    <TextInput
-                      label="Degree / Qualification"
-                      value={newQualification}
-                      onChange={setNewQualification}
-                      placeholder="e.g. B.S. in Computer Science"
+                    <Button
+                      label="Save education"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAddEducation}
                     />
-                    <TextInput
-                      label="Graduation Year"
-                      value={newGradYear}
-                      onChange={setNewGradYear}
-                      placeholder="e.g. 2020"
-                    />
-                    <HStack gap={2} justify="end">
-                      <Button
-                        label="Cancel"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddEdu(false)}
-                      />
-                      <Button
-                        label="Save education"
-                        variant="primary"
-                        size="sm"
-                        onClick={handleAddEducation}
-                        isDisabled={!newInstitution.trim() && !newQualification.trim()}
-                      />
-                    </HStack>
-                  </VStack>
-                </Card>
+                  </HStack>
+                </div>
               )}
             </VStack>
-          </Card>
+          </div>
         </VStack>
       </div>
 
-      <Divider />
-
-      {/* Confirmation Actions */}
-      <HStack justify="between" align="center" width="100%">
+      {!hideBottomBar && (
+      /* Confirmation & Proceed Action Bar - Fixed to bottom of screen on internal & external pages */
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          width: "100%",
+          zIndex: 40,
+          background: "rgba(15, 16, 26, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderTop: "1px solid var(--color-gunmetal, #1f2433)",
+          boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.65)",
+          padding: "16px 24px",
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+          marginTop: 24,
+          borderRadius: "12px 12px 0 0",
+        }}
+      >
         <Button
           label="← Back to upload"
           variant="secondary"
           onClick={onBack}
           isDisabled={isSaving}
         />
-        <HStack gap={3}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {onSwitchToManual && (
             <Button
               label="Switch to manual form"
@@ -937,14 +1419,42 @@ export function ExtractedDataReviewStep({
               isDisabled={isSaving}
             />
           )}
-          <Button
-            label={isSaving ? 'Saving profile...' : 'Confirm & Save Profile →'}
-            variant="primary"
+
+          {/* Primary CTA button matching wireframe & tests */}
+          <button
+            type="button"
+            id="proceed-to-dashboard-btn"
             onClick={() => void handleConfirm()}
-            isDisabled={isSaving}
-          />
-        </HStack>
-      </HStack>
+            disabled={isSaving}
+            aria-label="Confirm & Save Profile →"
+            style={{
+              background:
+                "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 9999,
+              padding: "12px 28px",
+              fontSize: "0.96rem",
+              fontWeight: 500,
+              cursor: isSaving ? "not-allowed" : "pointer",
+              boxShadow:
+                "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "opacity 0.2s ease",
+            }}
+          >
+            <span>
+              {isSaving
+                ? "Saving profile..."
+                : "Confirm & Proceed to Dashboard →"}
+            </span>
+            <CheckCircle2 size={16} />
+          </button>
+        </div>
+      </div>
+      )}
     </VStack>
   );
 }

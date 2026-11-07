@@ -74,8 +74,9 @@ export function TrajectoryStrengthGauge({
       variant="default"
       elevation="none"
       style={{
-        border: '1px solid var(--color-border-subtle, rgba(255,255,255,0.08))',
-        background: 'var(--color-surface-elevated, rgba(255,255,255,0.03))',
+        border: '1px solid var(--color-gunmetal, #1f2433)',
+        background: 'var(--color-carbon-surface, #151621)',
+        borderRadius: 16,
       }}
     >
       <HStack gap={4} align="center" justify="between" padding={3} wrap="wrap">
@@ -105,7 +106,7 @@ export function TrajectoryStrengthGauge({
                 stroke="currentColor"
                 strokeWidth="5"
                 fill="transparent"
-                style={{ color: 'var(--color-border-subtle, rgba(255,255,255,0.1))' }}
+                style={{ color: 'var(--color-gunmetal, #1f2433)' }}
               />
               <circle
                 cx="32"
@@ -123,8 +124,8 @@ export function TrajectoryStrengthGauge({
               />
               <defs>
                 <linearGradient id="trajectoryGaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="var(--color-accent, #38bdf8)" />
-                  <stop offset="100%" stopColor="var(--color-text-green, #10b981)" />
+                  <stop offset="0%" stopColor="var(--color-iris-blue, #5b63d3)" />
+                  <stop offset="100%" stopColor="var(--color-periwinkle-glow, #98a4f7)" />
                 </linearGradient>
               </defs>
             </svg>
@@ -168,14 +169,14 @@ export function TrajectoryStrengthGauge({
                 fontSize: '0.78rem',
                 fontWeight: 500,
                 border: item.completed
-                  ? '1px solid var(--color-border-green, rgba(16, 185, 129, 0.3))'
-                  : '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.1))',
+                  ? '1px solid var(--color-border-green, #22C55E)'
+                  : '1px solid var(--color-gunmetal, #1f2433)',
                 background: item.completed
-                  ? 'var(--color-surface-green, rgba(16, 185, 129, 0.1))'
+                  ? 'rgba(34, 197, 94, 0.12)'
                   : 'transparent',
                 color: item.completed
-                  ? 'var(--color-text-green, #10b981)'
-                  : 'var(--color-text-secondary, #94a3b8)',
+                  ? 'var(--color-text-green, #86EFAC)'
+                  : 'var(--color-muted-steel, #646e87)',
                 transition: 'all 0.25s ease',
               }}
             >

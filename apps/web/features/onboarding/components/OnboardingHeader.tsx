@@ -5,7 +5,7 @@ import { HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 
 interface OnboardingHeaderProps {
-  currentStep?: 1 | 2 | null;
+  currentStep?: 1 | 2 | 3 | null;
 }
 
 export function OnboardingHeader({ currentStep = null }: OnboardingHeaderProps) {
@@ -25,7 +25,7 @@ export function OnboardingHeader({ currentStep = null }: OnboardingHeaderProps) 
             {currentStep === 1 ? '●' : '○'}
           </Text>
           <Text type="supporting" color="secondary">
-            ─────
+            ──
           </Text>
           <Text
             type="label"
@@ -33,6 +33,16 @@ export function OnboardingHeader({ currentStep = null }: OnboardingHeaderProps) 
             color={currentStep === 2 ? 'primary' : 'secondary'}
           >
             {currentStep === 2 ? '●' : '○'}
+          </Text>
+          <Text type="supporting" color="secondary">
+            ──
+          </Text>
+          <Text
+            type="label"
+            weight={currentStep === 3 ? 'bold' : 'normal'}
+            color={currentStep === 3 ? 'primary' : 'secondary'}
+          >
+            {currentStep === 3 ? '●' : '○'}
           </Text>
         </HStack>
       )}

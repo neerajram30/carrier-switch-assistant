@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./layers.css";
 import "./globals.css";
+import "@astryxdesign/charts/charts.css";
 import { ThemeProvider } from "./theme-provider";
 
 const geistSans = Geist({

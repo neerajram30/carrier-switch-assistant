@@ -28,19 +28,62 @@ model User {
 }
 
 model CareerProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique // @unique enforces the 1:1 constraint
+  id                String    @id @default(uuid())
+  userId            String    @unique // @unique enforces the 1:1 constraint
   currentRole       String
-  yearsOfExperience Decimal  @db.Decimal(3, 1)
+  yearsOfExperience Decimal   @db.Decimal(3, 1)
   targetRole        String?
-  skills            String[] @default([])
+  skills            String[]  @default([])
   summary           String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  // Foreign key relation linking to User
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPrompt        String?   @db.Text
+
+  // Calibrated experience & LLM-generated trajectories
+  workExperience    Json?
+  education         Json?
+  projects          Json?
+  suggestedPaths    Json?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmaps          Roadmap[]
 
   @@map("career_profiles")
+}
+
+model Roadmap {
+  id              String             @id @default(uuid())
+  careerProfileId String
+  targetRole      String
+  estimatedMonths Int                @default(6)
+  progressPercent Int                @default(0)
+  milestones      RoadmapMilestone[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  careerProfile   CareerProfile      @relation(fields: [careerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([careerProfileId])
+  @@map("roadmaps")
+}
+
+model RoadmapMilestone {
+  id          String    @id @default(uuid())
+  roadmapId   String
+  weekRange   String    // e.g. "Week 1 - 2"
+  title       String    // e.g. "Distributed Systems & Raft Consensus"
+  description String
+  category    String    // e.g. "Architecture"
+  duration    String    // e.g. "15 hrs"
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+
+  roadmap     Roadmap   @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId])
+  @@map("roadmap_milestones")
 }
 
 model Resume {
@@ -50,6 +93,7 @@ model Resume {
   contentType      String
   fileSize         Int
   storageKey       String
+  userPrompt       String?      @db.Text
   status           ResumeStatus @default(UPLOADING)
   extractedText    String?      @db.Text
   structuredData   Json?
@@ -58,7 +102,7 @@ model Resume {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("resumes")

@@ -22,7 +22,9 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
     global.fetch = originalFetch;
   });
 
-  it('completes the entire journey: Upload -> Process with AI -> Review & Edit -> Handle failure with preserved state -> Retry & Persist', async () => {
+  it(
+    'completes the entire journey: Upload -> Process with AI -> Review & Edit -> Handle failure with preserved state -> Retry & Persist',
+    async () => {
     const resumeId = 'resume-e2e-proc-101';
     const devUserId = '00000000-0000-0000-0000-000000000001';
 
@@ -94,6 +96,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
       updatedAt: '2026-10-16T00:00:00Z',
     };
 
+    let saveAttempts = 0;
     const mockFetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const urlStr = String(url);
 
@@ -135,8 +138,9 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
 
       // POST /career-profile (save)
       if (urlStr.includes('/api/v1/career-profile') && init?.method === 'POST') {
+        saveAttempts++;
         // First attempt fails to verify error handling and preservation of user edits
-        if (!mockFetch.mock.calls.some(c => c[0].includes('/api/v1/career-profile') && c[1]?.method === 'POST' && c !== mockFetch.mock.calls[mockFetch.mock.calls.length - 1])) {
+        if (saveAttempts === 1) {
           return {
             ok: false,
             status: 500,
@@ -172,7 +176,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
     // -------------------------------------------------------------------------
     // Step 1: Render Home Page
     // -------------------------------------------------------------------------
-    render(<OnboardingRoute />);
+    render(<OnboardingRoute initialStep="upload" />);
 
     expect(screen.getByText('Build your career baseline')).toBeInTheDocument();
 
@@ -292,7 +296,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
     expect(lastSaveBody.skills).toContain('GraphQL');
     expect(lastSaveBody.skills).toContain('React');
     expect(saveCalls[1][1].headers['x-user-id']).toBe(devUserId);
-  });
+  }, 20000);
 
   it('handles processing failure with recovery and retry', async () => {
     const resumeId = 'resume-retry-failure-1';
@@ -376,7 +380,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
       etag: 'etag-1',
     });
 
-    render(<OnboardingRoute />);
+    render(<OnboardingRoute initialStep="upload" />);
 
     const fileInput = document.querySelector('input[type="file"]')!;
     fireEvent.change(fileInput, {

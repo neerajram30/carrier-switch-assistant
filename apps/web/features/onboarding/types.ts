@@ -1,4 +1,13 @@
-export type OnboardingStep = 'upload' | 'review' | 'manual';
+export type OnboardingStep =
+  | 'upload'
+  | 'review'
+  | 'manual'
+  | 'manual_guided';
+
+export interface OnboardingPreferences {
+  careerDriver?: string;
+  targetTimeline?: string;
+}
 
 export type UploadProcessingState =
   | 'idle'
@@ -20,6 +29,7 @@ export interface UploadedResumeInfo {
 export interface WorkExperienceItem {
   company: string | null;
   role: string | null;
+  title?: string | null;
   description: string | null;
   startDate: string | null;
   endDate: string | null;
@@ -45,6 +55,10 @@ export interface ExtractedCareerData {
   workExperience: WorkExperienceItem[];
   education: EducationItem[];
   projects: ProjectItem[];
+  summary?: string | null;
+  targetRole?: string | null;
+  suggestedPaths?: unknown[];
+  userPrompt?: string | null;
   extractionMethod?: 'ai' | 'heuristic';
   warnings?: string[];
 }
@@ -68,6 +82,11 @@ export interface CareerProfileData {
   skills: string[];
   summary: string;
   targetRole?: string;
+  userPrompt?: string | null;
+  workExperience?: WorkExperienceItem[];
+  education?: EducationItem[];
+  projects?: ProjectItem[];
+  suggestedPaths?: unknown[];
 }
 
 export interface CareerProfileApiResponse {

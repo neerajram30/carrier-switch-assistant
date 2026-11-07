@@ -11,7 +11,7 @@ import type { CurrentUser as ICurrentUser } from './current-user.interface.js';
  * Reads the identity resolved and attached to request.user by AuthGuard.
  */
 export const CurrentUser = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): ICurrentUser => {
+  (data: keyof ICurrentUser | undefined, ctx: ExecutionContext): any => {
     const request = ctx
       .switchToHttp()
       .getRequest<Request & { user?: ICurrentUser }>();
@@ -22,6 +22,6 @@ export const CurrentUser = createParamDecorator(
       );
     }
 
-    return request.user;
+    return data ? request.user[data] : request.user;
   },
 );

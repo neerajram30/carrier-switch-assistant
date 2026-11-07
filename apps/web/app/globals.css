@@ -9,6 +9,180 @@
 html,
 body {
   height: 100%;
+  background-color: var(--color-void-black, #0f101a);
+  color: var(--color-pure-white, #ffffff);
+  font-family: var(--font-helvetica-now-text, "Helvetica Now Text", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  /* =========================================================================
+     Better Stack — Midnight SRE Console Tokens (Design.md)
+     ========================================================================= */
+  --color-void-black: #0f101a;
+  --color-carbon-surface: #151621;
+  --color-gunmetal: #1f2433;
+  --color-steel-border: #939db8;
+  --color-muted-steel: #646e87;
+  --color-frost: #c9d3ee;
+  --color-pure-white: #ffffff;
+  --color-deep-ink: #000000;
+  --color-iris-blue: #5b63d3;
+  --gradient-iris-blue: linear-gradient(
+    353deg,
+    rgb(91, 99, 211) 17.51%,
+    rgb(124, 135, 247) 183.08%
+  );
+  --color-periwinkle-glow: #98a4f7;
+
+  /* Typography — Font Families */
+  --font-helvetica-now-text: "Helvetica Now Text", "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-helvetica-now-display: "Helvetica Now Display", "Inter Display", "Inter",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Typography — Scale */
+  --text-caption: 10px;
+  --leading-caption: 1.55;
+  --tracking-caption: -0.1px;
+  --text-body-sm: 14px;
+  --leading-body-sm: 1.55;
+  --tracking-body-sm: -0.14px;
+  --text-body: 16px;
+  --leading-body: 1.6;
+  --tracking-body: -0.16px;
+  --text-subheading: 20px;
+  --leading-subheading: 1.45;
+  --tracking-subheading: -0.2px;
+  --text-heading-sm: 28px;
+  --leading-heading-sm: 1.45;
+  --tracking-heading-sm: -0.28px;
+  --text-heading: 36px;
+  --leading-heading: 1.17;
+  --tracking-heading: -0.36px;
+  --text-heading-lg: 40px;
+  --leading-heading-lg: 1.1;
+  --tracking-heading-lg: -0.4px;
+  --text-display: 53px;
+  --leading-display: 1.08;
+  --tracking-display: -0.53px;
+
+  /* Named Radii (Design.md) */
+  --radius-nav: 10px;
+  --radius-cards: 16px;
+  --radius-inputs: 10px;
+  --radius-buttons: 9999px;
+
+  /* Shadows (Design.md: Inset white highlight for elevation) */
+  --shadow-subtle: rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset;
+
+  /* Surfaces (Design.md) */
+  --surface-canvas: #0f101a;
+  --surface-card-surface: #151621;
+  --surface-elevated-border: #1f2433;
+
+  /* Astryx Design System CSS Variable Integration */
+  --color-background-body: #0f101a;
+  --color-background-surface: #151621;
+  --color-background-card: #151621;
+  --color-background-popover: #151621;
+  --color-background-muted: #1f2433;
+
+  --color-border: #1f2433;
+  --color-border-subtle: #191c28;
+  --color-border-emphasized: #939db8;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #c9d3ee;
+  --color-text-disabled: #646e87;
+
+  --color-icon-primary: #ffffff;
+  --color-icon-secondary: #c9d3ee;
+  --color-icon-disabled: #646e87;
+
+  --color-accent: #5b63d3;
+  --color-text-accent: #98a4f7;
+  --color-icon-accent: #98a4f7;
+}
+
+/* Better Stack Primary CTA Button */
+.btn-midnight-primary,
+button[class*="variant-primary"],
+button[data-variant="primary"],
+.astryx-button-primary {
+  border-radius: 9999px !important;
+  background: linear-gradient(353deg, #5b63d3 17.51%, #7c87f7 183.08%) !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  box-shadow: rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset !important;
+  border: none !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+
+.btn-midnight-primary:hover,
+button[class*="variant-primary"]:hover,
+button[data-variant="primary"]:hover,
+.astryx-button-primary:hover {
+  opacity: 0.94 !important;
+}
+
+/* Better Stack Ghost / Outlined Button */
+.btn-midnight-ghost,
+button[class*="variant-secondary"],
+button[data-variant="secondary"],
+.astryx-button-secondary {
+  border-radius: 9999px !important;
+  background: transparent !important;
+  color: #c9d3ee !important;
+  border: 1px solid #1f2433 !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-midnight-ghost:hover,
+button[class*="variant-secondary"]:hover,
+button[data-variant="secondary"]:hover,
+.astryx-button-secondary:hover {
+  border-color: #939db8 !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Better Stack Card Surface (Level 1: #151621) */
+.card-midnight,
+div[class*="Card"],
+.astryx-card {
+  border-radius: 16px !important;
+  background: #151621 !important;
+  border: 1px solid #1f2433 !important;
+}
+
+/* Better Stack Input Wells (Level 0 Well: #0f101a recessed) */
+input,
+textarea,
+select,
+div[class*="TextInput"] input,
+div[class*="TextArea"] textarea {
+  border-radius: 10px !important;
+  background: #0f101a !important;
+  border: 1px solid #1f2433 !important;
+  color: #ffffff !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+div[class*="TextInput"] input:focus,
+div[class*="TextArea"] textarea:focus {
+  border-color: #98a4f7 !important;
+  outline: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #646e87 !important;
 }
 
 @keyframes fadeInSlideUp {

@@ -38,8 +38,23 @@ const neutralSyntax = defineSyntaxTheme({
 // Red -> Error
 // Blue -> Information
 const neutralLocalTokens: Record<string, TokenValue> = {
-  // Primary (Indigo/Blue) for action/navigation/focus
-  '--astryx-theme-neutral-color-status-fill-accent': ['#4F46E5', '#6366F1'],
+  // Midnight SRE Tokens from Design.md
+  '--color-void-black': ['#0f101a', '#0f101a'],
+  '--color-carbon-surface': ['#151621', '#151621'],
+  '--color-gunmetal': ['#1f2433', '#1f2433'],
+  '--color-steel-border': ['#939db8', '#939db8'],
+  '--color-muted-steel': ['#646e87', '#646e87'],
+  '--color-frost': ['#c9d3ee', '#c9d3ee'],
+  '--color-pure-white': ['#ffffff', '#ffffff'],
+  '--color-iris-blue': ['#5b63d3', '#5b63d3'],
+  '--color-periwinkle-glow': ['#98a4f7', '#98a4f7'],
+  '--shadow-subtle': [
+    'rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset',
+    'rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset',
+  ],
+
+  // Primary (Iris Blue / Periwinkle Glow) for action/navigation/focus
+  '--astryx-theme-neutral-color-status-fill-accent': ['#5B63D3', '#5B63D3'],
   // AI (Cyan)
   '--astryx-theme-neutral-color-status-fill-ai': ['#0891B2', '#06B6D4'],
   // Status Green -> Success
@@ -58,7 +73,7 @@ const neutralLocalTokens: Record<string, TokenValue> = {
   '--color-border-ai': ['#0891B2', '#22D3EE'],
   '--color-icon-ai': ['#0891B2', '#22D3EE'],
 
-  '--astryx-theme-neutral-color-status-muted-accent': ['#4F46E522', '#6366F133'],
+  '--astryx-theme-neutral-color-status-muted-accent': ['#5B63D322', '#98A4F733'],
   '--astryx-theme-neutral-color-on-tint-neutral': ['#fafafa4D', '#0a0a0a4D'],
   '--astryx-theme-neutral-color-on-tint-overlay-hover': [
     '#fafafa1A',
@@ -94,15 +109,15 @@ export const neutralTheme = defineTheme({
   typography: {
     scale: {base: 14, ratio: 1.2},
     body: {
-      family: 'Figtree',
+      family: 'Helvetica Now Text',
       fallbacks:
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },
     heading: {
-      family: 'Figtree',
+      family: 'Helvetica Now Display',
       fallbacks:
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      weights: {3: 'bold', 4: 'bold'},
+        '"Inter Display", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      weights: {3: 'medium', 4: 'medium'},
     },
     code: {
       family: 'ui-monospace',
@@ -116,21 +131,21 @@ export const neutralTheme = defineTheme({
 
   tokens: {
     // =========================================================================
-    // DARK NEUTRAL - Canvas, Surfaces, and Structure
+    // MIDNIGHT SRE CONSOLE - Canvas, Surfaces, and Structure (Design.md)
     // =========================================================================
-    '--color-background-surface': ['#FFFFFF', '#161922'],
-    '--color-background-body': ['#F8FAFC', '#0D1117'],
-    '--color-background-card': ['#FFFFFF', '#161922'],
-    '--color-background-popover': ['#FFFFFF', '#1E2230'],
-    '--color-background-muted': ['#F1F5F9', '#1E232F'],
+    '--color-background-surface': ['#FFFFFF', '#151621'], // Carbon Surface
+    '--color-background-body': ['#F8FAFC', '#0f101a'],    // Void Black
+    '--color-background-card': ['#FFFFFF', '#151621'],    // Carbon Surface
+    '--color-background-popover': ['#FFFFFF', '#151621'], // Carbon Surface
+    '--color-background-muted': ['#F1F5F9', '#1f2433'],   // Gunmetal
 
     // =========================================================================
-    // PRIMARY (Indigo / Blue) - User actions, Navigation, Focus
+    // PRIMARY (Iris Blue & Periwinkle Glow) - User actions & Links (Design.md)
     // =========================================================================
-    '--color-accent': ['#4F46E5', '#6366F1'],
-    '--color-accent-muted': ['#4F46E522', '#6366F133'],
-    '--color-text-accent': ['#4338CA', '#818CF8'],
-    '--color-icon-accent': ['#4F46E5', '#818CF8'],
+    '--color-accent': ['#4F46E5', '#5B63D3'],              // Iris Blue
+    '--color-accent-muted': ['#4F46E522', '#98A4F726'],    // Periwinkle Glow tint
+    '--color-text-accent': ['#4338CA', '#98A4F7'],         // Periwinkle Glow
+    '--color-icon-accent': ['#4F46E5', '#98A4F7'],
     '--color-on-accent': '#FFFFFF',
 
     '--color-neutral': [
@@ -152,20 +167,20 @@ export const neutralTheme = defineTheme({
       withAlpha(neutral.dark[100], '1A'),
     ],
 
-    // Text & Icons
-    '--color-text-primary': ['#0F172A', '#F8FAFC'],
-    '--color-text-secondary': ['#475569', '#94A3B8'],
-    '--color-text-disabled': ['#94A3B8', '#475569'],
+    // Text & Icons (Design.md: Pure White, Frost, Muted Steel)
+    '--color-text-primary': ['#0F172A', '#ffffff'],         // Pure White
+    '--color-text-secondary': ['#475569', '#c9d3ee'],       // Frost
+    '--color-text-disabled': ['#94A3B8', '#646e87'],        // Muted Steel
     '--color-on-dark': '#FFFFFF',
     '--color-on-light': '#0F172A',
 
-    '--color-icon-primary': ['#0F172A', '#F8FAFC'],
-    '--color-icon-secondary': ['#64748B', '#94A3B8'],
-    '--color-icon-disabled': ['#94A3B8', '#475569'],
+    '--color-icon-primary': ['#0F172A', '#ffffff'],
+    '--color-icon-secondary': ['#64748B', '#c9d3ee'],
+    '--color-icon-disabled': ['#94A3B8', '#646e87'],
 
-    // Borders
-    '--color-border': ['#E2E8F0', '#252D3D'],
-    '--color-border-emphasized': ['#CBD5E1', '#3B465C'],
+    // Borders (Design.md: Gunmetal for subtle/inputs, Steel Border for hairline)
+    '--color-border': ['#E2E8F0', '#1f2433'],               // Gunmetal
+    '--color-border-emphasized': ['#CBD5E1', '#939db8'],    // Steel Border
 
     // =========================================================================
     // STATUS: Green -> Success
@@ -242,34 +257,25 @@ export const neutralTheme = defineTheme({
     '--color-icon-gray': ['#64748B', '#94A3B8'],
     '--color-text-gray': ['#334155', '#E2E8F0'],
 
-    // Radius
+    // Radius (Design.md: 10px nav/inputs, 16px cards, 9999px buttons)
     '--radius-none': '0px',
-    '--radius-inner': '0.375rem',
-    '--radius-element': '0.5rem',
-    '--radius-container': '0.75rem',
-    '--radius-page': '1.5rem',
+    '--radius-inner': '10px',
+    '--radius-element': '10px',
+    '--radius-container': '16px',
+    '--radius-page': '26px',
     '--radius-full': '9999px',
 
-    // Shadows
-    '--shadow-low':
-      '0 2px 4px light-dark(rgba(15, 23, 42, 0.05), rgba(0, 0, 0, 0.35)), ' +
-      '0 4px 8px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.5)), ' +
-      'inset 0 0 0 1px light-dark(transparent, rgba(255, 255, 255, 0.07))',
-    '--shadow-med':
-      '0 4px 6px light-dark(rgba(15, 23, 42, 0.06), rgba(0, 0, 0, 0.45)), ' +
-      '0 8px 16px light-dark(rgba(15, 23, 42, 0.12), rgba(0, 0, 0, 0.65)), ' +
-      'inset 0 0 0 1px light-dark(transparent, rgba(255, 255, 255, 0.1))',
-    '--shadow-high':
-      '0 6px 10px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.55)), ' +
-      '0 16px 32px light-dark(rgba(15, 23, 42, 0.16), rgba(0, 0, 0, 0.8)), ' +
-      'inset 0 0 0 1px light-dark(transparent, rgba(255, 255, 255, 0.12))',
+    // Shadows (Design.md: Inset white highlight for elevation, surface contrast instead of drop shadows)
+    '--shadow-low': 'rgba(255, 255, 255, 0.15) 0px 1px 2px 0px inset',
+    '--shadow-med': 'rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset',
+    '--shadow-high': 'rgba(255, 255, 255, 0.3) 0px 1px 4px 0px inset',
 
-    // Focus and Inset rings - Indigo/Blue Primary
-    '--shadow-inset-hover': 'inset 0px 0px 0px 2px rgba(99, 102, 241, 0.3)',
-    '--shadow-inset-selected': 'inset 0px 0px 0px 2px rgba(99, 102, 241, 0.7)',
-    '--shadow-inset-success': 'inset 0px 0px 0px 2px rgba(34, 197, 94, 0.4)',
-    '--shadow-inset-warning': 'inset 0px 0px 0px 2px rgba(245, 158, 11, 0.4)',
-    '--shadow-inset-error': 'inset 0px 0px 0px 2px rgba(239, 68, 68, 0.4)',
+    // Focus and Inset rings - Midnight SRE (Periwinkle & Steel)
+    '--shadow-inset-hover': 'inset 0px 0px 0px 1px #939db8',
+    '--shadow-inset-selected': 'inset 0px 0px 0px 1px #98a4f7',
+    '--shadow-inset-success': 'inset 0px 0px 0px 1px #22c55e',
+    '--shadow-inset-warning': 'inset 0px 0px 0px 1px #f59e0b',
+    '--shadow-inset-error': 'inset 0px 0px 0px 1px #ef4444',
   },
 
   components: {

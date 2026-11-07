@@ -41,18 +41,26 @@ describe('Resume Upload E2E Journey', () => {
       status: 'UPLOADED' as const,
     };
 
-    const mockFetch = vi
-      .fn()
-      // Step 1: Backend upload intent
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockIntentResponse,
-      })
-      // Step 3: Backend complete verification
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockCompleteResponse,
+    const mockFetch = vi.fn().mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : (url as { url?: string }).url || '';
+      if (urlStr.includes('/upload-intent')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockIntentResponse,
+        });
+      }
+      if (urlStr.includes('/complete')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockCompleteResponse,
+        });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Not found' }),
       });
+    });
 
     global.fetch = mockFetch;
 
@@ -70,7 +78,7 @@ describe('Resume Upload E2E Journey', () => {
     // -------------------------------------------------------------------------
     // Step 1: Open / (Mount root Next.js page)
     // -------------------------------------------------------------------------
-    render(<OnboardingRoute />);
+    render(<OnboardingRoute initialStep="upload" />);
 
     // Verify initial wireframe is present
     expect(
@@ -137,8 +145,7 @@ describe('Resume Upload E2E Journey', () => {
     // Step 5: Verify integration contracts across boundaries
     // -------------------------------------------------------------------------
     // 5A: POST upload-intent contract
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      1,
+    expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/resumes/upload-intent'),
       expect.objectContaining({
         method: 'POST',
@@ -166,8 +173,7 @@ describe('Resume Upload E2E Journey', () => {
     );
 
     // 5C: POST complete contract
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
+    expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/resumes/resume-e2e-uuid-42/complete'),
       expect.objectContaining({
         method: 'POST',

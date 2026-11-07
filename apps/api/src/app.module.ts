@@ -5,6 +5,7 @@ import { HealthController } from './health/health.controller.js';
 import { CareerProfileModule } from './career-profile/career-profile.module.js';
 import { ResumeModule } from './resume/resume.module.js';
 import { AuthModule } from './common/auth/auth.module.js';
+import { RoadmapModule } from './roadmap/roadmap.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from './common/auth/auth.module.js';
     AuthModule,
     CareerProfileModule,
     ResumeModule,
+    RoadmapModule,
   ],
   controllers: [HealthController],
 })

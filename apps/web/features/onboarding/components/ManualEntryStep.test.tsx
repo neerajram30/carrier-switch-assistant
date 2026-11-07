@@ -137,7 +137,8 @@ describe('ManualEntryStep', () => {
     expect(backBtn).toBeDisabled();
 
     // Text inputs are disabled
-    expect(screen.getByDisplayValue('Backend Engineer')).toBeDisabled();
+    const input = screen.getByDisplayValue('Backend Engineer');
+    expect(input.hasAttribute('disabled') || input.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
   it('shows loading indicator when isLoadingExisting is true', () => {
