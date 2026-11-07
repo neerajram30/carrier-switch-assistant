@@ -1,8 +1,4 @@
 import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DEFAULT_TEMPLATE_PATHS } from '../resume/extractors/deterministic-career-data.extractor.js';
@@ -31,6 +27,7 @@ export interface MilestoneTemplate {
 export function generateDefaultDailyTasks(
   milestoneTitle: string,
   milestoneCategory: string,
+  weekRange: string,
   _weekRange: string,
 ): DailyTask[] {
   return [
