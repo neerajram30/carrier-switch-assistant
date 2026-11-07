@@ -13,6 +13,10 @@ describe('ExplorePathsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    } as unknown as Response);
   });
 
   it('renders only bubbles and central baseline hub when no item is hovered', () => {
