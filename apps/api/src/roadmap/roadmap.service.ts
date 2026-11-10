@@ -120,7 +120,7 @@ export class RoadmapService {
     if (!targetTitle || detectedBridgeSkills.length === 0) {
       const paths = (profile.suggestedPaths as any[]) || [];
       const match = paths.find(
-        (p) =>
+        (p: any) =>
           p.id === pathId ||
           p.title?.toLowerCase() === targetTitle?.toLowerCase(),
       );
@@ -171,7 +171,7 @@ export class RoadmapService {
         milestones: (existingRoadmap.milestones || []).map((m: any) =>
           this.hydrateMilestone(m),
         ),
-        roadmaps: allRoadmaps.map((r) => this.summarizeRoadmap(r)),
+        roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
         totalActive: allRoadmaps.length,
       };
     }
@@ -231,7 +231,7 @@ export class RoadmapService {
       milestones: (roadmap.milestones || []).map((m: any) =>
         this.hydrateMilestone(m),
       ),
-      roadmaps: allRoadmaps.map((r) => this.summarizeRoadmap(r)),
+      roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
       totalActive: allRoadmaps.length,
     };
   }
@@ -264,12 +264,12 @@ export class RoadmapService {
     }
 
     let activeRoadmap = roadmapId
-      ? allRoadmaps.find((r) => r.id === roadmapId)
+      ? allRoadmaps.find((r: any) => r.id === roadmapId)
       : null;
 
     if (!activeRoadmap && profile.targetRole) {
       activeRoadmap = allRoadmaps.find(
-        (r) =>
+        (r: any) =>
           r.targetRole.toLowerCase() === profile.targetRole?.toLowerCase(),
       );
     }
@@ -285,7 +285,7 @@ export class RoadmapService {
     return {
       ...activeRoadmap,
       milestones: mappedMilestones,
-      roadmaps: allRoadmaps.map((r) => this.summarizeRoadmap(r)),
+      roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
       totalActive: allRoadmaps.length,
     };
   }
