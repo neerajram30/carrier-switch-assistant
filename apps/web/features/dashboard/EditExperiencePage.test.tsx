@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/dashboard/experience',
 }));
 
 describe('EditExperiencePage', () => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -9,6 +10,7 @@ import { VStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import {
+  AlertTriangle,
   ArrowRight,
   BookOpen,
   Calendar,
@@ -48,6 +50,13 @@ export interface TrackMilestone {
   dailyTasks: DailyTask[];
 }
 
+export interface ActiveRoadmapSummary {
+  id: string;
+  targetRole: string;
+  progressPercent: number;
+  milestonesCount?: number;
+}
+
 interface ApiMilestone {
   id: string;
   weekRange?: string;
@@ -62,29 +71,69 @@ interface ApiMilestone {
 }
 
 export function TrackRoadmapPage() {
+  const searchParams = useSearchParams();
+  const paramRoadmapId = searchParams?.get('roadmapId') || null;
+
+  const [activeRoadmapId, setActiveRoadmapId] = useState<string | null>(paramRoadmapId);
+  const [roadmaps, setRoadmaps] = useState<ActiveRoadmapSummary[]>([]);
   const [targetRole, setTargetRole] = useState<string>('');
-  const [currentRole, setCurrentRole] = useState<string>('Software Engineer');
+  const [currentRole] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('csa_career_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed.currentRole === 'string') {
+            return parsed.currentRole;
+          }
+        }
+      } catch {
+        // Ignore fallback
+      }
+    }
+    return 'Software Engineer';
+  });
   const [milestones, setMilestones] = useState<TrackMilestone[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [expandedMilestones, setExpandedMilestones] = useState<Record<string, boolean>>({});
+  const [syncTrigger, setSyncTrigger] = useState<number>(0);
 
   useEffect(() => {
     async function loadTrackData() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${apiUrl}/api/v1/roadmap`, {
+        const query = activeRoadmapId ? `?roadmapId=${encodeURIComponent(activeRoadmapId)}` : '';
+        const res = await fetch(`${apiUrl}/api/v1/roadmap${query}`, {
           headers: {
             'x-user-id': '00000000-0000-0000-0000-000000000001',
           },
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.milestones) {
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          const msg =
+            errJson.message ||
+            `Failed to load roadmap execution telemetry (${res.status} ${res.statusText})`;
+          throw new Error(msg);
+        }
+
+        const data = await res.json();
+        if (data) {
+          if (Array.isArray(data.roadmaps)) {
+            setRoadmaps(data.roadmaps);
+          }
+          if (data.id) {
+            setActiveRoadmapId(data.id);
+          }
+          if (data.targetRole) {
+            setTargetRole(data.targetRole);
+          }
+          if (Array.isArray(data.milestones)) {
             const mapped: TrackMilestone[] = data.milestones.map((m: ApiMilestone) => ({
               id: m.id,
-              week: m.weekRange || m.week,
+              week: m.weekRange || m.week || 'Sprint',
               title: m.title,
               description: m.description,
               duration: m.duration,
@@ -95,7 +144,7 @@ export function TrackRoadmapPage() {
 
             setMilestones(mapped);
 
-            // Default expand the first in-progress milestone and the first milestone
+            // Default expand first active milestone or first milestone
             const initialExpanded: Record<string, boolean> = {};
             const firstActive = mapped.find((m) => !m.completed);
             if (firstActive) {
@@ -104,35 +153,44 @@ export function TrackRoadmapPage() {
               initialExpanded[mapped[0].id] = true;
             }
             setExpandedMilestones(initialExpanded);
-
-            if (data.targetRole) {
-              setTargetRole(data.targetRole);
-            }
+          } else {
+            setMilestones([]);
           }
         }
-      } catch {
-        // Fallback to local storage if API is offline
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : 'Failed to synchronize roadmap execution plan with server.';
+        setFetchError(errorMsg);
+        setMilestones([]);
       } finally {
         setLoading(false);
-      }
-
-      // Check sessionStorage for targetRole / currentRole
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = sessionStorage.getItem('csa_career_profile');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.targetRole) setTargetRole(parsed.targetRole);
-            if (parsed.currentRole) setCurrentRole(parsed.currentRole);
-          }
-        } catch {
-          // Ignore
-        }
       }
     }
 
     void loadTrackData();
-  }, []);
+  }, [activeRoadmapId, syncTrigger]);
+
+  const handleSwitchRoadmap = (newRoadmapId: string) => {
+    if (newRoadmapId === activeRoadmapId) return;
+    setLoading(true);
+    setFetchError(null);
+    setActiveRoadmapId(newRoadmapId);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(
+        null,
+        '',
+        `/dashboard/track?roadmapId=${encodeURIComponent(newRoadmapId)}`,
+      );
+    }
+  };
+
+  const handleRetrySync = () => {
+    setLoading(true);
+    setFetchError(null);
+    setSyncTrigger((prev) => prev + 1);
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedMilestones((prev) => ({
@@ -155,7 +213,6 @@ export function TrackRoadmapPage() {
 
   // Toggle whole milestone
   const handleToggleMilestone = async (milestoneId: string) => {
-    // Optimistic UI update
     setMilestones((prev) =>
       prev.map((m) => {
         if (m.id === milestoneId) {
@@ -175,13 +232,26 @@ export function TrackRoadmapPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      await fetch(`${apiUrl}/api/v1/roadmap/milestones/${milestoneId}/toggle`, {
+      const res = await fetch(`${apiUrl}/api/v1/roadmap/milestones/${milestoneId}/toggle`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': '00000000-0000-0000-0000-000000000001',
         },
       });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.progressPercent === 'number' && activeRoadmapId) {
+          setRoadmaps((prev) =>
+            prev.map((r) =>
+              r.id === activeRoadmapId
+                ? { ...r, progressPercent: data.progressPercent }
+                : r,
+            ),
+          );
+        }
+      }
     } catch {
       // Graceful degradation
     }
@@ -189,7 +259,6 @@ export function TrackRoadmapPage() {
 
   // Toggle individual daily task
   const handleToggleDailyTask = async (milestoneId: string, taskId: string) => {
-    // Optimistic UI update
     setMilestones((prev) =>
       prev.map((m) => {
         if (m.id === milestoneId) {
@@ -210,7 +279,7 @@ export function TrackRoadmapPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      await fetch(
+      const res = await fetch(
         `${apiUrl}/api/v1/roadmap/milestones/${milestoneId}/tasks/${taskId}/toggle`,
         {
           method: 'PATCH',
@@ -220,6 +289,19 @@ export function TrackRoadmapPage() {
           },
         },
       );
+
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.progressPercent === 'number' && activeRoadmapId) {
+          setRoadmaps((prev) =>
+            prev.map((r) =>
+              r.id === activeRoadmapId
+                ? { ...r, progressPercent: data.progressPercent }
+                : r,
+            ),
+          );
+        }
+      }
     } catch {
       // Graceful degradation
     }
@@ -239,14 +321,12 @@ export function TrackRoadmapPage() {
       ? Math.round((completedDailyTasks / totalDailyTasks) * 100)
       : milestones.length > 0
         ? Math.round(
-            (milestones.filter((m) => m.completed).length / milestones.length) *
-              100,
+            (milestones.filter((m) => m.completed).length / milestones.length) * 100,
           )
         : 0;
 
   const completedMilestonesCount = milestones.filter((m) => m.completed).length;
 
-  // Filtered milestones
   const filteredMilestones = milestones.filter((m) => {
     if (filter === 'active') return !m.completed;
     if (filter === 'completed') return m.completed;
@@ -257,7 +337,7 @@ export function TrackRoadmapPage() {
 
   return (
     <InternalPageLayout
-      maxWidth='100%'
+      maxWidth="100%"
       badge="ROADMAP EXECUTION TRACKER // DAILY SPRINT LOG"
       badgeIcon={<Target size={12} />}
       badgeSecondaryText="Daily Learning & Micro-Task Engine"
@@ -267,8 +347,78 @@ export function TrackRoadmapPage() {
       }.`}
       current="track"
     >
-      {!loading && !hasSelectedPath && milestones.length === 0 ? (
-        /* Empty State: Prompt user to choose target trajectory */
+      {/* ERROR STATE: Transparent error card with real message (NO fallback!) */}
+      {fetchError && !loading && (
+        <Card
+          variant="default"
+          elevation="low"
+          style={{
+            background: 'rgba(21, 22, 33, 0.95)',
+            border: '1.5px solid rgba(239, 68, 68, 0.45)',
+            padding: '36px 32px',
+            textAlign: 'center',
+            borderRadius: 16,
+            boxShadow:
+              '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(239, 68, 68, 0.2)',
+          }}
+        >
+          <VStack gap={4} align="center">
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#F87171',
+              }}
+            >
+              <AlertTriangle size={26} />
+            </div>
+            <VStack gap={2} align="center">
+              <Heading level={2} weight="semibold" style={{ color: '#ffffff' }}>
+                Roadmap Synchronization Error
+              </Heading>
+              <Text
+                type="supporting"
+                color="secondary"
+                style={{
+                  maxWidth: 540,
+                  lineHeight: 1.6,
+                  color: '#FCA5A5',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {fetchError}
+              </Text>
+            </VStack>
+            <button
+              type="button"
+              onClick={handleRetrySync}
+              style={{
+                background:
+                  'linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 9999,
+                padding: '10px 26px',
+                fontSize: '0.88rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                boxShadow: '0 0 16px rgba(91, 99, 211, 0.35)',
+              }}
+            >
+              Retry Synchronization
+            </button>
+          </VStack>
+        </Card>
+      )}
+
+      {/* EMPTY STATE */}
+      {!loading && !fetchError && !hasSelectedPath && milestones.length === 0 && (
         <Card
           variant="default"
           elevation="low"
@@ -277,6 +427,7 @@ export function TrackRoadmapPage() {
             border: '1px solid var(--color-gunmetal, #1f2433)',
             padding: '48px 32px',
             textAlign: 'center',
+            borderRadius: 16,
           }}
         >
           <VStack gap={4} align="center">
@@ -305,8 +456,8 @@ export function TrackRoadmapPage() {
                 style={{ maxWidth: 520, lineHeight: 1.6 }}
               >
                 To generate your daily tasks, learning objectives, and weekly
-                milestone sprints, explore our interactive trajectory
-                constellation and lock in your target destination.
+                milestone sprints, explore our interactive trajectory constellation
+                and lock in your target destination.
               </Text>
             </VStack>
             <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
@@ -336,7 +487,10 @@ export function TrackRoadmapPage() {
             </Link>
           </VStack>
         </Card>
-      ) : (
+      )}
+
+      {/* MAIN ROADMAP TRACK CONTENT */}
+      {!loading && !fetchError && (hasSelectedPath || milestones.length > 0) && (
         <VStack gap={6} width="100%">
           {/* Executive Overview & Macro Progress Deck */}
           <div
@@ -352,6 +506,127 @@ export function TrackRoadmapPage() {
               gap: 20,
             }}
           >
+            {/* MULTI-ROADMAP SWITCHER BAR */}
+            {roadmaps.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  paddingBottom: 16,
+                  borderBottom: '1px solid var(--color-gunmetal, #1f2433)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: 'var(--color-muted-steel, #646e87)',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Active Roadmaps ({roadmaps.length}):
+                  </span>
+
+                  {roadmaps.map((rm) => {
+                    const isCurrent =
+                      rm.id === activeRoadmapId ||
+                      rm.targetRole.toLowerCase() === targetRole.toLowerCase();
+
+                    return (
+                      <button
+                        key={rm.id}
+                        type="button"
+                        onClick={() => handleSwitchRoadmap(rm.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 14px',
+                          borderRadius: 9999,
+                          background: isCurrent
+                            ? 'linear-gradient(135deg, rgba(91, 99, 211, 0.4) 0%, rgba(21, 22, 33, 0.95) 100%)'
+                            : 'rgba(21, 22, 33, 0.7)',
+                          border: isCurrent
+                            ? '1.5px solid var(--color-periwinkle-glow, #98a4f7)'
+                            : '1px solid var(--color-gunmetal, #1f2433)',
+                          boxShadow: isCurrent
+                            ? '0 0 14px rgba(152, 164, 247, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+                            : 'none',
+                          color: isCurrent
+                            ? '#ffffff'
+                            : 'var(--color-frost, #c9d3ee)',
+                          fontSize: '0.78rem',
+                          fontWeight: isCurrent ? 600 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: isCurrent ? '#98a4f7' : '#646e87',
+                          }}
+                        >
+                          🎯
+                        </span>
+                        <span>{rm.targetRole}</span>
+                        <span
+                          style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '2px 6px',
+                            borderRadius: 9999,
+                            background: isCurrent
+                              ? 'rgba(134, 239, 172, 0.22)'
+                              : 'rgba(255, 255, 255, 0.06)',
+                            color: isCurrent
+                              ? '#86EFAC'
+                              : 'var(--color-muted-steel, #646e87)',
+                          }}
+                        >
+                          {rm.progressPercent}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+                  <button
+                    type="button"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      borderRadius: 9999,
+                      background: 'rgba(91, 99, 211, 0.12)',
+                      border: '1px dashed rgba(152, 164, 247, 0.35)',
+                      color: 'var(--color-periwinkle-glow, #98a4f7)',
+                      fontSize: '0.76rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>+ Explore Arena / Add Path</span>
+                  </button>
+                </Link>
+              </div>
+            )}
+
+            {/* Trajectory Header & Action Buttons */}
             <div
               style={{
                 display: 'flex',
@@ -446,7 +721,7 @@ export function TrackRoadmapPage() {
                       color: '#ffffff',
                     }}
                   >
-                    Total Roadmap Execution Progress
+                    Roadmap Execution Progress
                   </span>
                 </div>
                 <span

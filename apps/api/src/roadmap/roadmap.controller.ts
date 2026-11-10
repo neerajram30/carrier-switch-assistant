@@ -5,15 +5,27 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AuthGuard } from '../common/auth/auth.guard.js';
 import { CurrentUser } from '../common/auth/current-user.decorator.js';
 import { RoadmapService } from './roadmap.service.js';
 
 export class SelectCareerPathDto {
+  @IsString()
+  @IsNotEmpty()
   pathId: string;
+
+  @IsString()
+  @IsOptional()
   title?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  bridgeSkills?: string[];
 }
 
 @Controller()
@@ -31,12 +43,20 @@ export class RoadmapController {
     @CurrentUser('id') userId: string,
     @Body() dto: SelectCareerPathDto,
   ) {
-    return this.roadmapService.selectCareerPath(userId, dto.pathId, dto.title);
+    return this.roadmapService.selectCareerPath(
+      userId,
+      dto.pathId,
+      dto.title,
+      dto.bridgeSkills,
+    );
   }
 
   @Get('roadmap')
-  getRoadmap(@CurrentUser('id') userId: string) {
-    return this.roadmapService.getRoadmap(userId);
+  getRoadmap(
+    @CurrentUser('id') userId: string,
+    @Query('roadmapId') roadmapId?: string,
+  ) {
+    return this.roadmapService.getRoadmap(userId, roadmapId);
   }
 
   @Patch('roadmap/milestones/:id/toggle')

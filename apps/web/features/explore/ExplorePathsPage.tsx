@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import {
+  AlertTriangle,
   ArrowRight,
   BrainCircuit,
   CheckCircle2,
@@ -29,7 +30,7 @@ export interface CareerPathOption {
   category: string;
   icon: React.ReactNode;
   timeline: string;
-  marketDemand: 'Very High' | 'High' | 'Explosive';
+  marketDemand: 'Very High' | 'High' | 'Explosive' | string;
   salaryRange: string;
   description: string;
   bridgeSkills: string[];
@@ -37,246 +38,157 @@ export interface CareerPathOption {
   y: number;
 }
 
-export const CAREER_PATHS: CareerPathOption[] = [
-  {
-    id: 'cloud-architect',
-    title: 'Cloud Solutions Architect',
-    matchScore: 84,
-    category: 'Architecture & Cloud',
-    icon: <Cloud size={16} />,
-    timeline: '4 - 6 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$175k - $235k',
-    description:
-      'Design fault-tolerant, scalable multi-region architectures on AWS/GCP with Well-Architected governance and infrastructure automation.',
-    bridgeSkills: [
-      'Distributed Consensus',
-      'AWS Well-Architected',
-      'Terraform IaC',
-      'System Design',
-    ],
-    x: 35,
-    y: -160,
-  },
-  {
-    id: 'ai-ml-engineer',
-    title: 'AI / ML Platform Engineer',
-    matchScore: 72,
-    category: 'AI & Systems',
-    icon: <BrainCircuit size={16} />,
-    timeline: '6 - 9 Months',
-    marketDemand: 'Explosive',
-    salaryRange: '$185k - $250k',
-    description:
-      'Build infrastructure for LLM deployment, fine-tuning pipelines, vector stores, and model evaluation telemetry for generative AI products.',
-    bridgeSkills: [
-      'Python & PyTorch',
-      'Vector DBs (Pinecone/Milvus)',
-      'vLLM / Triton Inference',
-      'LangChain / Agents',
-    ],
-    x: 230,
-    y: -105,
-  },
-  {
-    id: 'staff-engineer',
-    title: 'Staff Software Engineer',
-    matchScore: 88,
-    category: 'Technical Leadership',
-    icon: <Rocket size={16} />,
-    timeline: '3 - 5 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$190k - $260k',
-    description:
-      'Set cross-organization architectural direction, solve ambiguous technical bottlenecks, and act as a leadership force multiplier.',
-    bridgeSkills: [
-      'Cross-System RFCs',
-      'High-Scale Data Pipelines',
-      'Engineering Strategy',
-      'Mentorship & Alignment',
-    ],
-    x: 275,
-    y: 35,
-  },
-  {
-    id: 'sre-engineer',
-    title: 'Site Reliability Engineer',
-    matchScore: 80,
-    category: 'Reliability & Infra',
-    icon: <Cpu size={16} />,
-    timeline: '4 - 6 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$170k - $225k',
-    description:
-      'Ensure 99.99% system availability, automate chaos experiments, engineer incident observability, and eliminate operational toil.',
-    bridgeSkills: [
-      'Prometheus / OpenTelemetry',
-      'Kubernetes Internals',
-      'SLO / Error Budgets',
-      'Chaos Engineering',
-    ],
-    x: 125,
-    y: 155,
-  },
-  {
-    id: 'devops-architect',
-    title: 'DevOps & Platform Specialist',
-    matchScore: 82,
-    category: 'Platform Engineering',
-    icon: <GitBranch size={16} />,
-    timeline: '4 - 6 Months',
-    marketDemand: 'High',
-    salaryRange: '$165k - $220k',
-    description:
-      'Build internal developer platforms (IDP), optimize zero-downtime CI/CD workflows, and govern containerized fleet orchestration.',
-    bridgeSkills: [
-      'ArgoCD / GitOps',
-      'Docker Fleet Security',
-      'Helm Charts',
-      'GitHub Actions Workflows',
-    ],
-    x: -130,
-    y: 155,
-  },
-  {
-    id: 'data-architect',
-    title: 'Data Systems Architect',
-    matchScore: 70,
-    category: 'Data & Analytics',
-    icon: <Database size={16} />,
-    timeline: '6 - 8 Months',
-    marketDemand: 'High',
-    salaryRange: '$175k - $230k',
-    description:
-      'Architect real-time event streaming architectures, lakehouse query engines, data mesh governance, and analytical schemas.',
-    bridgeSkills: [
-      'Apache Kafka',
-      'DuckDB / ClickHouse',
-      'Data Modeling',
-      'Event-Driven Systems',
-    ],
-    x: -275,
-    y: 40,
-  },
-  {
-    id: 'security-specialist',
-    title: 'Security & DevSecOps Engineer',
-    matchScore: 66,
-    category: 'Cybersecurity',
-    icon: <Shield size={16} />,
-    timeline: '6 - 9 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$170k - $230k',
-    description:
-      'Implement zero-trust security postures, automated static/dynamic scanning, cryptographic key hygiene, and container runtime auditing.',
-    bridgeSkills: [
-      'OAuth 2.1 & OIDC',
-      'Zero-Trust Architecture',
-      'Trivy / Snyk Scanning',
-      'CloudTrail / SIEM Audit',
-    ],
-    x: -230,
-    y: -90,
-  },
-  {
-    id: 'engineering-manager',
-    title: 'Engineering Manager / Lead',
-    matchScore: 86,
-    category: 'People & Delivery',
-    icon: <Network size={16} />,
-    timeline: '3 - 6 Months',
-    marketDemand: 'High',
-    salaryRange: '$180k - $240k',
-    description:
-      'Lead high-performing software squads, calibrate engineering velocity with product ROI, and guide long-term career growth.',
-    bridgeSkills: [
-      'Agile Sprint Calibration',
-      'Stakeholder Alignment',
-      'Tech Debt Prioritization',
-      'Talent Development',
-    ],
-    x: -75,
-    y: -160,
-  },
-];
+export interface ActiveRoadmapSummary {
+  id: string;
+  targetRole: string;
+  progressPercent: number;
+}
+
+function getPathIcon(category?: string, title?: string) {
+  const text = `${category || ''} ${title || ''}`.toLowerCase();
+  if (text.includes('cloud') || text.includes('aws') || text.includes('gcp') || text.includes('azure')) {
+    return <Cloud size={16} />;
+  }
+  if (text.includes('ai') || text.includes('ml') || text.includes('agent') || text.includes('learning')) {
+    return <BrainCircuit size={16} />;
+  }
+  if (text.includes('staff') || text.includes('principal') || text.includes('lead') || text.includes('leader')) {
+    return <Rocket size={16} />;
+  }
+  if (text.includes('sre') || text.includes('reliability') || text.includes('performance')) {
+    return <Cpu size={16} />;
+  }
+  if (text.includes('devops') || text.includes('platform') || text.includes('infra') || text.includes('gitops')) {
+    return <GitBranch size={16} />;
+  }
+  if (text.includes('data') || text.includes('database') || text.includes('streaming') || text.includes('analytics')) {
+    return <Database size={16} />;
+  }
+  if (text.includes('security') || text.includes('devsecops') || text.includes('cyber')) {
+    return <Shield size={16} />;
+  }
+  if (text.includes('manager') || text.includes('engineering manager') || text.includes('network')) {
+    return <Network size={16} />;
+  }
+  return <Compass size={16} />;
+}
 
 export function ExplorePathsPage() {
   const router = useRouter();
 
-  const [careerPaths, setCareerPaths] = useState<CareerPathOption[]>(CAREER_PATHS);
-  // Selected path (for confirmed choice)
-  const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
+  const [careerPaths, setCareerPaths] = useState<CareerPathOption[]>([]);
+  const [activeRoadmaps, setActiveRoadmaps] = useState<ActiveRoadmapSummary[]>([]);
+  const [loadingPaths, setLoadingPaths] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Active Pod state: only populated when hovering on a bubble or when cursor is inside the pod
-  // Initialized to null: if no item is hovered, ONLY show bubbles
+  const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const [activePodId, setActivePodId] = useState<string | null>(null);
   const [hoveredBubbleId, setHoveredBubbleId] = useState<string | null>(null);
 
-  // Grace timer to allow user to move mouse from bubble to the pod smoothly
   const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
-  // Fetch calibrated career paths from backend
   useEffect(() => {
     async function loadPaths() {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${apiUrl}/api/v1/career-paths`, {
-          headers: {
-            'x-user-id': '00000000-0000-0000-0000-000000000001',
-          },
-        });
-        if (res.ok) {
-          const data = (await res.json()) as Array<{
-            id?: string;
-            title?: string;
-            category?: string;
-            matchScore?: number;
-            timeline?: string;
-            marketDemand?: CareerPathOption['marketDemand'];
-            salaryRange?: string;
-            description?: string;
-            bridgeSkills?: string[];
-          }>;
-          if (Array.isArray(data) && data.length > 0) {
-            setCareerPaths((prev) =>
-              prev.map((defaultOption, index) => {
-                const backendMatch =
-                  data[index] ||
-                  data.find((d) => d.id === defaultOption.id);
-                if (!backendMatch) return defaultOption;
-                return {
-                  ...defaultOption,
-                  id: backendMatch.id || defaultOption.id,
-                  title: backendMatch.title || defaultOption.title,
-                  category: backendMatch.category || defaultOption.category,
-                  matchScore:
-                    typeof backendMatch.matchScore === 'number'
-                      ? backendMatch.matchScore
-                      : defaultOption.matchScore,
-                  timeline: backendMatch.timeline || defaultOption.timeline,
-                  marketDemand:
-                    backendMatch.marketDemand || defaultOption.marketDemand,
-                  salaryRange:
-                    backendMatch.salaryRange || defaultOption.salaryRange,
-                  description:
-                    backendMatch.description || defaultOption.description,
-                  bridgeSkills:
-                    Array.isArray(backendMatch.bridgeSkills) &&
-                    backendMatch.bridgeSkills.length > 0
-                      ? backendMatch.bridgeSkills
-                      : defaultOption.bridgeSkills,
-                };
-              }),
-            );
+        const [pathsRes, roadmapRes] = await Promise.all([
+          fetch(`${apiUrl}/api/v1/career-paths`, {
+            headers: {
+              'x-user-id': '00000000-0000-0000-0000-000000000001',
+            },
+          }),
+          fetch(`${apiUrl}/api/v1/roadmap`, {
+            headers: {
+              'x-user-id': '00000000-0000-0000-0000-000000000001',
+            },
+          }),
+        ]);
+
+        if (!pathsRes.ok) {
+          const errJson = await pathsRes.json().catch(() => ({}));
+          const msg =
+            errJson.message ||
+            `Failed to fetch career paths (${pathsRes.status} ${pathsRes.statusText})`;
+          throw new Error(msg);
+        }
+
+        const rawPaths = await pathsRes.json();
+        if (!Array.isArray(rawPaths) || rawPaths.length === 0) {
+          throw new Error(
+            'No career paths generated yet. Please upload your resume or calibrate your technical baseline.',
+          );
+        }
+
+        let activeList: ActiveRoadmapSummary[] = [];
+        if (roadmapRes.ok) {
+          const roadmapData = await roadmapRes.json();
+          if (roadmapData) {
+            if (Array.isArray(roadmapData.roadmaps)) {
+              activeList = roadmapData.roadmaps.map((r: { id: string; targetRole: string; progressPercent: number }) => ({
+                id: r.id,
+                targetRole: r.targetRole,
+                progressPercent: r.progressPercent ?? 0,
+              }));
+            } else if (roadmapData.targetRole) {
+              activeList = [
+                {
+                  id: roadmapData.id || '',
+                  targetRole: roadmapData.targetRole,
+                  progressPercent: roadmapData.progressPercent ?? 0,
+                },
+              ];
+            }
           }
         }
-      } catch {
-        // Fallback to local CAREER_PATHS seamlessly
+        setActiveRoadmaps(activeList);
+
+        const total = rawPaths.length;
+        const computedPaths: CareerPathOption[] = rawPaths.map((item, index) => {
+          const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+          const x = Math.round(250 * Math.cos(angle));
+          const y = Math.round(145 * Math.sin(angle));
+          return {
+            id: item.id || `path-${index}`,
+            title: item.title,
+            category: item.category || 'Engineering',
+            matchScore: typeof item.matchScore === 'number' ? item.matchScore : 75,
+            timeline: item.timeline || '4 - 6 Months',
+            marketDemand: item.marketDemand || 'High',
+            salaryRange: item.salaryRange || '$160k - $220k',
+            description: item.description || '',
+            bridgeSkills: Array.isArray(item.bridgeSkills) ? item.bridgeSkills : [],
+            icon: getPathIcon(item.category, item.title),
+            x,
+            y,
+          };
+        });
+
+        setCareerPaths(computedPaths);
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : 'Failed to connect to Career Switch Assistant API.';
+        setLoadError(errorMsg);
+      } finally {
+        setLoadingPaths(false);
       }
     }
+
     void loadPaths();
-  }, []);
+  }, [reloadTrigger]);
+
+  const handleRetryPaths = () => {
+    setLoadingPaths(true);
+    setLoadError(null);
+    setReloadTrigger((prev) => prev + 1);
+  };
 
   // Close pod on Escape key
   useEffect(() => {
@@ -294,6 +206,12 @@ export function ExplorePathsPage() {
     ? careerPaths.find((p) => p.id === activePodId) || null
     : null;
 
+  const matchingActiveRoadmap = activePath
+    ? activeRoadmaps.find(
+        (r) => r.targetRole.toLowerCase() === activePath.title.toLowerCase(),
+      )
+    : null;
+
   const handleBubbleMouseEnter = (pathId: string) => {
     if (leaveTimerRef.current) {
       clearTimeout(leaveTimerRef.current);
@@ -301,6 +219,7 @@ export function ExplorePathsPage() {
     }
     setHoveredBubbleId(pathId);
     setActivePodId(pathId);
+    setSubmitError(null);
   };
 
   const handleBubbleMouseLeave = () => {
@@ -332,21 +251,13 @@ export function ExplorePathsPage() {
   };
 
   const handleSelectAsTarget = async (path: CareerPathOption) => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = sessionStorage.getItem('csa_career_profile');
-        const profile = stored ? JSON.parse(stored) : {};
-        profile.targetRole = path.title;
-        sessionStorage.setItem('csa_career_profile', JSON.stringify(profile));
-      } catch {
-        // Ignore fallback
-      }
-    }
+    setIsSubmitting(true);
+    setSubmitError(null);
     setSelectedPathId(path.id);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      await fetch(`${apiUrl}/api/v1/career-paths/select`, {
+      const res = await fetch(`${apiUrl}/api/v1/career-paths/select`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -355,21 +266,47 @@ export function ExplorePathsPage() {
         body: JSON.stringify({
           pathId: path.id,
           title: path.title,
+          bridgeSkills: path.bridgeSkills,
         }),
       });
-    } catch {
-      // Backend may be offline; fallback smoothly to session profile
-    }
 
-    router.push('/dashboard');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const msg = errJson.message || `Roadmap generation failed (${res.status})`;
+        throw new Error(msg);
+      }
+
+      const createdData = await res.json();
+
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = sessionStorage.getItem('csa_career_profile');
+          const profile = stored ? JSON.parse(stored) : {};
+          profile.targetRole = path.title;
+          sessionStorage.setItem('csa_career_profile', JSON.stringify(profile));
+        } catch {
+          // Ignore fallback
+        }
+      }
+
+      router.push(
+        createdData?.id
+          ? `/dashboard/track?roadmapId=${createdData.id}`
+          : '/dashboard/track',
+      );
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : 'Failed to generate dynamic roadmap.';
+      setSubmitError(errorMsg);
+      setIsSubmitting(false);
+    }
   };
 
   // Calculate pod floating coordinates strictly clamped inside the bubble canvas viewport
   const getPodPosition = (path: CareerPathOption) => {
-    // If bubble is on the right half (x >= 0), place pod to the left of the bubble
-    // If bubble is on the left half (x < 0), place pod to the right of the bubble
     const leftOffset = path.x >= 0 ? path.x - 355 : path.x + 25;
-    // Align pod vertically centered with bubble
     const topOffset = path.y - 120;
 
     return {
@@ -383,7 +320,11 @@ export function ExplorePathsPage() {
       fullHeight
       badge="INTERACTIVE CAREER CONSTELLATION"
       badgeIcon={<Compass size={12} />}
-      badgeSecondaryText="8 Trajectories Mapped to Your Baseline"
+      badgeSecondaryText={
+        careerPaths.length > 0
+          ? `${careerPaths.length} Trajectories Mapped to Your Baseline`
+          : 'Calibrating Trajectories'
+      }
       title="Explore Career Paths"
       description="Hover on any career bubble radiating around your baseline to inspect skill compatibility, bridge milestones, and market trajectory."
       current="explore"
@@ -442,6 +383,14 @@ export function ExplorePathsPage() {
             transform: scale(1) translateY(0);
           }
         }
+        @keyframes radarSpin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
       `}</style>
 
       {/* FULL-SCREEN BUBBLE CONSTELLATION CANVAS (Zero Scroll, Strict Viewport Fit) */}
@@ -451,11 +400,12 @@ export function ExplorePathsPage() {
         style={{
           flex: 1,
           width: '100%',
-          minHeight: 0, // Critical for zero-scroll flex layout
+          minHeight: 0,
           height: '100%',
           background: 'var(--color-carbon-surface, #151621)',
           border: '1px solid var(--color-gunmetal, #1f2433)',
-          boxShadow: 'var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)',
+          boxShadow:
+            'var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)',
           borderRadius: 16,
           position: 'relative',
           overflow: 'hidden',
@@ -554,165 +504,340 @@ export function ExplorePathsPage() {
           })}
         </svg>
 
-        {/* Central Baseline Hub */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 10,
-            width: 124,
-            height: 124,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 35%, #1f2433 0%, #0f101a 100%)',
-            border: '2px solid var(--color-periwinkle-glow, #98a4f7)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            padding: 10,
-            boxSizing: 'border-box',
-            cursor: 'default',
-            animation: 'hubPulseGlow 4.5s ease-in-out infinite',
-          }}
-        >
+        {/* LOADING STATE: Cosmic Telemetry Radar Scanner */}
+        {loadingPaths && (
           <div
             style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#86EFAC',
-              boxShadow: '0 0 8px #86EFAC',
-              marginBottom: 3,
-            }}
-          />
-          <span
-            style={{
-              fontSize: '0.64rem',
-              fontWeight: 600,
-              color: 'var(--color-periwinkle-glow, #98a4f7)',
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
+              position: 'relative',
+              zIndex: 30,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 16,
+              textAlign: 'center',
+              padding: 24,
             }}
           >
-            Explore Paths
-          </span>
-          <span
-            style={{
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              color: '#ffffff',
-              lineHeight: 1.2,
-              marginTop: 2,
-            }}
-          >
-            Technical Baseline
-          </span>
-          <span
-            style={{
-              fontSize: '0.64rem',
-              color: 'var(--color-muted-steel, #646e87)',
-              marginTop: 2,
-            }}
-          >
-            8 Paths Calibrated
-          </span>
-        </div>
-
-        {/* Radiating Interactive Career Bubbles with Micro-Movement Animations */}
-        {careerPaths.map((path, index) => {
-          const isPodActive = activePodId === path.id;
-          const isBubbleHovered = hoveredBubbleId === path.id;
-          const isSelected = selectedPathId === path.id;
-
-          const animationName = `bubbleDrift${(index % 4) + 1}`;
-          const animationDuration = `${5.2 + (index % 4) * 0.5}s`;
-          const animationDelay = `${(index * 0.35).toFixed(1)}s`;
-
-          return (
-            <button
-              key={path.id}
-              type="button"
-              onMouseEnter={() => handleBubbleMouseEnter(path.id)}
-              onMouseLeave={handleBubbleMouseLeave}
-              onClick={() => handleBubbleMouseEnter(path.id)}
-              style={
-                {
-                  '--bx': `${path.x}px`,
-                  '--by': `${path.y}px`,
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  zIndex: isPodActive ? 30 : isBubbleHovered ? 25 : 15,
-                  padding: '7px 14px',
-                  borderRadius: 9999,
-                  background: isPodActive || isSelected
-                    ? 'linear-gradient(135deg, rgba(91, 99, 211, 0.45) 0%, rgba(21, 22, 33, 0.95) 100%)'
-                    : isBubbleHovered
-                      ? 'rgba(31, 36, 51, 0.95)'
-                      : 'rgba(21, 22, 33, 0.88)',
-                  border: isPodActive || isSelected
-                    ? '2px solid var(--color-periwinkle-glow, #98a4f7)'
-                    : isBubbleHovered
-                      ? '1.5px solid var(--color-frost, #c9d3ee)'
-                      : '1px solid var(--color-gunmetal, #1f2433)',
-                  boxShadow: isPodActive || isSelected
-                    ? '0 0 20px rgba(152, 164, 247, 0.45), inset 0 1px 3px rgba(255, 255, 255, 0.25)'
-                    : isBubbleHovered
-                      ? '0 0 12px rgba(152, 164, 247, 0.25)'
-                      : 'none',
-                  color: isPodActive || isSelected ? '#ffffff' : 'var(--color-frost, #c9d3ee)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  animation: `${animationName} ${animationDuration} ease-in-out infinite alternate`,
-                  animationDelay,
-                  animationPlayState: isBubbleHovered || isPodActive ? 'paused' : 'running',
-                  transform:
-                    isBubbleHovered || isPodActive
-                      ? `translate(${path.x}px, ${path.y}px) translate(-50%, -50%) scale(1.06)`
-                      : undefined,
-                  transition:
-                    'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
-                } as React.CSSProperties
-              }
+            <div
+              style={{
+                position: 'relative',
+                width: 86,
+                height: 86,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  border: '2px solid rgba(152, 164, 247, 0.25)',
+                  borderTopColor: '#98a4f7',
+                  animation: 'radarSpin 1.4s cubic-bezier(0.5, 0, 0.5, 1) infinite',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 12,
+                  borderRadius: '50%',
+                  border: '1.5px dashed rgba(91, 99, 211, 0.45)',
+                  animation: 'radarSpin 3s linear infinite reverse',
+                }}
+              />
+              <Compass
+                size={30}
+                style={{
+                  color: '#98a4f7',
+                  animation: 'hubPulseGlow 2.5s ease-in-out infinite',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: '0.98rem', fontWeight: 600, color: '#ffffff' }}>
+                Analyzing verified baseline &amp; calibrating transition vectors...
+              </span>
               <span
                 style={{
-                  color: isPodActive || isSelected
-                    ? 'var(--color-periwinkle-glow, #98a4f7)'
-                    : 'var(--color-muted-steel, #646e87)',
-                  display: 'flex',
-                  alignItems: 'center',
+                  fontSize: '0.78rem',
+                  color: 'var(--color-muted-steel, #646e87)',
                 }}
               >
-                {path.icon}
+                Synthesizing real-time market demand and role competency gaps
               </span>
+            </div>
+          </div>
+        )}
 
-              <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{path.title}</span>
-
+        {/* ERROR STATE: Transparent error card with real message (NO fallback!) */}
+        {loadError && !loadingPaths && (
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 30,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 16,
+              textAlign: 'center',
+              maxWidth: 480,
+              padding: '28px 32px',
+              background: 'rgba(21, 22, 33, 0.95)',
+              border: '1.5px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: 16,
+              boxShadow:
+                '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#F87171',
+              }}
+            >
+              <AlertTriangle size={24} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>
+                Trajectory Calibration Unavailable
+              </span>
               <span
                 style={{
-                  fontSize: '0.67rem',
-                  fontWeight: 600,
-                  padding: '2px 5px',
-                  borderRadius: 9999,
-                  background: isPodActive || isSelected
-                    ? 'rgba(134, 239, 172, 0.22)'
-                    : 'rgba(255, 255, 255, 0.06)',
-                  color: isPodActive || isSelected
-                    ? '#86EFAC'
-                    : 'var(--color-muted-steel, #646e87)',
+                  fontSize: '0.8rem',
+                  color: '#FCA5A5',
+                  lineHeight: 1.5,
+                  wordBreak: 'break-word',
                 }}
               >
-                {path.matchScore}%
+                {loadError}
               </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleRetryPaths}
+              style={{
+                background:
+                  'linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 9999,
+                padding: '9px 24px',
+                fontSize: '0.84rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                boxShadow: '0 0 14px rgba(91, 99, 211, 0.35)',
+              }}
+            >
+              Retry Calibration
             </button>
-          );
-        })}
+          </div>
+        )}
 
-        {/* FLOATING INSPECTOR POD (ONLY OPEN ON HOVER, STRICTLY CONTAINED INSIDE VIEWPORT) */}
+        {/* Central Baseline Hub (Rendered when paths are loaded) */}
+        {!loadingPaths && !loadError && (
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 10,
+              width: 126,
+              height: 126,
+              borderRadius: '50%',
+              background:
+                'radial-gradient(circle at 35% 35%, #1f2433 0%, #0f101a 100%)',
+              border: '2px solid var(--color-periwinkle-glow, #98a4f7)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              padding: 10,
+              boxSizing: 'border-box',
+              cursor: 'default',
+              animation: 'hubPulseGlow 4.5s ease-in-out infinite',
+            }}
+          >
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#86EFAC',
+                boxShadow: '0 0 8px #86EFAC',
+                marginBottom: 3,
+              }}
+            />
+            <span
+              style={{
+                fontSize: '0.64rem',
+                fontWeight: 600,
+                color: 'var(--color-periwinkle-glow, #98a4f7)',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Explore Paths
+            </span>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#ffffff',
+                lineHeight: 1.2,
+                marginTop: 2,
+              }}
+            >
+              Technical Baseline
+            </span>
+            <span
+              style={{
+                fontSize: '0.64rem',
+                color: 'var(--color-muted-steel, #646e87)',
+                marginTop: 2,
+              }}
+            >
+              {careerPaths.length} Paths Calibrated
+            </span>
+          </div>
+        )}
+
+        {/* Radiating Interactive Career Bubbles */}
+        {!loadingPaths &&
+          !loadError &&
+          careerPaths.map((path, index) => {
+            const isPodActive = activePodId === path.id;
+            const isBubbleHovered = hoveredBubbleId === path.id;
+            const isSelected = selectedPathId === path.id;
+
+            const matching = activeRoadmaps.find(
+              (r) => r.targetRole.toLowerCase() === path.title.toLowerCase(),
+            );
+            const isActiveTrajectory = Boolean(matching);
+
+            const animationName = `bubbleDrift${(index % 4) + 1}`;
+            const animationDuration = `${5.2 + (index % 4) * 0.5}s`;
+            const animationDelay = `${(index * 0.35).toFixed(1)}s`;
+
+            return (
+              <button
+                key={path.id}
+                type="button"
+                onMouseEnter={() => handleBubbleMouseEnter(path.id)}
+                onMouseLeave={handleBubbleMouseLeave}
+                onClick={() => handleBubbleMouseEnter(path.id)}
+                style={
+                  {
+                    '--bx': `${path.x}px`,
+                    '--by': `${path.y}px`,
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    zIndex: isPodActive ? 30 : isBubbleHovered ? 25 : 15,
+                    padding: '7px 14px',
+                    borderRadius: 9999,
+                    background:
+                      isPodActive || isSelected
+                        ? 'linear-gradient(135deg, rgba(91, 99, 211, 0.45) 0%, rgba(21, 22, 33, 0.95) 100%)'
+                        : isBubbleHovered
+                          ? 'rgba(31, 36, 51, 0.95)'
+                          : 'rgba(21, 22, 33, 0.88)',
+                    border:
+                      isPodActive || isSelected
+                        ? '2px solid var(--color-periwinkle-glow, #98a4f7)'
+                        : isActiveTrajectory
+                          ? '1.5px solid rgba(74, 222, 128, 0.5)'
+                          : isBubbleHovered
+                            ? '1.5px solid var(--color-frost, #c9d3ee)'
+                            : '1px solid var(--color-gunmetal, #1f2433)',
+                    boxShadow:
+                      isPodActive || isSelected
+                        ? '0 0 20px rgba(152, 164, 247, 0.45), inset 0 1px 3px rgba(255, 255, 255, 0.25)'
+                        : isActiveTrajectory
+                          ? '0 0 14px rgba(74, 222, 128, 0.25)'
+                          : isBubbleHovered
+                            ? '0 0 12px rgba(152, 164, 247, 0.25)'
+                            : 'none',
+                    color:
+                      isPodActive || isSelected
+                        ? '#ffffff'
+                        : 'var(--color-frost, #c9d3ee)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    animation: `${animationName} ${animationDuration} ease-in-out infinite alternate`,
+                    animationDelay,
+                    animationPlayState:
+                      isBubbleHovered || isPodActive ? 'paused' : 'running',
+                    transform:
+                      isBubbleHovered || isPodActive
+                        ? `translate(${path.x}px, ${path.y}px) translate(-50%, -50%) scale(1.06)`
+                        : undefined,
+                    transition:
+                      'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
+                  } as React.CSSProperties
+                }
+              >
+                <span
+                  style={{
+                    color:
+                      isPodActive || isSelected
+                        ? 'var(--color-periwinkle-glow, #98a4f7)'
+                        : isActiveTrajectory
+                          ? '#4ADE80'
+                          : 'var(--color-muted-steel, #646e87)',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {path.icon}
+                </span>
+
+                <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                  {path.title}
+                </span>
+
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: 9999,
+                    background: isActiveTrajectory
+                      ? 'rgba(34, 197, 94, 0.25)'
+                      : isPodActive || isSelected
+                        ? 'rgba(134, 239, 172, 0.22)'
+                        : 'rgba(255, 255, 255, 0.06)',
+                    color: isActiveTrajectory
+                      ? '#4ADE80'
+                      : isPodActive || isSelected
+                        ? '#86EFAC'
+                        : 'var(--color-muted-steel, #646e87)',
+                    border: isActiveTrajectory
+                      ? '1px solid rgba(74, 222, 128, 0.4)'
+                      : 'none',
+                  }}
+                >
+                  {isActiveTrajectory
+                    ? `Active • ${matching?.progressPercent}%`
+                    : `${path.matchScore}%`}
+                </span>
+              </button>
+            );
+          })}
+
+        {/* FLOATING INSPECTOR POD */}
         {activePodId && activePath && (
           <div
             onMouseEnter={handlePodMouseEnter}
@@ -728,7 +853,9 @@ export function ExplorePathsPage() {
               background: 'rgba(18, 20, 31, 0.96)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              border: '1.5px solid rgba(152, 164, 247, 0.35)',
+              border: matchingActiveRoadmap
+                ? '1.5px solid rgba(74, 222, 128, 0.5)'
+                : '1.5px solid rgba(152, 164, 247, 0.35)',
               boxShadow:
                 '0 18px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(91, 99, 211, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
               borderRadius: 16,
@@ -768,23 +895,43 @@ export function ExplorePathsPage() {
                   {activePath.category}
                 </span>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 7px',
-                    borderRadius: 9999,
-                    background: 'rgba(134, 239, 172, 0.15)',
-                    border: '1px solid rgba(134, 239, 172, 0.3)',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    color: '#86EFAC',
-                  }}
-                >
-                  <CheckCircle2 size={11} />
-                  <span>{activePath.matchScore}% Readiness Match</span>
-                </div>
+                {matchingActiveRoadmap ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 7px',
+                      borderRadius: 9999,
+                      background: 'rgba(34, 197, 94, 0.22)',
+                      border: '1px solid rgba(74, 222, 128, 0.45)',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: '#4ADE80',
+                    }}
+                  >
+                    <CheckCircle2 size={11} />
+                    <span>Active • {matchingActiveRoadmap.progressPercent}%</span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 7px',
+                      borderRadius: 9999,
+                      background: 'rgba(134, 239, 172, 0.15)',
+                      border: '1px solid rgba(134, 239, 172, 0.3)',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: '#86EFAC',
+                    }}
+                  >
+                    <CheckCircle2 size={11} />
+                    <span>{activePath.matchScore}% Readiness Match</span>
+                  </div>
+                )}
               </div>
 
               <button
@@ -913,67 +1060,153 @@ export function ExplorePathsPage() {
             </div>
 
             {/* Critical Competency Bridge Chips */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span
+            {activePath.bridgeSkills.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    color: 'var(--color-frost, #c9d3ee)',
+                  }}
+                >
+                  Critical Competency Bridge ({activePath.bridgeSkills.length} skills):
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {activePath.bridgeSkills.map((skill) => (
+                    <div
+                      key={skill}
+                      style={{
+                        padding: '2px 6px',
+                        borderRadius: 5,
+                        background: 'rgba(91, 99, 211, 0.14)',
+                        border: '1px solid rgba(152, 164, 247, 0.25)',
+                        color: 'var(--color-frost, #c9d3ee)',
+                        fontSize: '0.68rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Zap size={9} style={{ color: '#FDE047' }} />
+                      <span>{skill}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Submission / Generation Real Error Callout */}
+            {submitError && (
+              <div
                 style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  color: 'var(--color-frost, #c9d3ee)',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#FCA5A5',
+                  fontSize: '0.72rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
                 }}
               >
-                Critical Competency Bridge ({activePath.bridgeSkills.length} skills):
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {activePath.bridgeSkills.map((skill) => (
-                  <div
-                    key={skill}
-                    style={{
-                      padding: '2px 6px',
-                      borderRadius: 5,
-                      background: 'rgba(91, 99, 211, 0.14)',
-                      border: '1px solid rgba(152, 164, 247, 0.25)',
-                      color: 'var(--color-frost, #c9d3ee)',
-                      fontSize: '0.68rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <Zap size={9} style={{ color: '#FDE047' }} />
-                    <span>{skill}</span>
-                  </div>
-                ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                  <AlertTriangle size={12} />
+                  <span>Roadmap Generation Error</span>
+                </div>
+                <span>{submitError}</span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectAsTarget(activePath)}
+                  style={{
+                    alignSelf: 'flex-start',
+                    background: 'transparent',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    color: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    fontSize: '0.68rem',
+                    cursor: 'pointer',
+                    marginTop: 2,
+                  }}
+                >
+                  Retry
+                </button>
               </div>
-            </div>
+            )}
 
-            {/* Primary Action Button: Set as Target */}
-            <button
-              type="button"
-              id="set-target-role-btn"
-              onClick={() => handleSelectAsTarget(activePath)}
-              style={{
-                width: '100%',
-                background:
-                  'linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 9999,
-                padding: '9px 16px',
-                fontSize: '0.82rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                boxShadow:
-                  '0 0 16px rgba(91, 99, 211, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>Set as Target &amp; Update Roadmap</span>
-              <ArrowRight size={13} />
-            </button>
+            {/* Primary Action Button */}
+            {matchingActiveRoadmap ? (
+              <button
+                type="button"
+                id="open-in-track-btn"
+                onClick={() =>
+                  router.push(`/dashboard/track?roadmapId=${matchingActiveRoadmap.id}`)
+                }
+                style={{
+                  width: '100%',
+                  background:
+                    'linear-gradient(353deg, rgb(34, 197, 94) 17.51%, rgb(74, 222, 128) 183.08%)',
+                  color: '#0f172a',
+                  border: 'none',
+                  borderRadius: 9999,
+                  padding: '9px 16px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 0 16px rgba(74, 222, 128, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>
+                  Open in Track View ({matchingActiveRoadmap.progressPercent}% Complete)
+                </span>
+                <ArrowRight size={13} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                id="set-target-role-btn"
+                disabled={isSubmitting}
+                onClick={() => handleSelectAsTarget(activePath)}
+                style={{
+                  width: '100%',
+                  background: isSubmitting
+                    ? 'rgba(91, 99, 211, 0.5)'
+                    : 'linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 9999,
+                  padding: '9px 16px',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  boxShadow:
+                    '0 0 16px rgba(91, 99, 211, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span style={{ fontSize: '0.82rem' }}>⏳</span>
+                    <span>Generating 5-Sprint Roadmap...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Set as Target &amp; Update Roadmap</span>
+                    <ArrowRight size={13} />
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Advisory Footnote */}
             <div

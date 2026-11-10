@@ -9,6 +9,9 @@ vi.mock('next/navigation', () => ({
     push: mockPush,
   }),
   usePathname: () => '/dashboard/track',
+  useSearchParams: () => ({
+    get: (key: string) => (key === 'roadmapId' ? 'rm-1' : null),
+  }),
 }));
 
 const mockRoadmapData = {
@@ -16,6 +19,20 @@ const mockRoadmapData = {
   targetRole: 'Cloud Solutions Architect',
   estimatedMonths: 6,
   progressPercent: 20,
+  roadmaps: [
+    {
+      id: 'rm-1',
+      targetRole: 'Cloud Solutions Architect',
+      progressPercent: 20,
+      milestonesCount: 2,
+    },
+    {
+      id: 'rm-2',
+      targetRole: 'AI / ML Platform Engineer',
+      progressPercent: 45,
+      milestonesCount: 5,
+    },
+  ],
   milestones: [
     {
       id: 'm-1',
@@ -110,8 +127,8 @@ describe('TrackRoadmapPage', () => {
     // Target role is displayed
     await waitFor(() => {
       expect(
-        screen.getByText('Cloud Solutions Architect'),
-      ).toBeInTheDocument();
+        screen.getAllByText('Cloud Solutions Architect').length,
+      ).toBeGreaterThan(0);
     });
 
     // Milestone titles rendered
@@ -255,5 +272,62 @@ describe('TrackRoadmapPage', () => {
     expect(
       screen.queryByText('AWS Well-Architected Framework & VPC Networking'),
     ).not.toBeInTheDocument();
+  });
+
+  it('renders multi-roadmap switcher tabs and switches active roadmap', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockRoadmapData,
+    } as unknown as Response);
+
+    render(<TrackRoadmapPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Active Roadmaps (2):')).toBeInTheDocument();
+      expect(screen.getAllByText('Cloud Solutions Architect').length).toBeGreaterThan(0);
+      expect(screen.getByText('AI / ML Platform Engineer')).toBeInTheDocument();
+      expect(screen.getByText('+ Explore Arena / Add Path')).toBeInTheDocument();
+    });
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ...mockRoadmapData,
+        id: 'rm-2',
+        targetRole: 'AI / ML Platform Engineer',
+        progressPercent: 45,
+      }),
+    } as unknown as Response);
+
+    const aiTab = screen.getByRole('button', { name: /AI \/ ML Platform Engineer/i });
+    fireEvent.click(aiTab);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('roadmapId=rm-2'),
+        expect.anything(),
+      );
+    });
+  });
+
+  it('displays transparent error card when roadmap API fails (zero fallback)', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      statusText: 'Bad Gateway',
+      json: async () => ({ message: 'Roadmap engine failure' }),
+    } as unknown as Response);
+
+    render(<TrackRoadmapPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Roadmap Synchronization Error'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Roadmap engine failure')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Retry Synchronization/i }),
+      ).toBeInTheDocument();
+    });
   });
 });

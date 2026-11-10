@@ -133,6 +133,9 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
 
   const [milestones, setMilestones] = useState<StudyMilestone[]>([]);
   const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
+  const [roadmaps, setRoadmaps] = useState<Array<{ id: string; targetRole: string; progressPercent: number }>>([]);
+  const [activeRoadmapId, setActiveRoadmapId] = useState<string | null>(null);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
   // Load dynamically from backend roadmap or fallback to session storage
   useEffect(() => {
@@ -179,20 +182,61 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
             if (data.targetRole) {
               setProfile((prev) => ({ ...prev, targetRole: data.targetRole }));
             }
+            if (Array.isArray(data.roadmaps)) {
+              setRoadmaps(data.roadmaps);
+            }
+            if (data.id) {
+              setActiveRoadmapId(data.id);
+            }
           }
+        } else {
+          const errData = await roadmapRes.json().catch(() => ({}));
+          setRoadmapError(errData.message || `API error (${roadmapRes.status})`);
         }
 
         if (activityRes.ok) {
           const act = await activityRes.json();
           setActivityData(act);
         }
-      } catch {
-        // Fallback to storage
+      } catch (err: unknown) {
+        setRoadmapError(err instanceof Error ? err.message : 'Failed to connect to API');
       }
     }
 
     void fetchRoadmapAndActivity();
   }, []);
+
+  const handleSelectDashboardRoadmap = async (roadmapId: string) => {
+    setActiveRoadmapId(roadmapId);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/roadmap?roadmapId=${encodeURIComponent(roadmapId)}`, {
+        headers: { 'x-user-id': '00000000-0000-0000-0000-000000000001' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.milestones) {
+          setMilestones(
+            data.milestones.map((m: BackendMilestoneItem) => ({
+              id: m.id,
+              week: m.weekRange,
+              title: m.title,
+              description: m.description,
+              duration: m.duration,
+              completed: m.isCompleted,
+              category: m.category,
+              dailyTasks: m.dailyTasks || [],
+            })),
+          );
+          if (data.targetRole) {
+            setProfile((prev) => ({ ...prev, targetRole: data.targetRole }));
+          }
+        }
+      }
+    } catch {
+      // Keep current
+    }
+  };
 
   const hasSelectedPath = Boolean(profile.targetRole && profile.targetRole.trim().length > 0);
   const targetRole = profile.targetRole;
@@ -331,6 +375,25 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
       current="dashboard"
       maxWidth='100%'
     >
+      {roadmapError && (
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: 12,
+            padding: '12px 18px',
+            color: '#FCA5A5',
+            fontSize: '0.82rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>Sync Warning:</span>
+          <span>{roadmapError}</span>
+        </div>
+      )}
+
       {/* Wireframe Hero Card: Minimal Profile Baseline */}
       <Card
         variant="default"
@@ -430,16 +493,49 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                     : '1px dashed var(--color-gunmetal, #1f2433)',
                 }}
               >
-                <Text
-                  type="supporting"
+                <div
                   style={{
-                    fontSize: '0.7rem',
-                    color: hasSelectedPath ? 'var(--color-frost, #c9d3ee)' : 'var(--color-muted-steel, #646e87)',
-                    textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
                   }}
                 >
-                  Target Horizon
-                </Text>
+                  <Text
+                    type="supporting"
+                    style={{
+                      fontSize: '0.7rem',
+                      color: hasSelectedPath ? 'var(--color-frost, #c9d3ee)' : 'var(--color-muted-steel, #646e87)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Target Horizon{roadmaps.length > 1 ? ` (${roadmaps.length} Active)` : ''}
+                  </Text>
+
+                  {roadmaps.length > 1 && (
+                    <select
+                      value={activeRoadmapId || ''}
+                      onChange={(e) => void handleSelectDashboardRoadmap(e.target.value)}
+                      aria-label="Select active roadmap"
+                      style={{
+                        background: 'rgba(21, 22, 33, 0.9)',
+                        border: '1px solid rgba(152, 164, 247, 0.3)',
+                        color: '#98a4f7',
+                        fontSize: '0.68rem',
+                        borderRadius: 4,
+                        padding: '1px 4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {roadmaps.map((r) => (
+                        <option key={r.id} value={r.id} style={{ background: '#151621', color: '#ffffff' }}>
+                          {r.targetRole} ({r.progressPercent}%)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
                 <Text
                   type="body"
                   weight="semibold"

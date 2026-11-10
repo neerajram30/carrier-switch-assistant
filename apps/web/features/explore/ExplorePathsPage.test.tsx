@@ -7,30 +7,76 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/dashboard/explore',
 }));
+
+const mockPaths = [
+  {
+    id: 'cloud-architect',
+    title: 'Cloud Solutions Architect',
+    matchScore: 84,
+    category: 'Architecture & Cloud',
+    timeline: '4 - 6 Months',
+    marketDemand: 'Very High',
+    salaryRange: '$175k - $235k',
+    description: 'Design fault-tolerant, scalable architectures on cloud.',
+    bridgeSkills: ['Distributed Consensus', 'AWS Well-Architected'],
+  },
+  {
+    id: 'ai-ml-engineer',
+    title: 'AI / ML Platform Engineer',
+    matchScore: 72,
+    category: 'AI & Systems',
+    timeline: '6 - 9 Months',
+    marketDemand: 'Explosive',
+    salaryRange: '$185k - $250k',
+    description: 'Build infrastructure for LLM deployment and fine-tuning.',
+    bridgeSkills: ['Python & PyTorch', 'Vector DBs'],
+  },
+];
 
 describe('ExplorePathsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    } as unknown as Response);
+    global.fetch = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/career-paths/select')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: 'new-rm-123', targetRole: 'Cloud Solutions Architect' }),
+        } as unknown as Response);
+      }
+      if (url.includes('/api/v1/career-paths')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockPaths,
+        } as unknown as Response);
+      }
+      if (url.includes('/api/v1/roadmap')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ roadmaps: [] }),
+        } as unknown as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as unknown as Response);
+    });
   });
 
-  it('renders only bubbles and central baseline hub when no item is hovered', () => {
+  it('renders loading state then displays bubbles and central baseline hub', async () => {
     render(<ExplorePathsPage />);
 
-    // Top header removed by design
-    // Badge removed with top header
-    expect(screen.getByText('Technical Baseline')).toBeInTheDocument();
+    // Initially or upon fetch resolution
+    await waitFor(() => {
+      expect(screen.getByText('Technical Baseline')).toBeInTheDocument();
+    });
 
-    // Verify bubbles exist
+    expect(screen.getByText('2 Paths Calibrated')).toBeInTheDocument();
     expect(screen.getByText('Cloud Solutions Architect')).toBeInTheDocument();
     expect(screen.getByText('AI / ML Platform Engineer')).toBeInTheDocument();
-    expect(screen.getByText('Staff Software Engineer')).toBeInTheDocument();
-    expect(screen.getByText('Site Reliability Engineer')).toBeInTheDocument();
 
     // Verify no inspector pod is open initially
     expect(
@@ -40,13 +86,16 @@ describe('ExplorePathsPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('displays the floating inspector pod only when a bubble is hovered', () => {
+  it('displays the floating inspector pod only when a bubble is hovered', async () => {
     render(<ExplorePathsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AI / ML Platform Engineer')).toBeInTheDocument();
+    });
 
     const aiBubble = screen.getByText('AI / ML Platform Engineer');
     fireEvent.mouseEnter(aiBubble);
 
-    // Inspector pod should display AI/ML Platform details
     expect(screen.getByText('AI & Systems')).toBeInTheDocument();
     expect(screen.getByText('72% Readiness Match')).toBeInTheDocument();
     expect(screen.getByText('6 - 9 Months')).toBeInTheDocument();
@@ -59,8 +108,12 @@ describe('ExplorePathsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('closes inspector pod when close button is clicked', () => {
+  it('closes inspector pod when close button is clicked', async () => {
     render(<ExplorePathsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('AI / ML Platform Engineer')).toBeInTheDocument();
+    });
 
     const aiBubble = screen.getByText('AI / ML Platform Engineer');
     fireEvent.mouseEnter(aiBubble);
@@ -75,8 +128,12 @@ describe('ExplorePathsPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('updates target role in storage and navigates to dashboard on select', async () => {
+  it('generates roadmap dynamically and navigates to track page with roadmapId', async () => {
     render(<ExplorePathsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cloud Solutions Architect')).toBeInTheDocument();
+    });
 
     const cloudBubble = screen.getByText('Cloud Solutions Architect');
     fireEvent.mouseEnter(cloudBubble);
@@ -86,12 +143,44 @@ describe('ExplorePathsPage', () => {
     });
     fireEvent.click(setTargetBtn);
 
-    const stored = sessionStorage.getItem('csa_career_profile');
-    expect(stored).toBeTruthy();
-    const parsed = JSON.parse(stored!);
-    expect(parsed.targetRole).toBe('Cloud Solutions Architect');
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      const stored = sessionStorage.getItem('csa_career_profile');
+      expect(stored).toBeTruthy();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.targetRole).toBe('Cloud Solutions Architect');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard/track?roadmapId=new-rm-123');
+    });
+  });
+
+  it('renders transparent error card with real message when career paths call fails', async () => {
+    vi.mocked(global.fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/career-paths')) {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+          statusText: 'Bad Gateway',
+          json: async () => ({ message: 'Gemini rate limit exceeded' }),
+        } as unknown as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as unknown as Response);
+    });
+
+    render(<ExplorePathsPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Trajectory Calibration Unavailable'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Gemini rate limit exceeded'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Retry Calibration/i }),
+      ).toBeInTheDocument();
     });
   });
 });

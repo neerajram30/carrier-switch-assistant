@@ -5,340 +5,208 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { DEFAULT_TEMPLATE_PATHS } from '../resume/extractors/deterministic-career-data.extractor.js';
+import {
+  DailyTaskTemplate,
+  DynamicCareerPath,
+  DynamicRoadmapGeneratorService,
+} from './dynamic-roadmap-generator.service.js';
 
-export interface DailyTask {
+export interface DailyTask extends DailyTaskTemplate {}
+
+export interface RoadmapSummaryItem {
   id: string;
-  dayNumber: number;
-  dayLabel: string;
-  title: string;
-  learningFocus: string;
-  actionItem: string;
-  duration: string;
-  isCompleted: boolean;
-  completedAt?: string | null;
+  targetRole: string;
+  progressPercent: number;
+  estimatedMonths: number;
+  totalMilestones: number;
+  completedMilestones: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface MilestoneTemplate {
-  weekRange: string;
-  title: string;
-  description: string;
-  category: string;
-  duration: string;
-  dailyTasks?: DailyTask[];
+export interface HydratedRoadmapResponse {
+  id: string;
+  careerProfileId: string;
+  targetRole: string;
+  estimatedMonths: number;
+  progressPercent: number;
+  milestones: any[];
+  roadmaps: RoadmapSummaryItem[];
+  totalActive: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
-
-export function generateDefaultDailyTasks(
-  milestoneTitle: string,
-  milestoneCategory: string,
-  _weekRange: string,
-): DailyTask[] {
-  return [
-    {
-      id: 'd1',
-      dayNumber: 1,
-      dayLabel: 'Day 1',
-      title: `${milestoneCategory} Foundations & Paradigm Review`,
-      learningFocus: `Study core trade-offs, architecture specifications, and design contracts for ${milestoneTitle}.`,
-      actionItem: `Author an engineering design note outlining pros/cons vs alternative patterns.`,
-      duration: '2.5 hrs',
-      isCompleted: false,
-    },
-    {
-      id: 'd2',
-      dayNumber: 2,
-      dayLabel: 'Day 2',
-      title: `High-Scale Production Patterns & Edge Cases`,
-      learningFocus: `Investigate concurrency bottlenecks, failure modes, and resilient fallback mechanisms.`,
-      actionItem: `Draw sequence and data-flow diagrams illustrating failure boundaries and recovery paths.`,
-      duration: '2.5 hrs',
-      isCompleted: false,
-    },
-    {
-      id: 'd3',
-      dayNumber: 3,
-      dayLabel: 'Day 3',
-      title: `Hands-on Lab: Implementation & Benchmarking`,
-      learningFocus: `Examine SDKs, CLI workflows, and configuration manifests applicable to this domain.`,
-      actionItem: `Write a modular, runnable code prototype with automated unit and regression tests.`,
-      duration: '3.0 hrs',
-      isCompleted: false,
-    },
-    {
-      id: 'd4',
-      dayNumber: 4,
-      dayLabel: 'Day 4',
-      title: `Security Boundaries, Observability & SLO Calibration`,
-      learningFocus: `Define telemetry metrics (SLIs/SLOs), distributed tracing, and least-privilege policies.`,
-      actionItem: `Instrument structured logging and verify boundary authorization against attack vectors.`,
-      duration: '2.5 hrs',
-      isCompleted: false,
-    },
-    {
-      id: 'd5',
-      dayNumber: 5,
-      dayLabel: 'Day 5',
-      title: `Sprint Synthesis & Deliverable Checkpoint`,
-      learningFocus: `Review end-to-end integration, operational runbooks, and real-world deployment criteria.`,
-      actionItem: `Publish reproducible artifact to your portfolio project repository for peer calibration.`,
-      duration: '3.5 hrs',
-      isCompleted: false,
-    },
-  ];
-}
-
-const ROLE_MILESTONE_MAP: Record<string, MilestoneTemplate[]> = {
-  'cloud-architect': [
-    {
-      weekRange: 'Week 1 - 2',
-      title: 'Distributed Systems & Consensus Fundamentals',
-      description:
-        'Master CAP theorem trade-offs, Paxos/Raft consensus algorithms, and fault tolerance paradigms in large-scale multi-region setups.',
-      category: 'Architecture',
-      duration: '15 hrs',
-    },
-    {
-      weekRange: 'Week 3 - 4',
-      title: 'AWS Well-Architected Framework & VPC Networking',
-      description:
-        'Architect multi-AZ networks with Transit Gateways, Direct Connect redundancy, and cost-effective disaster recovery topologies.',
-      category: 'Cloud',
-      duration: '18 hrs',
-    },
-    {
-      weekRange: 'Week 5 - 6',
-      title: 'Infrastructure as Code (IaC) with Terraform & Terragrunt',
-      description:
-        'Write modular, reusable infrastructure manifests with automated drift detection, state locking in DynamoDB, and policy-as-code.',
-      category: 'DevOps',
-      duration: '14 hrs',
-    },
-    {
-      weekRange: 'Week 7 - 8',
-      title: 'Enterprise Security, Zero-Trust Posture & IAM Boundary Governance',
-      description:
-        'Implement least-privilege IAM service control policies, KMS key rotations, and mTLS communication across microservices.',
-      category: 'Security',
-      duration: '12 hrs',
-    },
-    {
-      weekRange: 'Week 9 - 10',
-      title: 'Capstone: Multi-Tenant Enterprise Cloud Architecture Blueprint',
-      description:
-        'Design a comprehensive end-to-end architecture RFC with automated deployment pipelines and operational runbooks.',
-      category: 'Capstone',
-      duration: '20 hrs',
-    },
-  ],
-  'ai-ml-engineer': [
-    {
-      weekRange: 'Week 1 - 2',
-      title: 'LLM Foundations, Attention Mechanisms & PyTorch Fine-Tuning',
-      description:
-        'Understand transformer internals, LoRA/QLoRA parameter-efficient fine-tuning, and gradient accumulation strategies.',
-      category: 'AI Systems',
-      duration: '16 hrs',
-    },
-    {
-      weekRange: 'Week 3 - 4',
-      title: 'High-Performance Vector Databases & Hybrid Retrieval Telemetry',
-      description:
-        'Benchmark vector indexing algorithms (HNSW, IVFFlat), implement hybrid BM25 + dense embedding retrieval, and optimize latency.',
-      category: 'Data & Search',
-      duration: '14 hrs',
-    },
-    {
-      weekRange: 'Week 5 - 6',
-      title: 'Scalable Model Serving with vLLM, Triton & GPU Orchestration',
-      description:
-        'Deploy low-latency inference servers with PagedAttention, continuous batching, and Kubernetes GPU operator scheduling.',
-      category: 'Platform',
-      duration: '18 hrs',
-    },
-    {
-      weekRange: 'Week 7 - 8',
-      title: 'Agentic Workflows, Tool Use & LLM Evaluation Frameworks',
-      description:
-        'Build robust autonomous agents with LangGraph, implement structured tool calling, and track evaluation metrics with Ragas.',
-      category: 'Agents & Eval',
-      duration: '15 hrs',
-    },
-    {
-      weekRange: 'Week 9 - 10',
-      title: 'Capstone: Enterprise AI Copilot Engine with Guardrails & Observability',
-      description:
-        'Deploy a full-stack generative AI assistant with OpenTelemetry tracing, toxicity guardrails, and automated regression testing.',
-      category: 'Capstone',
-      duration: '20 hrs',
-    },
-  ],
-  'staff-engineer': [
-    {
-      weekRange: 'Week 1 - 2',
-      title: 'Cross-Organization Architectural Governance & RFC Frameworks',
-      description:
-        'Establish technical decision-making processes, write structured RFCs for critical initiatives, and drive consensus across squads.',
-      category: 'Leadership',
-      duration: '12 hrs',
-    },
-    {
-      weekRange: 'Week 3 - 4',
-      title: 'High-Scale Distributed Storage & Real-Time Event Streaming',
-      description:
-        'Architect event-driven platforms with Apache Kafka, outbox patterns, schema registries, and idempotent consumer workers.',
-      category: 'Architecture',
-      duration: '18 hrs',
-    },
-    {
-      weekRange: 'Week 5 - 6',
-      title: 'Organizational Engineering Velocity, Observability & SLO Management',
-      description:
-        'Define meaningful SLIs/SLOs, conduct blameless postmortems, and eliminate systemic engineering friction.',
-      category: 'Strategy',
-      duration: '14 hrs',
-    },
-    {
-      weekRange: 'Week 7 - 8',
-      title: 'Tech Debt Prioritization & Executive Alignment',
-      description:
-        'Quantify business risk of technical debt, negotiate engineering investments with executive leadership, and mentor senior talent.',
-      category: 'Delivery',
-      duration: '12 hrs',
-    },
-    {
-      weekRange: 'Week 9 - 10',
-      title: 'Technical Vision & Multi-Year Platform Evolution Strategy',
-      description:
-        'Author a multi-year technical roadmap balancing immediate customer delivery with strategic architectural scalability.',
-      category: 'Capstone',
-      duration: '16 hrs',
-    },
-  ],
-};
-
-const DEFAULT_GENERIC_MILESTONES: MilestoneTemplate[] = [
-  {
-    weekRange: 'Week 1 - 2',
-    title: 'Core Architecture & System Decomposition',
-    description:
-      'Analyze architectural patterns, decompose monolithic domains into clean boundaries, and solidify API contracts.',
-    category: 'Foundations',
-    duration: '14 hrs',
-  },
-  {
-    weekRange: 'Week 3 - 4',
-    title: 'Advanced Domain Modeling & High-Scale Design',
-    description:
-      'Implement domain-driven design, transactional integrity, caching strategies with Redis, and database query optimization.',
-    category: 'Engineering',
-    duration: '16 hrs',
-  },
-  {
-    weekRange: 'Week 5 - 6',
-    title: 'Production Infrastructure, Observability & CI/CD Hardening',
-    description:
-      'Build automated testing matrices, containerized deployments, zero-downtime release pipelines, and monitoring dashboards.',
-    category: 'Platform',
-    duration: '15 hrs',
-  },
-  {
-    weekRange: 'Week 7 - 8',
-    title: 'Security, Performance Optimization & Reliability Engineering',
-    description:
-      'Audit OWASP vulnerabilities, optimize runtime CPU/memory profiles, and run automated resilience and chaos experiments.',
-    category: 'Reliability',
-    duration: '14 hrs',
-  },
-  {
-    weekRange: 'Week 9 - 10',
-    title: 'Capstone: Production Transition Project & Architecture Portfolio',
-    description:
-      'Assemble a production-ready reference application showcasing your mastery of target role competencies.',
-    category: 'Capstone',
-    duration: '18 hrs',
-  },
-];
 
 @Injectable()
 export class RoadmapService {
   private readonly logger = new Logger(RoadmapService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dynamicRoadmapGenerator: DynamicRoadmapGeneratorService,
+  ) {}
 
-  async getCareerPaths(userId: string) {
+  /**
+   * Retrieves dynamic tailored career paths for the user.
+   * If not yet calibrated in CareerProfile, triggers on-demand AI generation from user profile.
+   * Never returns hardcoded dummy paths.
+   */
+  async getCareerPaths(userId: string): Promise<DynamicCareerPath[]> {
     const profile = await this.prisma.careerProfile.findUnique({
       where: { userId },
     });
 
-    if (profile?.suggestedPaths && Array.isArray(profile.suggestedPaths)) {
-      return profile.suggestedPaths;
+    if (!profile) {
+      throw new NotFoundException(
+        'Career profile not found. Please upload or review your resume to initialize your profile.',
+      );
     }
 
-    return DEFAULT_TEMPLATE_PATHS;
+    if (
+      profile.suggestedPaths &&
+      Array.isArray(profile.suggestedPaths) &&
+      profile.suggestedPaths.length > 0
+    ) {
+      return profile.suggestedPaths as unknown as DynamicCareerPath[];
+    }
+
+    this.logger.log(
+      `Calibrating dynamic career paths on-demand for user "${userId}" (${profile.currentRole})...`,
+    );
+
+    // Call dynamic LLM generator with candidate's verified baseline
+    const generatedPaths =
+      await this.dynamicRoadmapGenerator.generateCareerPathsForProfile({
+        currentRole: profile.currentRole,
+        yearsOfExperience: Number(profile.yearsOfExperience),
+        currentSkills: profile.skills,
+        summary: profile.summary,
+      });
+
+    // Persist dynamic paths to CareerProfile for fast subsequent queries
+    await this.prisma.careerProfile.update({
+      where: { id: profile.id },
+      data: { suggestedPaths: generatedPaths as any },
+    });
+
+    return generatedPaths;
   }
 
-  async selectCareerPath(userId: string, pathId: string, title?: string) {
+  /**
+   * Selects or activates a career path.
+   * Supports MULTIPLE active roadmaps simultaneously without resetting existing progress.
+   * Generates a tailored dynamic 5-sprint curriculum via Gemini if new.
+   */
+  async selectCareerPath(
+    userId: string,
+    pathId: string,
+    title?: string,
+    bridgeSkills?: string[],
+  ): Promise<HydratedRoadmapResponse> {
     let profile = await this.prisma.careerProfile.findUnique({
       where: { userId },
     });
 
     if (!profile) {
-      // Auto-create basic profile if user jumps straight into paths
-      profile = await this.prisma.careerProfile.create({
-        data: {
-          userId,
-          currentRole: 'Software Engineer',
-          yearsOfExperience: 3,
-          skills: ['TypeScript', 'React', 'Node.js'],
-        },
-      });
+      throw new NotFoundException(
+        'Career profile not found. Please complete profile onboarding before selecting a roadmap.',
+      );
     }
 
-    // Determine target title from suggestedPaths or fallback
+    // Determine target title from title param or suggestedPaths lookup
     let targetTitle = title?.trim();
-    if (!targetTitle) {
-      const paths = (profile.suggestedPaths as any[]) || DEFAULT_TEMPLATE_PATHS;
-      const match = paths.find((p) => p.id === pathId);
-      targetTitle = match?.title || pathId.replace(/-/g, ' ');
-    }
-    const finalTargetTitle = targetTitle || 'Software Engineer';
+    let detectedBridgeSkills: string[] = bridgeSkills || [];
 
-    // 1. Update CareerProfile with chosen targetRole
+    if (!targetTitle || detectedBridgeSkills.length === 0) {
+      const paths = (profile.suggestedPaths as any[]) || [];
+      const match = paths.find(
+        (p: any) =>
+          p.id === pathId ||
+          p.title?.toLowerCase() === targetTitle?.toLowerCase(),
+      );
+      if (match) {
+        if (!targetTitle) targetTitle = match.title;
+        if (
+          detectedBridgeSkills.length === 0 &&
+          Array.isArray(match.bridgeSkills)
+        ) {
+          detectedBridgeSkills = match.bridgeSkills;
+        }
+      }
+    }
+    const finalTargetTitle = targetTitle || pathId.replace(/-/g, ' ');
+
+    // Update CareerProfile active targetRole pointer
     await this.prisma.careerProfile.update({
       where: { id: profile.id },
       data: { targetRole: finalTargetTitle },
     });
 
-    // 2. Select matching milestones template
-    const milestoneTemplates =
-      ROLE_MILESTONE_MAP[pathId] || DEFAULT_GENERIC_MILESTONES;
+    // Check if user ALREADY has a roadmap for this role (Multi-Roadmap Concurrency)
+    const existingRoadmap = await this.prisma.roadmap.findFirst({
+      where: {
+        careerProfileId: profile.id,
+        targetRole: { equals: finalTargetTitle, mode: 'insensitive' },
+      },
+      include: {
+        milestones: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
 
-    // 3. Create fresh Roadmap record and seed milestones
-    const roadmap: any = await this.prisma.roadmap.create({
+    if (existingRoadmap) {
+      this.logger.log(
+        `User "${userId}" switched to existing active roadmap "${finalTargetTitle}" (${existingRoadmap.progressPercent}% complete).`,
+      );
+
+      const allRoadmaps = await this.prisma.roadmap.findMany({
+        where: { careerProfileId: profile.id },
+        orderBy: { createdAt: 'desc' },
+        include: { milestones: { orderBy: { order: 'asc' } } },
+      });
+
+      return {
+        ...existingRoadmap,
+        milestones: (existingRoadmap.milestones || []).map((m: any) =>
+          this.hydrateMilestone(m),
+        ),
+        roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
+        totalActive: allRoadmaps.length,
+      };
+    }
+
+    // Generate tailored dynamic curriculum via Gemini API (No hardcoded fallback!)
+    const milestoneTemplates =
+      await this.dynamicRoadmapGenerator.generateRoadmapForRole({
+        currentRole: profile.currentRole,
+        yearsOfExperience: Number(profile.yearsOfExperience),
+        currentSkills: profile.skills,
+        targetRole: finalTargetTitle,
+        bridgeSkills: detectedBridgeSkills,
+        summary: profile.summary,
+      });
+
+    // Create fresh Roadmap record and seed dynamic milestones in PostgreSQL
+    const roadmap = await this.prisma.roadmap.create({
       data: {
         careerProfileId: profile.id,
         targetRole: finalTargetTitle,
         estimatedMonths: 6,
         progressPercent: 0,
         milestones: {
-          create: milestoneTemplates.map((m, index) => {
-            const daily =
-              m.dailyTasks && m.dailyTasks.length > 0
-                ? m.dailyTasks
-                : generateDefaultDailyTasks(m.title, m.category, m.weekRange);
-            return {
-              weekRange: m.weekRange,
-              title: m.title,
-              description: JSON.stringify({
-                summary: m.description,
-                dailyTasks: daily,
-              }),
-              category: m.category,
-              duration: m.duration,
-              isCompleted: false,
-              order: index + 1,
-            };
-          }),
+          create: milestoneTemplates.map((m, index) => ({
+            weekRange: m.weekRange,
+            title: m.title,
+            description: JSON.stringify({
+              summary: m.description,
+              dailyTasks: m.dailyTasks,
+            }),
+            category: m.category,
+            duration: m.duration,
+            isCompleted: false,
+            order: index + 1,
+          })),
         },
       },
       include: {
@@ -349,49 +217,30 @@ export class RoadmapService {
     });
 
     this.logger.log(
-      `User "${userId}" locked target role "${finalTargetTitle}" with ${roadmap?.milestones?.length || 0} milestones.`,
+      `User "${userId}" generated new dynamic roadmap "${finalTargetTitle}" with ${roadmap?.milestones?.length || 0} milestones.`,
     );
+
+    const allRoadmaps = await this.prisma.roadmap.findMany({
+      where: { careerProfileId: profile.id },
+      orderBy: { createdAt: 'desc' },
+      include: { milestones: { orderBy: { order: 'asc' } } },
+    });
 
     return {
       ...roadmap,
       milestones: (roadmap.milestones || []).map((m: any) =>
         this.hydrateMilestone(m),
       ),
+      roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
+      totalActive: allRoadmaps.length,
     };
   }
 
-  private hydrateMilestone(m: any) {
-    let summary = m.description;
-    let dailyTasks: DailyTask[] = [];
-
-    try {
-      const parsed = JSON.parse(m.description);
-      if (parsed && Array.isArray(parsed.dailyTasks)) {
-        summary = parsed.summary || m.description;
-        dailyTasks = parsed.dailyTasks;
-      } else {
-        dailyTasks = generateDefaultDailyTasks(
-          m.title,
-          m.category,
-          m.weekRange,
-        );
-      }
-    } catch {
-      dailyTasks = generateDefaultDailyTasks(
-        m.title,
-        m.category,
-        m.weekRange,
-      );
-    }
-
-    return {
-      ...m,
-      description: summary,
-      dailyTasks,
-    };
-  }
-
-  async getRoadmap(userId: string) {
+  /**
+   * Retrieves active roadmap and all user roadmaps.
+   * If roadmapId is specified, focuses that specific roadmap.
+   */
+  async getRoadmap(userId: string, roadmapId?: string): Promise<HydratedRoadmapResponse | null> {
     const profile = await this.prisma.careerProfile.findUnique({
       where: { userId },
     });
@@ -400,7 +249,7 @@ export class RoadmapService {
       return null;
     }
 
-    let roadmap: any = await this.prisma.roadmap.findFirst({
+    const allRoadmaps = await this.prisma.roadmap.findMany({
       where: { careerProfileId: profile.id },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -410,32 +259,81 @@ export class RoadmapService {
       },
     });
 
-    // If targetRole is set but no roadmap records exist, automatically generate one!
-    if (!roadmap && profile.targetRole) {
-      const pathKey = profile.targetRole
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-');
-      roadmap = await this.selectCareerPath(
-        userId,
-        pathKey,
-        profile.targetRole,
-      );
-    }
-
-    if (!roadmap) {
+    if (allRoadmaps.length === 0) {
       return null;
     }
 
-    const mappedMilestones = (roadmap.milestones || []).map((m: any) =>
+    let activeRoadmap = roadmapId
+      ? allRoadmaps.find((r: any) => r.id === roadmapId)
+      : null;
+
+    if (!activeRoadmap && profile.targetRole) {
+      activeRoadmap = allRoadmaps.find(
+        (r: any) =>
+          r.targetRole.toLowerCase() === profile.targetRole?.toLowerCase(),
+      );
+    }
+
+    if (!activeRoadmap) {
+      activeRoadmap = allRoadmaps[0];
+    }
+
+    const mappedMilestones = (activeRoadmap.milestones || []).map((m: any) =>
       this.hydrateMilestone(m),
     );
 
     return {
-      ...roadmap,
+      ...activeRoadmap,
       milestones: mappedMilestones,
+      roadmaps: allRoadmaps.map((r: any) => this.summarizeRoadmap(r)),
+      totalActive: allRoadmaps.length,
     };
   }
 
+  /**
+   * Hydrates a database milestone by parsing its daily tasks JSON.
+   */
+  private hydrateMilestone(m: any) {
+    let summary = m.description;
+    let dailyTasks: DailyTask[] = [];
+
+    try {
+      const parsed = JSON.parse(m.description);
+      if (parsed && Array.isArray(parsed.dailyTasks)) {
+        summary = parsed.summary || m.description;
+        dailyTasks = parsed.dailyTasks;
+      }
+    } catch {
+      // Plain text description without micro-tasks
+    }
+
+    return {
+      ...m,
+      description: summary,
+      dailyTasks,
+    };
+  }
+
+  private summarizeRoadmap(r: any): RoadmapSummaryItem {
+    const milestones = r.milestones || [];
+    const completedMilestones = milestones.filter(
+      (m: any) => m.isCompleted,
+    ).length;
+    return {
+      id: r.id,
+      targetRole: r.targetRole,
+      progressPercent: r.progressPercent,
+      estimatedMonths: r.estimatedMonths,
+      totalMilestones: milestones.length,
+      completedMilestones,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    };
+  }
+
+  /**
+   * Toggles milestone completion and synchronizes all its daily tasks.
+   */
   async toggleMilestone(userId: string, milestoneId: string) {
     const milestone = await this.prisma.roadmapMilestone.findUnique({
       where: { id: milestoneId },
@@ -460,7 +358,6 @@ export class RoadmapService {
 
     const nextCompleted = !milestone.isCompleted;
 
-    // Hydrate current daily tasks and sync their state with milestone
     const hydrated = this.hydrateMilestone(milestone);
     const updatedDailyTasks = hydrated.dailyTasks.map((t: DailyTask) => ({
       ...t,
@@ -491,12 +388,16 @@ export class RoadmapService {
     for (const m of allMilestones) {
       if (m.id === milestoneId) {
         totalTasks += updatedDailyTasks.length;
-        completedTasks += updatedDailyTasks.filter((t: DailyTask) => t.isCompleted).length;
+        completedTasks += updatedDailyTasks.filter(
+          (t: DailyTask) => t.isCompleted,
+        ).length;
         continue;
       }
       const h = this.hydrateMilestone(m);
       totalTasks += h.dailyTasks.length;
-      completedTasks += h.dailyTasks.filter((t: DailyTask) => t.isCompleted).length;
+      completedTasks += h.dailyTasks.filter(
+        (t: DailyTask) => t.isCompleted,
+      ).length;
     }
 
     const progressPercent =
@@ -519,6 +420,9 @@ export class RoadmapService {
     };
   }
 
+  /**
+   * Toggles an individual daily micro-task within a sprint milestone.
+   */
   async toggleDailyTask(userId: string, milestoneId: string, taskId: string) {
     const milestone = await this.prisma.roadmapMilestone.findUnique({
       where: { id: milestoneId },
@@ -581,12 +485,16 @@ export class RoadmapService {
     for (const m of allMilestones) {
       if (m.id === milestoneId) {
         totalTasks += updatedDailyTasks.length;
-        completedTasks += updatedDailyTasks.filter((t: DailyTask) => t.isCompleted).length;
+        completedTasks += updatedDailyTasks.filter(
+          (t: DailyTask) => t.isCompleted,
+        ).length;
         continue;
       }
       const h = this.hydrateMilestone(m);
       totalTasks += h.dailyTasks.length;
-      completedTasks += h.dailyTasks.filter((t: DailyTask) => t.isCompleted).length;
+      completedTasks += h.dailyTasks.filter(
+        (t: DailyTask) => t.isCompleted,
+      ).length;
     }
 
     const progressPercent =
@@ -609,36 +517,52 @@ export class RoadmapService {
     };
   }
 
+  /**
+   * Aggregates activity logs across all active roadmaps for consistency heatmap and streak calculations.
+   */
   async getActivityLogs(userId: string, days = 84) {
     const profile = await this.prisma.careerProfile.findUnique({
       where: { userId },
     });
-    if (!profile) return { activity: [], totalActiveDays: 0, currentStreak: 0, longestStreak: 0 };
+    if (!profile)
+      return {
+        activity: [],
+        totalActiveDays: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+      };
 
-    const roadmap: any = await this.prisma.roadmap.findFirst({
+    const roadmaps = await this.prisma.roadmap.findMany({
       where: { careerProfileId: profile.id },
-      orderBy: { createdAt: 'desc' },
       include: {
         milestones: { orderBy: { order: 'asc' } },
       },
     });
 
-    if (!roadmap) return { activity: [], totalActiveDays: 0, currentStreak: 0, longestStreak: 0 };
+    if (roadmaps.length === 0)
+      return {
+        activity: [],
+        totalActiveDays: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+      };
 
     const dateCountMap = new Map<string, number>();
 
-    for (const m of roadmap.milestones || []) {
-      const h = this.hydrateMilestone(m);
-      for (const t of h.dailyTasks) {
-        if (t.isCompleted && t.completedAt) {
-          const dateStr = t.completedAt.split('T')[0];
-          dateCountMap.set(dateStr, (dateCountMap.get(dateStr) || 0) + 1);
+    for (const roadmap of roadmaps) {
+      for (const m of roadmap.milestones || []) {
+        const h = this.hydrateMilestone(m);
+        for (const t of h.dailyTasks) {
+          if (t.isCompleted && t.completedAt) {
+            const dateStr = t.completedAt.split('T')[0];
+            dateCountMap.set(dateStr, (dateCountMap.get(dateStr) || 0) + 1);
+          }
         }
-      }
-      if (m.isCompleted && m.completedAt) {
-        const mDate = new Date(m.completedAt).toISOString().split('T')[0];
-        if (!dateCountMap.has(mDate)) {
-          dateCountMap.set(mDate, 1);
+        if (m.isCompleted && m.completedAt) {
+          const mDate = new Date(m.completedAt).toISOString().split('T')[0];
+          if (!dateCountMap.has(mDate)) {
+            dateCountMap.set(mDate, 1);
+          }
         }
       }
     }
@@ -651,7 +575,8 @@ export class RoadmapService {
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().split('T')[0];
       const count = dateCountMap.get(iso) || 0;
-      const level = count === 0 ? 0 : count <= 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4;
+      const level =
+        count === 0 ? 0 : count <= 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4;
       activity.push({ date: iso, count, level });
     }
 
@@ -677,7 +602,9 @@ export class RoadmapService {
       }
     }
 
-    const totalActiveDays = Array.from(dateCountMap.values()).filter((cnt) => cnt > 0).length;
+    const totalActiveDays = Array.from(dateCountMap.values()).filter(
+      (cnt) => cnt > 0,
+    ).length;
 
     return {
       activity,
