@@ -76,145 +76,6 @@ const KNOWN_ROLES = [
   'QA Engineer',
 ];
 
-export const DEFAULT_TEMPLATE_PATHS = [
-  {
-    id: 'cloud-architect',
-    title: 'Cloud Solutions Architect',
-    matchScore: 84,
-    category: 'Architecture & Cloud',
-    timeline: '4 - 6 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$175k - $235k',
-    description:
-      'Design fault-tolerant, scalable multi-region architectures on AWS/GCP with Well-Architected governance and infrastructure automation.',
-    bridgeSkills: [
-      'Distributed Consensus',
-      'AWS Well-Architected',
-      'Terraform IaC',
-      'System Design',
-    ],
-  },
-  {
-    id: 'ai-ml-engineer',
-    title: 'AI / ML Platform Engineer',
-    matchScore: 72,
-    category: 'AI & Systems',
-    timeline: '6 - 9 Months',
-    marketDemand: 'Explosive',
-    salaryRange: '$185k - $250k',
-    description:
-      'Build infrastructure for LLM deployment, fine-tuning pipelines, vector stores, and model evaluation telemetry for generative AI products.',
-    bridgeSkills: [
-      'Python & PyTorch',
-      'Vector DBs (Pinecone/Milvus)',
-      'vLLM / Triton Inference',
-      'LangChain / Agents',
-    ],
-  },
-  {
-    id: 'staff-engineer',
-    title: 'Staff Software Engineer',
-    matchScore: 88,
-    category: 'Technical Leadership',
-    timeline: '3 - 5 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$190k - $260k',
-    description:
-      'Set cross-organization architectural direction, solve ambiguous technical bottlenecks, and act as a leadership force multiplier.',
-    bridgeSkills: [
-      'Cross-System RFCs',
-      'High-Scale Data Pipelines',
-      'Engineering Strategy',
-      'Mentorship & Alignment',
-    ],
-  },
-  {
-    id: 'sre-engineer',
-    title: 'Site Reliability Engineer',
-    matchScore: 80,
-    category: 'Reliability & Infra',
-    timeline: '4 - 6 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$170k - $225k',
-    description:
-      'Ensure 99.99% system availability, automate chaos experiments, engineer incident observability, and eliminate operational toil.',
-    bridgeSkills: [
-      'Prometheus / OpenTelemetry',
-      'Kubernetes Internals',
-      'SLO / Error Budgets',
-      'Chaos Engineering',
-    ],
-  },
-  {
-    id: 'devops-architect',
-    title: 'DevOps & Platform Specialist',
-    matchScore: 82,
-    category: 'Platform Engineering',
-    timeline: '4 - 6 Months',
-    marketDemand: 'High',
-    salaryRange: '$165k - $220k',
-    description:
-      'Build internal developer platforms (IDP), optimize zero-downtime CI/CD workflows, and govern containerized fleet orchestration.',
-    bridgeSkills: [
-      'ArgoCD / GitOps',
-      'Docker Fleet Security',
-      'Helm Charts',
-      'GitHub Actions Workflows',
-    ],
-  },
-  {
-    id: 'data-architect',
-    title: 'Data Systems Architect',
-    matchScore: 70,
-    category: 'Data & Analytics',
-    timeline: '6 - 8 Months',
-    marketDemand: 'High',
-    salaryRange: '$175k - $230k',
-    description:
-      'Architect real-time event streaming architectures, lakehouse query engines, data mesh governance, and analytical schemas.',
-    bridgeSkills: [
-      'Apache Kafka',
-      'DuckDB / ClickHouse',
-      'Data Modeling',
-      'Event-Driven Systems',
-    ],
-  },
-  {
-    id: 'security-specialist',
-    title: 'Security & DevSecOps Engineer',
-    matchScore: 66,
-    category: 'Cybersecurity',
-    timeline: '6 - 9 Months',
-    marketDemand: 'Very High',
-    salaryRange: '$170k - $230k',
-    description:
-      'Implement zero-trust security postures, automated static/dynamic scanning, cryptographic key hygiene, and container runtime auditing.',
-    bridgeSkills: [
-      'OAuth 2.1 & OIDC',
-      'Zero-Trust Architecture',
-      'Trivy / Snyk Scanning',
-      'CloudTrail / SIEM Audit',
-    ],
-  },
-  {
-    id: 'engineering-manager',
-    title: 'Engineering Manager / Lead',
-    matchScore: 86,
-    category: 'People & Delivery',
-    timeline: '3 - 6 Months',
-    marketDemand: 'High',
-    salaryRange: '$180k - $240k',
-    description:
-      'Lead high-performing software squads, calibrate engineering velocity with product ROI, and guide long-term career growth.',
-    bridgeSkills: [
-      'Agile Sprint Calibration',
-      'Stakeholder Alignment',
-      'Tech Debt Prioritization',
-      'Talent Development',
-    ],
-  },
-];
-
 @Injectable()
 export class DeterministicCareerDataExtractor implements CareerDataExtractor {
   private readonly logger = new Logger(DeterministicCareerDataExtractor.name);
@@ -229,7 +90,7 @@ export class DeterministicCareerDataExtractor implements CareerDataExtractor {
     if (!combinedText) {
       return validateExtractedCareerData({
         extractionMethod: 'heuristic',
-        suggestedPaths: DEFAULT_TEMPLATE_PATHS,
+        suggestedPaths: [],
         warnings: ['Empty input provided to heuristic extractor.'],
       });
     }
@@ -310,7 +171,7 @@ export class DeterministicCareerDataExtractor implements CareerDataExtractor {
       workExperience,
       education,
       projects,
-      suggestedPaths: currentRole ? DEFAULT_TEMPLATE_PATHS : [],
+      suggestedPaths: [],
       extractionMethod: 'heuristic',
       warnings: [
         'Extracted via deterministic heuristic fallback.',

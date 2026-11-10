@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { InternalNavbar } from './InternalNavbar';
 import {
   InternalPageHeader,
   type InternalPageHeaderProps,
@@ -30,11 +31,15 @@ export interface InternalPageLayoutProps extends Omit<InternalPageHeaderProps, '
    * Whether to show the top header section. Defaults to false.
    */
   showHeader?: boolean;
+  /**
+   * Whether to show the compact transparent navbar with profile icon. Defaults to true.
+   */
+  showNavbar?: boolean;
 }
 
 /**
  * Reusable layout for internal pages.
- * Designed with zero horizontal waste, eliminating unwanted margins/paddings and removing the redundant top header section.
+ * Designed with zero horizontal waste, featuring a compact transparent navbar with profile icon.
  */
 export function InternalPageLayout({
   badge,
@@ -51,6 +56,7 @@ export function InternalPageLayout({
   containerStyle,
   contentStyle,
   showHeader = false,
+  showNavbar = true,
 }: InternalPageLayoutProps) {
   if (fullHeight) {
     return (
@@ -65,11 +71,11 @@ export function InternalPageLayout({
           display: 'flex',
           flexDirection: 'column',
           boxSizing: 'border-box',
-          padding: '16px',
-          gap: 12,
           ...containerStyle,
         }}
       >
+        {showNavbar && <InternalNavbar title={title} current={current} />}
+
         {showHeader && (
           <InternalPageHeader
             badge={badge}
@@ -79,7 +85,7 @@ export function InternalPageLayout({
             description={description}
             current={current}
             actions={actions}
-            padding="0 0 8px 0"
+            padding="8px 16px"
           />
         )}
 
@@ -92,6 +98,8 @@ export function InternalPageLayout({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            padding: '12px 16px',
+            boxSizing: 'border-box',
             ...contentStyle,
           }}
         >
@@ -114,6 +122,8 @@ export function InternalPageLayout({
         ...containerStyle,
       }}
     >
+      {showNavbar && <InternalNavbar title={title} current={current} />}
+
       {showHeader && (
         <InternalPageHeader
           badge={badge}

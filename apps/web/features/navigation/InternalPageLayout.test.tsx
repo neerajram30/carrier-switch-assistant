@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/dashboard',
 }));
 
 describe('InternalPageHeader and InternalPageActions', () => {
@@ -75,7 +76,7 @@ describe('InternalPageLayout', () => {
       </InternalPageLayout>,
     );
 
-    expect(screen.getByText('Test Page Title')).toBeInTheDocument();
+    expect(screen.getAllByText('Test Page Title').length).toBeGreaterThan(0);
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
   });
 
@@ -92,7 +93,26 @@ describe('InternalPageLayout', () => {
       </InternalPageLayout>,
     );
 
-    expect(screen.getByText('Explore Canvas')).toBeInTheDocument();
+    expect(screen.getAllByText('Explore Canvas').length).toBeGreaterThan(0);
     expect(container.firstChild).toHaveStyle({ height: '100%' });
+  });
+
+  it('renders transparent internal navbar by default and can be hidden via showNavbar', () => {
+    const { rerender } = render(
+      <InternalPageLayout title="Dashboard Overview" current="dashboard">
+        <div>Content</div>
+      </InternalPageLayout>,
+    );
+
+    expect(screen.getByTestId('internal-navbar')).toBeInTheDocument();
+    expect(screen.getByLabelText(/User Profile Menu/i)).toBeInTheDocument();
+
+    rerender(
+      <InternalPageLayout title="Dashboard Overview" current="dashboard" showNavbar={false}>
+        <div>Content</div>
+      </InternalPageLayout>,
+    );
+
+    expect(screen.queryByTestId('internal-navbar')).not.toBeInTheDocument();
   });
 });

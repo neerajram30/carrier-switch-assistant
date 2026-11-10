@@ -16,44 +16,52 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     vi.clearAllMocks();
   });
 
-  it('renders landing page with full project details, value pillars, and login interface', () => {
+  it('renders elegant focused login interface without marketing jargons', () => {
     render(<Home />);
 
-    // Brand and Header
-    expect(screen.getAllByText('Career Switch Assistant').length).toBeGreaterThan(0);
-    expect(screen.getByText('Software Career Readiness')).toBeInTheDocument();
-    expect(screen.getByText('Evidence-Based Transition Platform')).toBeInTheDocument();
-
-    // Value Proposition and Details
+    // Header & Greeting
     expect(
-      screen.getByRole('heading', {
-        name: /Turn your career goals into an actionable roadmap/i,
-      }),
+      screen.getByRole('heading', { name: /Welcome back/i }),
     ).toBeInTheDocument();
+    expect(screen.getByText('Please enter your details.')).toBeInTheDocument();
 
-    expect(screen.getByText('Resume Extraction')).toBeInTheDocument();
-    expect(screen.getByText('Readiness Indicators')).toBeInTheDocument();
-    expect(screen.getByText('Advisory & Private')).toBeInTheDocument();
+    // Form inputs and Controls
+    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
+    expect(screen.getByText('Remember for 30 days')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Login$/i })).toBeInTheDocument();
 
-    // Form inputs and Action Buttons
-    expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Developer Name/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Sign In & Open Onboarding/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /One-Click Demo Access/i }),
-    ).toBeInTheDocument();
+    // Social and Quick Sign-In
+    expect(screen.getByText(/OR SIGN IN WITH/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sign in with Google/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sign in with GitHub/i })).toBeInTheDocument();
 
-    // Architecture & Status links
-    expect(screen.getAllByRole('link', { name: /System Status/i }).length).toBeGreaterThanOrEqual(1);
+    // Branding and Status
+    expect(screen.getByText('Career Switch Assistant')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Systems Operational/i })).toBeInTheDocument();
+  });
+
+  it('toggles password visibility with the eye icon button', () => {
+    render(<LandingLoginPage />);
+
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const toggleButton = screen.getByRole('button', { name: /Show password/i });
+
+    expect(passwordInput).toHaveAttribute('type', 'password');
+
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute('type', 'text');
+
+    const hideButton = screen.getByRole('button', { name: /Hide password/i });
+    fireEvent.click(hideButton);
+    expect(passwordInput).toHaveAttribute('type', 'password');
   });
 
   it('validates email input and shows error message for empty or invalid email', async () => {
     render(<LandingLoginPage />);
 
-    const emailInput = screen.getByLabelText(/Email Address/i);
-    const submitButton = screen.getByRole('button', { name: /Sign In & Open Onboarding/i });
+    const emailInput = screen.getByPlaceholderText('Enter your email');
+    const submitButton = screen.getByRole('button', { name: /^Login$/i });
 
     // Empty email test
     fireEvent.change(emailInput, { target: { value: '' } });
@@ -74,10 +82,12 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     const handleLoginSuccess = vi.fn();
     render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
 
-    const emailInput = screen.getByLabelText(/Email Address/i);
-    const submitButton = screen.getByRole('button', { name: /Sign In & Open Onboarding/i });
+    const emailInput = screen.getByPlaceholderText('Enter your email');
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitButton = screen.getByRole('button', { name: /^Login$/i });
 
     fireEvent.change(emailInput, { target: { value: 'test.user@company.org' } });
+    fireEvent.change(passwordInput, { target: { value: 'securePass123' } });
     fireEvent.click(submitButton);
 
     expect(handleLoginSuccess).toHaveBeenCalledWith('test.user@company.org', 'Alex Morgan');
@@ -87,12 +97,40 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     });
   });
 
-  it('supports one-click quick demo login', async () => {
+  it('supports social sign-in with Google and navigates to /onboarding', async () => {
     const handleLoginSuccess = vi.fn();
     render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
 
-    const quickDemoButton = screen.getByRole('button', { name: /One-Click Demo Access/i });
-    fireEvent.click(quickDemoButton);
+    const googleButton = screen.getByRole('button', { name: /Sign in with Google/i });
+    fireEvent.click(googleButton);
+
+    expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/onboarding');
+    });
+  });
+
+  it('supports social sign-in with GitHub and navigates to /onboarding', async () => {
+    const handleLoginSuccess = vi.fn();
+    render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
+
+    const githubButton = screen.getByRole('button', { name: /Sign in with GitHub/i });
+    fireEvent.click(githubButton);
+
+    expect(handleLoginSuccess).toHaveBeenCalledWith('github-dev@example.com', 'Alex Morgan');
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/onboarding');
+    });
+  });
+
+  it('supports quick demo fill button', async () => {
+    const handleLoginSuccess = vi.fn();
+    render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
+
+    const demoFillButton = screen.getByRole('button', { name: /Demo fill/i });
+    fireEvent.click(demoFillButton);
 
     expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
 
