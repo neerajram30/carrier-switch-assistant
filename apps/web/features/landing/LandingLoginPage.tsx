@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface LandingLoginPageProps {
@@ -20,12 +21,79 @@ export default function LandingLoginPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const performLogin = (targetEmail: string, targetName: string = 'Alex Morgan') => {
+  const performLogin = async (targetEmail: string, targetName: string = 'Alex Morgan', targetPassword?: string) => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    let authenticatedUser = { name: targetName, email: targetEmail };
+
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail, password: targetPassword || 'demoPassword123' }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 400) {
+          const data = await res.json().catch(() => ({}));
+          const msg = data.message || 'Invalid email or password';
+          setErrorMessage(Array.isArray(msg) ? msg[0] : msg);
+          setIsSubmitting(false);
+          return;
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (data.token) {
+          try {
+            localStorage.setItem('csa_auth_token', data.token);
+          } catch {
+            // ignore localStorage quota/disabled errors
+          }
+        }
+        if (data.user?.id) {
+          try {
+            localStorage.setItem('csa_user_id', data.user.id);
+          } catch {
+            // ignore
+          }
+        }
+        if (data.user?.name) {
+          authenticatedUser = { name: data.user.name, email: targetEmail };
+        }
+      }
+    } catch {
+      // Graceful fallback when API is offline or in mock dev mode
+    }
+
+    try {
+      localStorage.setItem(
+        'career_switch_user_profile',
+        JSON.stringify({
+          name: authenticatedUser.name,
+          email: authenticatedUser.email,
+          currentRole: '',
+          targetRole: '',
+        }),
+      );
+    } catch {
+      // ignore
+    }
+
+    // Synchronize NextAuth session state
+    try {
+      await signIn('credentials', {
+        email: targetEmail,
+        password: targetPassword || 'demoPassword123',
+        redirect: false,
+      });
+    } catch {
+      // Allow graceful fallback in offline or test mode
+    }
+
     if (onLoginSuccess) {
-      onLoginSuccess(targetEmail, targetName);
+      onLoginSuccess(authenticatedUser.email, authenticatedUser.name);
     }
 
     // Micro-delay for smooth transition feel
@@ -48,7 +116,7 @@ export default function LandingLoginPage({
       return;
     }
 
-    performLogin(trimmedEmail);
+    performLogin(trimmedEmail, 'Alex Morgan', password);
   };
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
@@ -294,6 +362,17 @@ export default function LandingLoginPage({
             </svg>
             <span className="text-xs font-medium text-[#c9d3ee]">GitHub</span>
           </button>
+        </div>
+
+        {/* Navigation to Signup */}
+        <div className="mt-6 text-center text-xs text-[#94A3B8]">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/signup"
+            className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            Sign up
+          </Link>
         </div>
       </div>
 

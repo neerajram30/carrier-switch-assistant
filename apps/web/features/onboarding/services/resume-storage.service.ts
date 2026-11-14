@@ -8,11 +8,45 @@ export interface UploadResumeResult {
   blobUrl?: string;
 }
 
+function getAuthHeaders(userId: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-user-id': userId,
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const token = localStorage.getItem('csa_auth_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return headers;
+}
+
+function resolveEffectiveUserId(explicitUserId?: string): string {
+  if (explicitUserId && explicitUserId !== '00000000-0000-0000-0000-000000000001') {
+    return explicitUserId;
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const storedId = localStorage.getItem('csa_user_id');
+      if (storedId) return storedId;
+    } catch {
+      // ignore
+    }
+  }
+  return explicitUserId || '00000000-0000-0000-0000-000000000001';
+}
+
 export async function uploadResumeDirectly(
   file: File,
   apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   userId = '00000000-0000-0000-0000-000000000001',
 ): Promise<UploadResumeResult> {
+  const effectiveUserId = resolveEffectiveUserId(userId);
   const contentType =
     file.type ||
     (file.name.endsWith('.pdf')
@@ -22,10 +56,7 @@ export async function uploadResumeDirectly(
   // Step 1: Request upload intent from backend API
   const intentResponse = await fetch(`${apiUrl}/api/v1/resumes/upload-intent`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    headers: getAuthHeaders(effectiveUserId),
     body: JSON.stringify({
       fileName: file.name,
       contentType,
@@ -61,10 +92,7 @@ export async function uploadResumeDirectly(
     `${apiUrl}/api/v1/resumes/${resumeId}/complete`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userId,
-      },
+      headers: getAuthHeaders(effectiveUserId),
       body: JSON.stringify({}),
     },
   );
@@ -92,12 +120,10 @@ export async function processResume(
   userId = '00000000-0000-0000-0000-000000000001',
   userPrompt?: string,
 ): Promise<ProcessedResumeResult> {
+  const effectiveUserId = resolveEffectiveUserId(userId);
   const init: RequestInit = {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    headers: getAuthHeaders(effectiveUserId),
   };
   if (userPrompt) {
     init.body = JSON.stringify({ userPrompt });

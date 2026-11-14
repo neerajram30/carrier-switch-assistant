@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import {
   CheckSquare,
   ChevronDown,
@@ -43,6 +44,7 @@ export function InternalNavbar({
 }: InternalNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,6 +76,19 @@ export function InternalNavbar({
     }
     return fallback;
   });
+
+  const displayName = session?.user?.name || userProfile.name;
+  const displayEmail = session?.user?.email || userProfile.email;
+  const displayImage = session?.user?.image || null;
+
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'AM';
 
   // Close dropdown on outside click or escape key
   useEffect(() => {
@@ -118,8 +133,21 @@ export function InternalNavbar({
     return 'Dashboard Overview';
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setDropdownOpen(false);
+    try {
+      localStorage.removeItem('csa_auth_token');
+      localStorage.removeItem('csa_user_id');
+      localStorage.removeItem('career_switch_user_profile');
+      sessionStorage.removeItem('csa_career_profile');
+    } catch {
+      // ignore
+    }
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // ignore
+    }
     router.push('/');
   };
 
@@ -196,8 +224,17 @@ export function InternalNavbar({
             className="flex items-center gap-1.5 h-7 pl-1 pr-1.5 rounded-full border border-[#1f2433] bg-[#151621] hover:border-indigo-500/50 hover:bg-[#1a1c2c] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer"
           >
             {/* Circular Avatar */}
-            <div className="relative flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-400 text-[10px] font-semibold text-white shadow-sm">
-              AM
+            <div className="relative flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-400 text-[10px] font-semibold text-white shadow-sm overflow-hidden">
+              {displayImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={displayImage}
+                  alt={displayName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
               {/* Online Green Ping */}
               <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-[#151621]" />
             </div>
@@ -223,15 +260,24 @@ export function InternalNavbar({
             >
               {/* User Profile Header */}
               <div className="flex items-center gap-2.5 px-2.5 py-2 border-b border-[#1f2433]">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-semibold text-white shadow-inner">
-                  AM
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-semibold text-white shadow-inner overflow-hidden">
+                  {displayImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={displayImage}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-xs font-semibold text-white truncate">
-                    {userProfile.name}
+                    {displayName}
                   </span>
                   <span className="text-[10px] text-[#94A3B8] truncate">
-                    {userProfile.email}
+                    {displayEmail}
                   </span>
                   <span className="text-[9px] text-indigo-400 font-mono mt-0.5">
                     {userProfile.currentRole}
