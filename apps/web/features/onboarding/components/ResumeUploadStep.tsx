@@ -255,20 +255,31 @@ export function ResumeUploadStep({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              gap: 12,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
               <StatusDot variant="success" label="Analysis Complete" />
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <Text type="body" weight="medium" style={{ color: "var(--color-pure-white, #ffffff)" }}>
                   Resume analysis complete ({selectedFile.name})
                 </Text>
-                <Text type="supporting" color="secondary">
+                <Text
+                  type="supporting"
+                  color="secondary"
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   Detected Role: {structured?.currentRole || "Role"} • Experience: {structured?.yearsOfExperience || 0} years • Skills identified: {structured?.skills?.length || 0}
                 </Text>
               </div>
             </div>
-            <Button label="Change file" variant="ghost" size="sm" onClick={clearError} />
+            <div style={{ flexShrink: 0 }}>
+              <Button label="Change file" variant="ghost" size="sm" onClick={clearError} />
+            </div>
           </div>
         ) : uploadState === "processing" && selectedFile ? (
           <div
@@ -402,54 +413,80 @@ export function ResumeUploadStep({
             borderTop: "1px solid var(--color-gunmetal, #1f2433)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              id="generate-details-button"
-              onClick={() => void handleGenerateClick()}
-              disabled={isPromptGenerating || uploadState === "processing"}
-              aria-label={selectedFile ? "Analyze resume with AI →" : "Generate Analysis Details →"}
-              style={{
-                background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: 9999,
-                padding: "10px 24px",
-                fontSize: "0.95rem",
-                fontWeight: 500,
-                cursor: isPromptGenerating || uploadState === "processing" ? "not-allowed" : "pointer",
-                boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                transition: "opacity 0.2s ease, transform 0.1s ease",
-              }}
-            >
-              <Sparkles size={16} />
-              <span>
-                {uploadState === "processing" || isPromptGenerating
-                  ? "Analyzing..."
-                  : "Generate Analysis Details →"}
+          {uploadState === "processed" ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                id="generate-details-button"
+                onClick={() => {
+                  if (onContinueToReview && structured) {
+                    onContinueToReview(structured);
+                  }
+                }}
+                aria-label="Continue to review extracted data →"
+                style={{
+                  background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 9999,
+                  padding: "10px 24px",
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "opacity 0.2s ease, transform 0.1s ease",
+                }}
+              >
+                <span style={{ whiteSpace: "nowrap" }}>Continue to review extracted data →</span>
+              </button>
+              <span style={{ fontSize: "0.85rem", color: "var(--color-text-green, #86efac)", whiteSpace: "nowrap" }}>
+                Resume analysis complete
               </span>
-            </button>
-
-            {uploadState === "processed" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "0.85rem", color: "var(--color-text-green, #86efac)" }}>
-                  Resume analysis complete
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                id="generate-details-button"
+                onClick={() => void handleGenerateClick()}
+                disabled={isPromptGenerating || uploadState === "processing"}
+                aria-label={selectedFile ? "Analyze resume with AI →" : "Generate Analysis Details →"}
+                style={{
+                  background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 9999,
+                  padding: "10px 24px",
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                  cursor: isPromptGenerating || uploadState === "processing" ? "not-allowed" : "pointer",
+                  boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "opacity 0.2s ease, transform 0.1s ease",
+                }}
+              >
+                <Sparkles size={16} style={{ flexShrink: 0 }} />
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {uploadState === "processing" || isPromptGenerating
+                    ? "Analyzing..."
+                    : selectedFile
+                    ? "Analyze resume with AI →"
+                    : "Generate Analysis Details →"}
                 </span>
-                <Button
-                  label="Continue to review extracted data →"
-                  variant="primary"
-                  onClick={() => {
-                    if (onContinueToReview && structured) {
-                      onContinueToReview(structured);
-                    }
-                  }}
-                />
-              </div>
-            )}
-          </div>
+              </button>
+            </div>
+          )}
 
           {/* Wireframe secondary button: Enter details manually */}
           <Button

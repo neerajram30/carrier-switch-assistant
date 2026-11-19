@@ -5,8 +5,9 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  // Protected internal routes
+  // Protected internal routes that require authentication
   const isProtectedRoute =
+    pathname === '/' ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/explore') ||
@@ -15,13 +16,16 @@ export default auth((req) => {
     pathname.startsWith('/edit-experience');
 
   if (isProtectedRoute && !isLoggedIn) {
-    // In production, enforce authentication strictly; in dev, allow seamless local development
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd) {
-      const loginUrl = new URL('/', req.nextUrl.origin);
+    const loginUrl = new URL('/login', req.nextUrl.origin);
+    if (pathname !== '/') {
       loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
     }
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // If user is already authenticated and visits login or signup page, redirect to dashboard (/)
+  if (isLoggedIn && (pathname === '/login' || pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/', req.nextUrl.origin));
   }
 
   return NextResponse.next();

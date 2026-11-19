@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LandingLoginPage from '../features/landing/LandingLoginPage';
-import Home from '../app/page';
+import LoginPage from '../app/login/page';
 
 const mockPush = vi.fn();
 
@@ -25,7 +25,7 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
   });
 
   it('renders elegant focused login interface without marketing jargons', () => {
-    render(<Home />);
+    render(<LoginPage />);
 
     // Header & Greeting
     expect(

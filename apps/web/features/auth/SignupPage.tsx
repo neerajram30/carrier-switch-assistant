@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface SignupPageProps {
@@ -53,9 +54,10 @@ export default function SignupPage({ onSignupSuccess }: SignupPageProps) {
       }
 
       const data = await res.json().catch(() => ({}));
-      if (data.token) {
+      const authToken = data.accessToken || data.token;
+      if (authToken) {
         try {
-          localStorage.setItem('csa_auth_token', data.token);
+          localStorage.setItem('csa_auth_token', authToken);
         } catch {
           // ignore
         }
@@ -66,6 +68,17 @@ export default function SignupPage({ onSignupSuccess }: SignupPageProps) {
         } catch {
           // ignore
         }
+      }
+
+      // Synchronize NextAuth session on successful registration
+      try {
+        await signIn('credentials', {
+          email: targetEmail,
+          password: targetPass,
+          redirect: false,
+        });
+      } catch {
+        // ignore in test or offline mode
       }
     } catch {
       // In development or when API is unreachable, fall back gracefully
@@ -405,7 +418,7 @@ export default function SignupPage({ onSignupSuccess }: SignupPageProps) {
         <div className="mt-6 text-center text-xs text-[#94A3B8]">
           Already have an account?{' '}
           <Link
-            href="/"
+            href="/login"
             className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
           >
             Log in

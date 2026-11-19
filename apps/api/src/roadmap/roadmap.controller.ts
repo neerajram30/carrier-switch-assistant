@@ -52,11 +52,12 @@ export class RoadmapController {
   }
 
   @Get('roadmap')
-  getRoadmap(
+  async getRoadmap(
     @CurrentUser('id') userId: string,
     @Query('roadmapId') roadmapId?: string,
   ) {
-    return this.roadmapService.getRoadmap(userId, roadmapId);
+    const roadmap = await this.roadmapService.getRoadmap(userId, roadmapId);
+    return roadmap ?? { milestones: [], roadmaps: [], totalActive: 0 };
   }
 
   @Patch('roadmap/milestones/:id/toggle')

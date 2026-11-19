@@ -1,11 +1,11 @@
-import LandingLoginPage from "@/features/landing/LandingLoginPage";
+import DashboardPage from '@/features/dashboard/DashboardPage';
 
 export const metadata = {
-  title: "Career Switch Assistant | Evidence-Based Career Readiness",
+  title: 'Dashboard | Career Switch Assistant',
   description:
-    "Turn your career goal into an actionable roadmap. Benchmark your background against target roles with intelligent resume parsing and gap analysis.",
+    'Evidence-based career readiness dashboard, skill gap analysis, and transition roadmap.',
 };
 
 export default function Home() {
-  return <LandingLoginPage />;
+  return <DashboardPage />;
 }

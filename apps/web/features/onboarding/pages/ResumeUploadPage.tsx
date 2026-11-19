@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { ResumeUploadStep } from '../components/ResumeUploadStep';
 import { getCareerProfile } from '../services/career-profile.service';
@@ -28,30 +28,39 @@ export default function ResumeUploadPage({
     router = null;
   }
 
-  const [hasExistingProfile, setHasExistingProfile] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
+  const hasStoredProfile = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener('storage', onStoreChange);
+      return () => window.removeEventListener('storage', onStoreChange);
+    },
+    () => {
       try {
         const stored = sessionStorage.getItem('csa_career_profile');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0))) {
-            return true;
-          }
+          return Boolean(
+            parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0)),
+          );
         }
       } catch {
         // Ignore fallback
       }
-    }
-    return false;
-  });
+      return false;
+    },
+    () => false,
+  );
+  const [hasBackendProfile, setHasBackendProfile] = useState<boolean>(false);
+  const hasExistingProfile = hasStoredProfile || hasBackendProfile;
 
+  // Hydrate backend check asynchronously in useEffect
   useEffect(() => {
     let isMounted = true;
+
     void getCareerProfile()
       .then((existing) => {
         if (!isMounted) return;
         if (existing && (existing.currentRole || existing.id)) {
-          setHasExistingProfile(true);
+          setHasBackendProfile(true);
         }
       })
       .catch(() => {

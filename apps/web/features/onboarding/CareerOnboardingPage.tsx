@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -102,22 +102,29 @@ export default function CareerOnboardingPage({
     setProfileStatus('loading');
   }, []);
 
-  const [hasCreatedProfile, setHasCreatedProfile] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
+  const hasStoredProfile = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener('storage', onStoreChange);
+      return () => window.removeEventListener('storage', onStoreChange);
+    },
+    () => {
       try {
         const stored = sessionStorage.getItem('csa_career_profile');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0))) {
-            return true;
-          }
+          return Boolean(
+            parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0)),
+          );
         }
       } catch {
         // Ignore fallback
       }
-    }
-    return false;
-  });
+      return false;
+    },
+    () => false,
+  );
+  const [hasBackendProfile, setHasBackendProfile] = useState<boolean>(false);
+  const hasCreatedProfile = hasStoredProfile || hasBackendProfile;
 
   // Detect whether career data is already created in backend
   useEffect(() => {
@@ -128,7 +135,7 @@ export default function CareerOnboardingPage({
       .then((existing) => {
         if (!isMounted) return;
         if (existing && (existing.currentRole || existing.id)) {
-          setHasCreatedProfile(true);
+          setHasBackendProfile(true);
         }
       })
       .catch(() => {

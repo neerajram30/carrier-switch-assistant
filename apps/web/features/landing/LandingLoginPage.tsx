@@ -45,9 +45,10 @@ export default function LandingLoginPage({
         }
       } else {
         const data = await res.json().catch(() => ({}));
-        if (data.token) {
+        const authToken = data.accessToken || data.token;
+        if (authToken) {
           try {
-            localStorage.setItem('csa_auth_token', data.token);
+            localStorage.setItem('csa_auth_token', authToken);
           } catch {
             // ignore localStorage quota/disabled errors
           }
