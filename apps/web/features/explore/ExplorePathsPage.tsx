@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { InternalPageLayout } from '@/features/navigation/InternalPageLayout';
+import { getAuthHeaders } from '@/lib/auth-headers';
 
 export interface CareerPathOption {
   id: string;
@@ -30,12 +31,24 @@ export interface CareerPathOption {
   category: string;
   icon: React.ReactNode;
   timeline: string;
-  marketDemand: 'Very High' | 'High' | 'Explosive' | string;
+  marketDemand: 'Very High' | 'High' | 'Explosive' | 'Moderate' | string;
   salaryRange: string;
   description: string;
   bridgeSkills: string[];
   x: number;
   y: number;
+}
+
+export interface RawCareerPathResponse {
+  id?: string;
+  title?: string;
+  category?: string;
+  matchScore?: number;
+  timeline?: string;
+  marketDemand?: string;
+  salaryRange?: string;
+  description?: string;
+  bridgeSkills?: string[];
 }
 
 export interface ActiveRoadmapSummary {
@@ -99,26 +112,41 @@ export function ExplorePathsPage() {
       try {
         const [pathsRes, roadmapRes] = await Promise.all([
           fetch(`${apiUrl}/api/v1/career-paths`, {
-            headers: {
-              'x-user-id': '00000000-0000-0000-0000-000000000001',
-            },
+            headers: getAuthHeaders(),
           }),
           fetch(`${apiUrl}/api/v1/roadmap`, {
-            headers: {
-              'x-user-id': '00000000-0000-0000-0000-000000000001',
-            },
+            headers: getAuthHeaders(),
           }),
         ]);
 
-        if (!pathsRes.ok) {
-          const errJson = await pathsRes.json().catch(() => ({}));
-          const msg =
-            errJson.message ||
-            `Failed to fetch career paths (${pathsRes.status} ${pathsRes.statusText})`;
-          throw new Error(msg);
+        let rawPaths: RawCareerPathResponse[] = [];
+        if (pathsRes.ok) {
+          rawPaths = await pathsRes.json();
+        } else {
+          // Check session storage for career profile suggested paths fallback
+          if (typeof window !== 'undefined') {
+            try {
+              const stored = sessionStorage.getItem('csa_career_profile');
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed.suggestedPaths) && parsed.suggestedPaths.length > 0) {
+                  rawPaths = parsed.suggestedPaths;
+                }
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (!rawPaths || rawPaths.length === 0) {
+            const errJson = await pathsRes.json().catch(() => ({}));
+            const msg =
+              errJson.message ||
+              `Failed to fetch career paths (${pathsRes.status} ${pathsRes.statusText})`;
+            throw new Error(msg);
+          }
         }
 
-        const rawPaths = await pathsRes.json();
         if (!Array.isArray(rawPaths) || rawPaths.length === 0) {
           throw new Error(
             'No career paths generated yet. Please upload your resume or calibrate your technical baseline.',
@@ -153,17 +181,43 @@ export function ExplorePathsPage() {
           const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
           const x = Math.round(250 * Math.cos(angle));
           const y = Math.round(145 * Math.sin(angle));
+          const id = typeof item.id === 'string' && item.id.trim() ? item.id : `path-${index}`;
+          const title = typeof item.title === 'string' && item.title.trim() ? item.title : 'Specialized Software Engineer';
+          const category = typeof item.category === 'string' && item.category.trim() ? item.category.trim() : 'Engineering & Systems';
+          const matchScore =
+            typeof item.matchScore === 'number' && !isNaN(item.matchScore)
+              ? Math.min(99, Math.max(40, Math.round(item.matchScore)))
+              : 75 + ((index * 7) % 20);
+          const timeline = typeof item.timeline === 'string' && item.timeline.trim() ? item.timeline : '3 - 6 Months';
+          const marketDemand =
+            typeof item.marketDemand === 'string' &&
+            ['Explosive', 'Very High', 'High', 'Moderate'].includes(item.marketDemand)
+              ? item.marketDemand
+              : 'High';
+          const salaryRange =
+            typeof item.salaryRange === 'string' && item.salaryRange.includes('$')
+              ? item.salaryRange
+              : '$140k - $190k';
+          const description =
+            typeof item.description === 'string' && item.description.trim()
+              ? item.description
+              : 'Target technical trajectory aligned with your verified background and engineering competencies.';
+          const bridgeSkills =
+            Array.isArray(item.bridgeSkills) && item.bridgeSkills.length > 0
+              ? item.bridgeSkills.filter(Boolean).map(String)
+              : ['System Design', 'Cloud Architecture', 'Distributed Systems'];
+
           return {
-            id: item.id || `path-${index}`,
-            title: item.title,
-            category: item.category || 'Engineering',
-            matchScore: typeof item.matchScore === 'number' ? item.matchScore : 75,
-            timeline: item.timeline || '4 - 6 Months',
-            marketDemand: item.marketDemand || 'High',
-            salaryRange: item.salaryRange || '$160k - $220k',
-            description: item.description || '',
-            bridgeSkills: Array.isArray(item.bridgeSkills) ? item.bridgeSkills : [],
-            icon: getPathIcon(item.category, item.title),
+            id,
+            title,
+            category,
+            matchScore,
+            timeline,
+            marketDemand,
+            salaryRange,
+            description,
+            bridgeSkills,
+            icon: getPathIcon(category, title),
             x,
             y,
           };
@@ -259,10 +313,7 @@ export function ExplorePathsPage() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const res = await fetch(`${apiUrl}/api/v1/career-paths/select`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': '00000000-0000-0000-0000-000000000001',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           pathId: path.id,
           title: path.title,
@@ -304,14 +355,40 @@ export function ExplorePathsPage() {
     }
   };
 
-  // Calculate pod floating coordinates strictly clamped inside the bubble canvas viewport
+  // Calculate pod floating coordinates strictly aligned and clamped inside the bubble canvas viewport
   const getPodPosition = (path: CareerPathOption) => {
-    const leftOffset = path.x >= 0 ? path.x - 355 : path.x + 25;
-    const topOffset = path.y - 120;
+    // Horizontal positioning:
+    // If the node is on the right side of center (x >= 0), place pod to the left of the node.
+    // If on the left side (x < 0), place pod to the right of the node.
+    const isRightHalf = path.x >= 0;
+    const leftOffset = isRightHalf ? path.x - 355 : path.x + 25;
+    const left = `clamp(16px, calc(50% + ${leftOffset}px), calc(100% - 350px))`;
 
+    // Vertical positioning:
+    // When hovering down items (path.y > 20), anchor to the bottom so the card and its action button
+    // never overflow or extend past the bottom edge of the viewport.
+    if (path.y > 20) {
+      return {
+        left,
+        bottom: '16px',
+        top: 'auto',
+      };
+    }
+
+    // When hovering top items (path.y < -20), anchor to the top so it never overflows above.
+    if (path.y < -20) {
+      return {
+        left,
+        top: '16px',
+        bottom: 'auto',
+      };
+    }
+
+    // Middle/equator items: center safely within the viewport
     return {
-      left: `clamp(16px, calc(50% + ${leftOffset}px), calc(100% - 350px))`,
-      top: `clamp(16px, calc(50% + ${topOffset}px), calc(100% - 390px))`,
+      left,
+      top: 'clamp(16px, calc(50% - 210px), calc(100% - 460px))',
+      bottom: 'auto',
     };
   };
 
@@ -840,6 +917,7 @@ export function ExplorePathsPage() {
         {/* FLOATING INSPECTOR POD */}
         {activePodId && activePath && (
           <div
+            data-testid="explore-inspector-pod"
             onMouseEnter={handlePodMouseEnter}
             onMouseLeave={handlePodMouseLeave}
             style={{
@@ -1145,6 +1223,8 @@ export function ExplorePathsPage() {
                 }
                 style={{
                   width: '100%',
+                  flexShrink: 0,
+                  marginTop: 'auto',
                   background:
                     'linear-gradient(353deg, rgb(34, 197, 94) 17.51%, rgb(74, 222, 128) 183.08%)',
                   color: '#0f172a',
@@ -1175,6 +1255,8 @@ export function ExplorePathsPage() {
                 onClick={() => handleSelectAsTarget(activePath)}
                 style={{
                   width: '100%',
+                  flexShrink: 0,
+                  marginTop: 'auto',
                   background: isSubmitting
                     ? 'rgba(91, 99, 211, 0.5)'
                     : 'linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)',
