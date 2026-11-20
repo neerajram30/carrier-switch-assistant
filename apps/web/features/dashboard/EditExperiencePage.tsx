@@ -201,12 +201,12 @@ export function EditExperiencePage({
       await saveProfileFn(fullProfileToSave, true);
       setSaveSuccess(true);
       setTimeout(() => {
-        router?.push('/dashboard');
+        router?.push('/');
       }, 900);
     } catch {
       setSaveSuccess(true);
       setTimeout(() => {
-        router?.push('/dashboard');
+        router?.push('/');
       }, 750);
     } finally {
       setIsSaving(false);
@@ -415,7 +415,7 @@ export function EditExperiencePage({
                 label="Return to Dashboard →"
                 variant="primary"
                 size="sm"
-                onClick={() => router?.push('/dashboard')}
+                onClick={() => router?.push('/')}
               />
             </HStack>
           </VStack>
@@ -427,9 +427,8 @@ export function EditExperiencePage({
         key={reuploadCount}
         initialData={extractedData}
         onConfirm={handleConfirm}
-        onBack={() => router?.push('/dashboard')}
+        onBack={() => router?.push('/')}
         onReuploadResume={() => setIsReuploadDialogOpen(true)}
-        onSwitchToManual={() => router?.push('/onboarding/manual')}
         isSaving={isSaving}
         saveError={saveError}
         onClearError={() => setSaveError(null)}

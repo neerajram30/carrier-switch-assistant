@@ -33,7 +33,7 @@ const TELEMETRY_STAGES = [
 interface ResumeUploadStepProps {
   onSuccess?: (file: File, resumeInfo: UploadedResumeInfo) => void;
   onContinueToReview?: (extractedData: ExtractedCareerData) => void;
-  onSwitchToManual: () => void;
+  onSwitchToManual?: () => void;
   uploadFn?: (file: File) => Promise<UploadResumeResult>;
   processFn?: (resumeId: string) => Promise<ProcessedResumeResult>;
   autoProcess?: boolean;
@@ -118,7 +118,7 @@ export function ResumeUploadStep({
       const message =
         err instanceof Error
           ? err.message
-          : "Failed to analyze career prompt with AI. Please check your connection or enter details manually.";
+          : "Failed to analyze career prompt with AI. Please check your connection and retry.";
       setPromptError(message);
     } finally {
       setIsPromptGenerating(false);
@@ -179,11 +179,6 @@ export function ResumeUploadStep({
                   setPromptError(null);
                   clearError();
                 }}
-              />
-              <Button
-                label="Enter details manually"
-                variant="ghost"
-                onClick={onSwitchToManual}
               />
             </HStack>
           </VStack>
@@ -487,13 +482,6 @@ export function ResumeUploadStep({
               </button>
             </div>
           )}
-
-          {/* Wireframe secondary button: Enter details manually */}
-          <Button
-            label="Enter details manually →"
-            variant="secondary"
-            onClick={onSwitchToManual}
-          />
         </div>
       </div>
 

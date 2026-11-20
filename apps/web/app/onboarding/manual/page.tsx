@@ -1,10 +1,10 @@
-import ManualOnboardingPage from '@/features/onboarding/pages/ManualOnboardingPage';
+import { redirect } from 'next/navigation';
 
 export const metadata = {
-  title: 'Manual Career Baseline | Career Switch Assistant',
-  description: 'Enter your technical role, years of experience, and competencies manually.',
+  title: 'Onboarding | Career Switch Assistant',
+  description: 'Evidence-based career readiness onboarding and resume analysis.',
 };
 
 export default function ManualOnboardingRoute() {
-  return <ManualOnboardingPage />;
+  redirect('/onboarding');
 }

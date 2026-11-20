@@ -128,9 +128,9 @@ describe('AppSidebar', () => {
   it('triggers router push when number key shortcut is pressed', () => {
     render(<AppSidebar />);
 
-    // Press '1' to go to Dashboard (/dashboard)
+    // Press '1' to go to Dashboard (/)
     fireEvent.keyDown(window, { key: '1' });
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/');
 
     // Press '2' to go to Explore Paths (/dashboard/explore)
     fireEvent.keyDown(window, { key: '2' });

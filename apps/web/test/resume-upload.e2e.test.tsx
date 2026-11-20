@@ -96,8 +96,8 @@ describe('Resume Upload E2E Journey', () => {
       screen.getByText(/Supports PDF or DOCX \(Max 5 MB\)/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: /Enter details manually/i }),
+    ).not.toBeInTheDocument();
 
     // -------------------------------------------------------------------------
     // Step 2: Select resume

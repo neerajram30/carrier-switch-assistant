@@ -43,3 +43,5 @@ Thumbs.db
 .yarn/build-state.yml
 .yarn/install-state.gz
 .unlighthouse
+# Graphify
+graphify-out/

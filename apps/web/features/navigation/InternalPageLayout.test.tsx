@@ -59,7 +59,7 @@ describe('InternalPageHeader and InternalPageActions', () => {
     expect(returnBtn).toBeInTheDocument();
     fireEvent.click(returnBtn);
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 });
 

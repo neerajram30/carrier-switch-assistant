@@ -93,7 +93,7 @@ export function InternalNavbar({
       {/* Breadcrumb Only */}
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 min-w-0">
         <Link
-          href="/dashboard"
+          href="/"
           className="text-[11px] font-medium text-[#646e87] hover:text-[#c9d3ee] transition-colors truncate hidden sm:inline"
         >
           Career Switch Assistant

@@ -119,7 +119,7 @@ export default function ResumeUploadPage({
             <button
               type="button"
               id="return-to-dashboard-btn"
-              onClick={() => router?.push('/dashboard')}
+              onClick={() => router?.push('/')}
               style={{
                 background: 'rgba(21, 22, 33, 0.85)',
                 color: 'var(--color-frost, #c9d3ee)',
@@ -152,7 +152,6 @@ export default function ResumeUploadPage({
           uploadFn={uploadFn}
           processFn={processFn}
           onContinueToReview={handleContinueToReview}
-          onSwitchToManual={handleSwitchToManual}
         />
       </main>
     </div>

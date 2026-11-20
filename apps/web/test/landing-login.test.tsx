@@ -108,6 +108,29 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     });
   });
 
+  it('navigates to / upon valid login when user is an existing user with profile', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: { id: 'user-existing', name: 'Alex Morgan', email: 'existing@company.org', hasProfile: true },
+        token: 'mock-token',
+      }),
+    } as Response);
+
+    const handleLoginSuccess = vi.fn();
+    render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your email'), { target: { value: 'existing@company.org' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'securePass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Login$/i }));
+
+    await waitFor(() => {
+      expect(handleLoginSuccess).toHaveBeenCalledWith('existing@company.org', 'Alex Morgan');
+      expect(mockPush).toHaveBeenCalledWith('/');
+    });
+  });
+
   it('supports social sign-in with Google and navigates to /onboarding', async () => {
     const handleLoginSuccess = vi.fn();
     render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);

@@ -30,7 +30,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/dashboard',
+    href: '/',
     shortcut: '1',
     icon: <Home size={16} aria-hidden="true" />,
   },
@@ -216,7 +216,7 @@ export function AppSidebar() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Brand Header */}
         <Link
-          href="/dashboard"
+          href="/"
           style={{
             textDecoration: 'none',
             display: 'block',

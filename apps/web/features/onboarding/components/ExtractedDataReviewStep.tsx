@@ -1438,15 +1438,6 @@ export function ExtractedDataReviewStep({
         )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {onSwitchToManual && (
-            <Button
-              label="Switch to manual form"
-              variant="ghost"
-              onClick={onSwitchToManual}
-              isDisabled={isSaving}
-            />
-          )}
-
           {/* Primary CTA button matching wireframe & tests */}
           <button
             type="button"

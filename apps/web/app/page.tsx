@@ -1,4 +1,5 @@
 import DashboardPage from '@/features/dashboard/DashboardPage';
+import DashboardLayout from './dashboard/layout';
 
 export const metadata = {
   title: 'Dashboard | Career Switch Assistant',
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function Home() {
-  return <DashboardPage />;
+  return (
+    <DashboardLayout>
+      <DashboardPage />
+    </DashboardLayout>
+  );
 }

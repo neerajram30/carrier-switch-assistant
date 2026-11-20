@@ -27,6 +27,7 @@ export default function LandingLoginPage({
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     let authenticatedUser = { name: targetName, email: targetEmail };
+    let isExistingUser = false;
 
     try {
       const res = await fetch(`${apiUrl}/api/v1/auth/login`, {
@@ -63,9 +64,45 @@ export default function LandingLoginPage({
         if (data.user?.name) {
           authenticatedUser = { name: data.user.name, email: targetEmail };
         }
+        if (data.user?.hasProfile !== undefined) {
+          isExistingUser = Boolean(data.user.hasProfile);
+        } else if (data.hasProfile !== undefined) {
+          isExistingUser = Boolean(data.hasProfile);
+        } else if (authToken && data.user?.id) {
+          try {
+            const profileRes = await fetch(`${apiUrl}/api/v1/career-profile`, {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                'x-user-id': data.user.id,
+              },
+            });
+            if (profileRes.ok) {
+              const profile = await profileRes.json().catch(() => null);
+              if (profile && (profile.id || profile.currentRole)) {
+                isExistingUser = true;
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
       }
     } catch {
       // Graceful fallback when API is offline or in mock dev mode
+    }
+
+    if (!isExistingUser) {
+      try {
+        const stored = sessionStorage.getItem('csa_career_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0))) {
+            isExistingUser = true;
+          }
+        }
+      } catch {
+        // ignore
+      }
     }
 
     try {
@@ -74,7 +111,7 @@ export default function LandingLoginPage({
         JSON.stringify({
           name: authenticatedUser.name,
           email: authenticatedUser.email,
-          currentRole: '',
+          currentRole: isExistingUser ? 'Software Engineer' : '',
           targetRole: '',
         }),
       );
@@ -99,7 +136,11 @@ export default function LandingLoginPage({
 
     // Micro-delay for smooth transition feel
     setTimeout(() => {
-      router.push('/onboarding');
+      if (isExistingUser) {
+        router.push('/');
+      } else {
+        router.push('/onboarding');
+      }
     }, 280);
   };
 

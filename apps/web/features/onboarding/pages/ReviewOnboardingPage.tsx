@@ -98,11 +98,11 @@ export default function ReviewOnboardingPage({
       await saveProfileFn(fullProfileToSave, false);
       clearExtractedDataFromStorage();
       setSaveSuccess(true);
-      router?.push('/dashboard');
+      router?.push('/');
     } catch {
       // Backend may be offline; proceed smoothly to dashboard using saved session profile
       clearExtractedDataFromStorage();
-      router?.push('/dashboard');
+      router?.push('/');
     } finally {
       setIsSaving(false);
     }
@@ -170,7 +170,7 @@ export default function ReviewOnboardingPage({
                   label="Go to Dashboard →"
                   variant="primary"
                   size="sm"
-                  onClick={() => router?.push('/dashboard')}
+                  onClick={() => router?.push('/')}
                 />
               </HStack>
             </VStack>
@@ -182,7 +182,6 @@ export default function ReviewOnboardingPage({
           initialData={extractedData}
           onConfirm={handleConfirm}
           onBack={() => router?.push('/onboarding')}
-          onSwitchToManual={() => router?.push('/onboarding/manual')}
           isSaving={isSaving}
           saveError={saveError}
           onClearError={() => setSaveError(null)}

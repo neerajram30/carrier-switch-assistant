@@ -23,6 +23,7 @@ export interface AuthResponse {
     email: string;
     name?: string | null;
     image?: string | null;
+    hasProfile?: boolean;
   };
   accessToken: string;
 }
@@ -95,6 +96,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase().trim() },
+      include: { careerProfile: true },
     });
 
     if (!user || !user.passwordHash) {
@@ -114,6 +116,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         image: user.image,
+        hasProfile: !!user.careerProfile,
       },
       accessToken,
     };
@@ -130,7 +133,11 @@ export class AuthService {
           providerAccountId: dto.providerAccountId,
         },
       },
-      include: { user: true },
+      include: {
+        user: {
+          include: { careerProfile: true },
+        },
+      },
     });
 
     if (existingAccount) {
@@ -141,6 +148,7 @@ export class AuthService {
           email: existingAccount.user.email,
           name: existingAccount.user.name,
           image: existingAccount.user.image,
+          hasProfile: !!existingAccount.user.careerProfile,
         },
         accessToken,
       };
@@ -149,6 +157,7 @@ export class AuthService {
     // Link or create user
     let user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
+      include: { careerProfile: true },
     });
 
     if (!user) {
@@ -158,6 +167,7 @@ export class AuthService {
           name: dto.name?.trim() || null,
           image: dto.image || null,
         },
+        include: { careerProfile: true },
       });
     }
 
@@ -179,6 +189,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         image: user.image,
+        hasProfile: !!user.careerProfile,
       },
       accessToken,
     };
