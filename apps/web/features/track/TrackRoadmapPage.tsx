@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@astryxdesign/core/Button';
@@ -77,8 +77,12 @@ export function TrackRoadmapPage() {
   const [activeRoadmapId, setActiveRoadmapId] = useState<string | null>(paramRoadmapId);
   const [roadmaps, setRoadmaps] = useState<ActiveRoadmapSummary[]>([]);
   const [targetRole, setTargetRole] = useState<string>('');
-  const [currentRole] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
+  const currentRole = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener('storage', onStoreChange);
+      return () => window.removeEventListener('storage', onStoreChange);
+    },
+    () => {
       try {
         const stored = sessionStorage.getItem('csa_career_profile');
         if (stored) {
@@ -90,9 +94,10 @@ export function TrackRoadmapPage() {
       } catch {
         // Ignore fallback
       }
-    }
-    return 'Software Engineer';
-  });
+      return 'Software Engineer';
+    },
+    () => 'Software Engineer',
+  );
   const [milestones, setMilestones] = useState<TrackMilestone[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);

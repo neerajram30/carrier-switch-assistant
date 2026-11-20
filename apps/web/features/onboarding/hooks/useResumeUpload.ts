@@ -63,7 +63,7 @@ export function useResumeUpload(
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return {
         fileName: file.name,
-        message: `The file "${file.name}" is larger than 5 MB. Please choose a smaller file or enter details manually.`,
+        message: `The file "${file.name}" is larger than 5 MB. Please choose a smaller file.`,
         reason: 'size',
       };
     }

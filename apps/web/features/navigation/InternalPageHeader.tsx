@@ -36,7 +36,7 @@ export function InternalPageActions({
           label="← Return to Dashboard"
           variant="secondary"
           size="sm"
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/')}
         />
       )}
 

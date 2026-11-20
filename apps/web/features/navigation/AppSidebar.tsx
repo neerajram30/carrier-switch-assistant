@@ -1,10 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { CheckSquare, Compass, Home, ListTodo, ShieldCheck } from 'lucide-react';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { useSession, signOut } from 'next-auth/react';
+import {
+  ArrowUpCircle,
+  Check,
+  ChevronDown,
+  Compass,
+  Home,
+  ListTodo,
+  LogOut,
+  MoreHorizontal,
+  Settings,
+  ShieldCheck,
+  User,
+} from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -18,7 +30,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/dashboard',
+    href: '/',
     shortcut: '1',
     icon: <Home size={16} aria-hidden="true" />,
   },
@@ -38,19 +50,56 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'review',
-    label: 'Edit Experience',
+    label: 'Profile',
     href: '/dashboard/experience',
     shortcut: '4',
-    icon: <CheckSquare size={16} aria-hidden="true" />,
+    icon: <User size={16} aria-hidden="true" />,
   },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const { data: session } = useSession();
 
-  // Keyboard shortcut listener (1: Dashboard, 2: Explore Paths, 3: Edit Experience)
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Profile data state with safe lazy client initialization
+  const [userProfile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('csa_career_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object') {
+            return {
+              name: 'Alex Morgan',
+              email: 'dev-user@example.com',
+              currentRole: parsed.currentRole || 'Frontend Developer',
+              targetRole: parsed.targetRole || '',
+            };
+          }
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+    return {
+      name: 'Alex Morgan',
+      email: 'dev-user@example.com',
+      currentRole: 'Frontend Developer',
+      targetRole: '',
+    };
+  });
+
+  const displayName = session?.user?.name || userProfile.name;
+  const displayEmail = session?.user?.email || userProfile.email;
+  const displayImage = session?.user?.image || null;
+  const firstInitial = (displayName || 'Alex Morgan').trim().charAt(0).toUpperCase() || 'A';
+
+  // Keyboard shortcut listener (1: Dashboard, 2: Explore Paths, 3: Track, 4: Edit Experience)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is currently typing inside an input, textarea, or contentEditable
@@ -74,10 +123,55 @@ export function AppSidebar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
+  // Click outside and Escape key to close user menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setUserMenuOpen(false);
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [userMenuOpen]);
+
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    try {
+      localStorage.removeItem('csa_auth_token');
+      localStorage.removeItem('csa_user_id');
+      localStorage.removeItem('career_switch_user_profile');
+      sessionStorage.removeItem('csa_career_profile');
+    } catch {
+      // ignore
+    }
+    try {
+      await signOut({ redirect: false });
+    } catch {
+      // ignore
+    }
+    router.push('/login');
+  };
+
   const isItemActive = (href: string) => {
     if (!pathname) return false;
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
+    if (href === '/dashboard' || href === '/') {
+      return pathname === '/dashboard' || pathname === '/';
     }
     if (href === '/dashboard/explore') {
       return pathname.startsWith('/dashboard/explore') || pathname.startsWith('/explore');
@@ -113,7 +207,7 @@ export function AppSidebar() {
         justifyContent: 'space-between',
         padding: '20px 14px 16px 14px',
         boxSizing: 'border-box',
-        overflowY: 'auto',
+        overflowY: 'visible',
         userSelect: 'none',
         zIndex: 50,
       }}
@@ -122,7 +216,7 @@ export function AppSidebar() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Brand Header */}
         <Link
-          href="/dashboard"
+          href="/"
           style={{
             textDecoration: 'none',
             display: 'block',
@@ -156,7 +250,7 @@ export function AppSidebar() {
           </div>
         </Link>
 
-        {/* Navigation Items (Home and Review & Edit only) */}
+        {/* Navigation Items */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {MAIN_NAV_ITEMS.map((item) => {
             const active = isItemActive(item.href);
@@ -249,62 +343,367 @@ export function AppSidebar() {
       <div
         style={{
           borderTop: '1px solid var(--color-gunmetal, #1f2433)',
-          paddingTop: 14,
+          paddingTop: 8,
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
         }}
       >
-        {/* Status Indicator */}
+        {/* User Details Section (Notion-style Bottom Bar) */}
         <div
+          ref={userMenuRef}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '7px 10px',
-            borderRadius: 8,
-            background: 'var(--color-carbon-surface, #151621)',
-            border: '1px solid var(--color-gunmetal, #1f2433)',
+            position: 'relative',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <StatusDot variant="success" label="Active" />
-            <span
+          {/* User Button Trigger */}
+          <button
+            type="button"
+            onClick={() => setUserMenuOpen((prev) => !prev)}
+            aria-label="User Profile Menu"
+            aria-expanded={userMenuOpen}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 8px',
+              borderRadius: 8,
+              background: userMenuOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            className="hover:bg-white/[0.05]"
+          >
+            <div
               style={{
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                color: 'var(--color-text-green, #86EFAC)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                minWidth: 0,
               }}
             >
-              Engine Online
-            </span>
-          </div>
+              {/* Square avatar with letter initial */}
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 5,
+                  background: '#242738',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--color-frost, #c9d3ee)',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+              >
+                {displayImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={displayImage}
+                    alt={displayName}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  firstInitial
+                )}
+              </div>
 
-          <span
-            style={{
-              fontSize: '0.68rem',
-              color: 'var(--color-muted-steel, #646e87)',
-            }}
-          >
-            v0.1
-          </span>
-        </div>
+              {/* User display name */}
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  color: 'var(--color-frost, #c9d3ee)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: 130,
+                }}
+              >
+                {displayName}
+              </span>
 
-        {/* Advisory Privacy Note */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '2px 8px',
-            fontSize: '0.72rem',
-            color: 'var(--color-muted-steel, #646e87)',
-          }}
-        >
-          <ShieldCheck size={14} style={{ color: 'var(--color-periwinkle-glow, #98a4f7)' }} />
-          <span>Private &amp; Advisory Only</span>
+              {/* Chevron */}
+              <ChevronDown
+                size={13}
+                style={{
+                  color: 'var(--color-muted-steel, #646e87)',
+                  transform: userMenuOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  flexShrink: 0,
+                }}
+              />
+            </div>
+          </button>
+
+          {/* Notion-style Popover Menu */}
+          {userMenuOpen && (
+            <div
+              role="menu"
+              aria-label="User Profile Details"
+              style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                left: 0,
+                right: 0,
+                background: '#151621',
+                border: '1px solid var(--color-gunmetal, #1f2433)',
+                borderRadius: 12,
+                padding: '8px',
+                boxShadow:
+                  '0 20px 40px -10px rgba(0, 0, 0, 0.85), 0 1px 1px 0 rgba(255, 255, 255, 0.05) inset',
+                zIndex: 100,
+                backdropFilter: 'blur(16px)',
+              }}
+            >
+              {/* Header: Avatar, Workspace Title & Plan */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '6px 8px 10px 8px',
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    background: '#242738',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {displayImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={displayImage}
+                      alt={displayName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    firstInitial
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span
+                    style={{
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: '#ffffff',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {displayName}&apos;s Workspace
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    {userProfile.currentRole ? `${userProfile.currentRole} · Free Plan` : 'Free Plan · 1 member'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Link
+                  href="/dashboard/explore"
+                  onClick={() => setUserMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    fontSize: '0.78rem',
+                    color: 'var(--color-periwinkle-glow, #98a4f7)',
+                    textDecoration: 'none',
+                    transition: 'background 0.12s ease',
+                  }}
+                  className="hover:bg-white/[0.05]"
+                >
+                  <ArrowUpCircle size={14} />
+                  <span>Upgrade</span>
+                </Link>
+
+                <Link
+                  href="/dashboard/experience"
+                  onClick={() => setUserMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    fontSize: '0.78rem',
+                    color: 'var(--color-frost, #c9d3ee)',
+                    textDecoration: 'none',
+                    transition: 'background 0.12s ease',
+                  }}
+                  className="hover:bg-white/[0.05]"
+                >
+                  <Settings size={14} style={{ color: '#94a3b8' }} />
+                  <span>Settings</span>
+                </Link>
+
+                <Link
+                  href="/status"
+                  onClick={() => setUserMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    fontSize: '0.78rem',
+                    color: 'var(--color-frost, #c9d3ee)',
+                    textDecoration: 'none',
+                    transition: 'background 0.12s ease',
+                  }}
+                  className="hover:bg-white/[0.05]"
+                >
+                  <ShieldCheck size={14} style={{ color: '#86efac' }} />
+                  <span>System Diagnostics</span>
+                </Link>
+              </div>
+
+              {/* Workspace / Account Section */}
+              <div
+                style={{
+                  borderTop: '1px solid var(--color-gunmetal, #1f2433)',
+                  marginTop: 6,
+                  paddingTop: 6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
+                {/* Email line with More options icon */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 8px',
+                    fontSize: '0.7rem',
+                    color: 'var(--color-muted-steel, #646e87)',
+                  }}
+                >
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {displayEmail}
+                  </span>
+                  <MoreHorizontal size={13} style={{ flexShrink: 0 }} />
+                </div>
+
+                {/* Active workspace row with Checkmark */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '5px 8px',
+                    borderRadius: 6,
+                    background: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 4,
+                        background: '#242738',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        color: 'var(--color-frost, #c9d3ee)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {firstInitial}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.76rem',
+                        color: '#ffffff',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {displayName}&apos;s Workspace
+                    </span>
+                  </div>
+                  <Check size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
+                </div>
+              </div>
+
+              {/* Log out Action */}
+              <div
+                style={{
+                  borderTop: '1px solid var(--color-gunmetal, #1f2433)',
+                  marginTop: 6,
+                  paddingTop: 6,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    color: '#f87171',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.12s ease',
+                  }}
+                  className="hover:bg-rose-500/10"
+                >
+                  <LogOut size={14} />
+                  <span>Log out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>
   );
 }
+
+export default AppSidebar;

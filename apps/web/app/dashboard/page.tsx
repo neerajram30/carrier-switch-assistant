@@ -1,4 +1,4 @@
-import DashboardPage from '@/features/dashboard/DashboardPage';
+import { redirect } from 'next/navigation';
 
 export const metadata = {
   title: 'Dashboard | Career Switch Assistant',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function DashboardRoute() {
-  return <DashboardPage />;
+  redirect('/');
 }

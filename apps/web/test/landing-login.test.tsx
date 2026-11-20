@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LandingLoginPage from '../features/landing/LandingLoginPage';
-import Home from '../app/page';
+import LoginPage from '../app/login/page';
 
 const mockPush = vi.fn();
 
@@ -14,10 +14,18 @@ vi.mock('next/navigation', () => ({
 describe('Landing & Login Page Unit and Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: { id: 'user-1', name: 'Alex Morgan', email: 'test.user@company.org' },
+        token: 'mock-token',
+      }),
+    } as Response);
   });
 
   it('renders elegant focused login interface without marketing jargons', () => {
-    render(<Home />);
+    render(<LoginPage />);
 
     // Header & Greeting
     expect(
@@ -35,6 +43,10 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     expect(screen.getByText(/OR SIGN IN WITH/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in with Google/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in with GitHub/i })).toBeInTheDocument();
+
+    // Signup navigation
+    expect(screen.getByText(/Don't have an account\?/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Sign up/i })).toHaveAttribute('href', '/signup');
 
     // Branding and Status
     expect(screen.getByText('Career Switch Assistant')).toBeInTheDocument();
@@ -90,10 +102,32 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     fireEvent.change(passwordInput, { target: { value: 'securePass123' } });
     fireEvent.click(submitButton);
 
-    expect(handleLoginSuccess).toHaveBeenCalledWith('test.user@company.org', 'Alex Morgan');
+    await waitFor(() => {
+      expect(handleLoginSuccess).toHaveBeenCalledWith('test.user@company.org', 'Alex Morgan');
+      expect(mockPush).toHaveBeenCalledWith('/onboarding');
+    });
+  });
+
+  it('navigates to / upon valid login when user is an existing user with profile', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: { id: 'user-existing', name: 'Alex Morgan', email: 'existing@company.org', hasProfile: true },
+        token: 'mock-token',
+      }),
+    } as Response);
+
+    const handleLoginSuccess = vi.fn();
+    render(<LandingLoginPage onLoginSuccess={handleLoginSuccess} />);
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your email'), { target: { value: 'existing@company.org' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'securePass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Login$/i }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/onboarding');
+      expect(handleLoginSuccess).toHaveBeenCalledWith('existing@company.org', 'Alex Morgan');
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
   });
 
@@ -104,9 +138,8 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     const googleButton = screen.getByRole('button', { name: /Sign in with Google/i });
     fireEvent.click(googleButton);
 
-    expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
-
     await waitFor(() => {
+      expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
       expect(mockPush).toHaveBeenCalledWith('/onboarding');
     });
   });
@@ -118,9 +151,8 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     const githubButton = screen.getByRole('button', { name: /Sign in with GitHub/i });
     fireEvent.click(githubButton);
 
-    expect(handleLoginSuccess).toHaveBeenCalledWith('github-dev@example.com', 'Alex Morgan');
-
     await waitFor(() => {
+      expect(handleLoginSuccess).toHaveBeenCalledWith('github-dev@example.com', 'Alex Morgan');
       expect(mockPush).toHaveBeenCalledWith('/onboarding');
     });
   });
@@ -132,10 +164,37 @@ describe('Landing & Login Page Unit and Integration Tests', () => {
     const demoFillButton = screen.getByRole('button', { name: /Demo fill/i });
     fireEvent.click(demoFillButton);
 
-    expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
-
     await waitFor(() => {
+      expect(handleLoginSuccess).toHaveBeenCalledWith('dev-user@example.com', 'Alex Morgan');
       expect(mockPush).toHaveBeenCalledWith('/onboarding');
     });
+  });
+
+  it('displays error message when login API returns 401 Unauthorized', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Invalid email or password' }),
+    });
+
+    try {
+      render(<LandingLoginPage />);
+
+      fireEvent.change(screen.getByPlaceholderText('Enter your email'), {
+        target: { value: 'user@example.com' },
+      });
+      fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
+        target: { value: 'wrongPassword' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /^Login$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
+      });
+      expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });

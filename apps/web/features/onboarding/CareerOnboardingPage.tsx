@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -102,22 +102,29 @@ export default function CareerOnboardingPage({
     setProfileStatus('loading');
   }, []);
 
-  const [hasCreatedProfile, setHasCreatedProfile] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
+  const hasStoredProfile = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener('storage', onStoreChange);
+      return () => window.removeEventListener('storage', onStoreChange);
+    },
+    () => {
       try {
         const stored = sessionStorage.getItem('csa_career_profile');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0))) {
-            return true;
-          }
+          return Boolean(
+            parsed && (parsed.currentRole || (Array.isArray(parsed.skills) && parsed.skills.length > 0)),
+          );
         }
       } catch {
         // Ignore fallback
       }
-    }
-    return false;
-  });
+      return false;
+    },
+    () => false,
+  );
+  const [hasBackendProfile, setHasBackendProfile] = useState<boolean>(false);
+  const hasCreatedProfile = hasStoredProfile || hasBackendProfile;
 
   // Detect whether career data is already created in backend
   useEffect(() => {
@@ -128,7 +135,7 @@ export default function CareerOnboardingPage({
       .then((existing) => {
         if (!isMounted) return;
         if (existing && (existing.currentRole || existing.id)) {
-          setHasCreatedProfile(true);
+          setHasBackendProfile(true);
         }
       })
       .catch(() => {
@@ -254,7 +261,7 @@ export default function CareerOnboardingPage({
       // Auto-navigate to dashboard on save
       if (router) {
         setTimeout(() => {
-          router?.push('/dashboard');
+          router?.push('/');
         }, 1000);
       }
     } catch (err: unknown) {
@@ -303,7 +310,7 @@ export default function CareerOnboardingPage({
       // Auto-navigate to dashboard on save
       if (router) {
         setTimeout(() => {
-          router?.push('/dashboard');
+          router?.push('/');
         }, 1000);
       }
     } catch (err) {
@@ -314,7 +321,7 @@ export default function CareerOnboardingPage({
         setSaveSuccess(true);
         if (router) {
           setTimeout(() => {
-            router?.push('/dashboard');
+            router?.push('/');
           }, 800);
         }
       }
@@ -364,7 +371,7 @@ export default function CareerOnboardingPage({
             <button
               type="button"
               id="return-to-dashboard-btn"
-              onClick={() => router?.push('/dashboard')}
+              onClick={() => router?.push('/')}
               style={{
                 background: 'rgba(21, 22, 33, 0.85)',
                 color: 'var(--color-frost, #c9d3ee)',
@@ -428,7 +435,7 @@ export default function CareerOnboardingPage({
                   label="Go to Dashboard →"
                   variant="primary"
                   size="sm"
-                  onClick={() => router?.push('/dashboard')}
+                  onClick={() => router?.push('/')}
                 />
               </HStack>
             </VStack>
@@ -442,11 +449,6 @@ export default function CareerOnboardingPage({
             onContinueToReview={handleContinueToReview}
             uploadFn={uploadFn}
             processFn={processFn}
-            onSwitchToManual={() => {
-              setSaveError(null);
-              setStep('manual_guided');
-              router?.push('/onboarding/manual');
-            }}
           />
         )}
 
@@ -458,19 +460,6 @@ export default function CareerOnboardingPage({
             onBack={() => {
               setSaveError(null);
               setStep('upload');
-            }}
-            onSwitchToManual={() => {
-              setProfileData({
-                currentRole: currentExtracted.currentRole ?? '',
-                yearsOfExperience:
-                  currentExtracted.yearsOfExperience !== null
-                    ? String(currentExtracted.yearsOfExperience)
-                    : '',
-                skills: currentExtracted.skills ?? [],
-                summary: currentExtracted.summary ?? '',
-              });
-              setSaveError(null);
-              setStep('manual');
             }}
             isSaving={isSaving}
             saveError={saveError}

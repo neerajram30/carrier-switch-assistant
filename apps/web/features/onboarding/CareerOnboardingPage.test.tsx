@@ -375,14 +375,9 @@ describe('CareerOnboardingPage Integration', () => {
 
     render(
       <CareerOnboardingPage
-        initialStep="upload"
+        initialStep="manual_guided"
         saveProfileFn={mockSaveProfile}
       />,
-    );
-
-    // Switch to manual entry
-    fireEvent.click(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
     );
 
     // Step 1: Role & Experience
