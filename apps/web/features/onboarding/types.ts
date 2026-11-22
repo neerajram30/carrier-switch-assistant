@@ -27,6 +27,7 @@ export interface UploadedResumeInfo {
 }
 
 export interface WorkExperienceItem {
+  id?: string | null;
   company: string | null;
   role: string | null;
   title?: string | null;
@@ -77,6 +78,7 @@ export interface ProcessedResumeResult {
 
 export interface CareerProfileData {
   id?: string;
+  name?: string;
   currentRole: string;
   yearsOfExperience: string;
   skills: string[];

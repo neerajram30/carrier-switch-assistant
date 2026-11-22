@@ -34,10 +34,10 @@ describe('ResumeUploadStep Component', () => {
       screen.getByText(/Your resume is used to build your career profile/i),
     ).toBeInTheDocument();
 
-    // Manual entry alternative button
+    // Manual entry alternative button removed from flow
     expect(
-      screen.getByRole('button', { name: /Enter details manually →/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: /Enter details manually/i }),
+    ).not.toBeInTheDocument();
 
     // Verify rejection alert is NOT visible initially
     expect(screen.queryByText("Resume couldn't be uploaded")).not.toBeInTheDocument();
@@ -168,7 +168,6 @@ describe('ResumeUploadStep Component', () => {
 
     expect(screen.getByText("Resume couldn't be uploaded")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose another file/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Enter details manually$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Choose another file/i }));
 
@@ -220,33 +219,9 @@ describe('ResumeUploadStep Component', () => {
     expect(dropzone).toBeInTheDocument();
   });
 
-  it('handles keyboard activation for manual entry button', () => {
-    const onSwitchToManual = vi.fn();
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={onSwitchToManual} />);
-
-    const manualBtn = screen.getByRole('button', { name: /Enter details manually →/i });
-
-    manualBtn.focus();
-    expect(manualBtn).toHaveFocus();
-
-    fireEvent.click(manualBtn);
-
-    expect(onSwitchToManual).toHaveBeenCalledTimes(1);
-  });
-
-  it('manual entry action works from error recovery card', () => {
-    const onSwitchToManual = vi.fn();
-    render(<ResumeUploadStep onSuccess={vi.fn()} onSwitchToManual={onSwitchToManual} />);
-
-    const input = document.querySelector('input[type="file"]')!;
-    const invalidFile = new File(['text'], 'notes.txt', { type: 'text/plain' });
-
-    fireEvent.change(input, { target: { files: [invalidFile] } });
-
-    const manualBtn = screen.getByRole('button', { name: /^Enter details manually$/i });
-    fireEvent.click(manualBtn);
-
-    expect(onSwitchToManual).toHaveBeenCalledTimes(1);
+  it('does not render manual entry buttons in the current flow', () => {
+    render(<ResumeUploadStep onSuccess={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Enter details manually/i })).not.toBeInTheDocument();
   });
 
   describe('Direct upload pipeline integration (Step 14)', () => {

@@ -4,6 +4,7 @@ import {
   CURRENT_USER_PROVIDER,
   DevHeaderUserProvider,
 } from './current-user.provider.js';
+import { HybridAuthUserProvider } from './hybrid-auth-user.provider.js';
 import { AuthGuard } from './auth.guard.js';
 
 @Global()
@@ -12,12 +13,13 @@ import { AuthGuard } from './auth.guard.js';
   providers: [
     {
       provide: CURRENT_USER_PROVIDER,
-      useClass: DevHeaderUserProvider,
+      useClass: HybridAuthUserProvider,
     },
     DevHeaderUserProvider,
+    HybridAuthUserProvider,
     AuthGuard,
   ],
-  exports: [CURRENT_USER_PROVIDER, DevHeaderUserProvider, AuthGuard],
+  exports: [CURRENT_USER_PROVIDER, DevHeaderUserProvider, HybridAuthUserProvider, AuthGuard],
 })
 export class AuthModule implements OnModuleInit {
   onModuleInit(): void {

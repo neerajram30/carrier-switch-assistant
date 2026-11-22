@@ -5,6 +5,7 @@ import { HealthController } from './health/health.controller.js';
 import { CareerProfileModule } from './career-profile/career-profile.module.js';
 import { ResumeModule } from './resume/resume.module.js';
 import { AuthModule } from './common/auth/auth.module.js';
+import { AuthApiModule } from './auth/auth.module.js';
 import { RoadmapModule } from './roadmap/roadmap.module.js';
 
 @Module({
@@ -15,6 +16,7 @@ import { RoadmapModule } from './roadmap/roadmap.module.js';
     }),
     PrismaModule,
     AuthModule,
+    AuthApiModule,
     CareerProfileModule,
     ResumeModule,
     RoadmapModule,

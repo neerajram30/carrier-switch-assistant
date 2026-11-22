@@ -1,8 +1,9 @@
-import type { CareerProfileApiResponse, CareerProfileData } from '../types';
+import type { CareerProfileApiResponse, CareerProfileData } from "../types";
+import { getAuthHeaders, DEFAULT_DEV_USER_ID } from "@/lib/auth-headers";
 
 export const DEFAULT_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-export const DEFAULT_DEV_USER_ID = '00000000-0000-0000-0000-000000000001';
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export { DEFAULT_DEV_USER_ID };
 
 export class ApiError extends Error {
   constructor(
@@ -10,15 +11,18 @@ export class ApiError extends Error {
     public readonly statusCode?: number,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
-async function parseErrorMessage(response: Response, defaultMessage: string): Promise<string> {
+async function parseErrorMessage(
+  response: Response,
+  defaultMessage: string,
+): Promise<string> {
   try {
     const errorData = await response.json();
     if (Array.isArray(errorData.message)) {
-      return errorData.message.join(', ');
+      return errorData.message.join(", ");
     }
     return errorData.message || defaultMessage;
   } catch {
@@ -31,11 +35,8 @@ export async function getCareerProfile(
   userId = DEFAULT_DEV_USER_ID,
 ): Promise<CareerProfileApiResponse | null> {
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    method: "GET",
+    headers: getAuthHeaders(userId),
   });
 
   if (response.status === 404) {
@@ -45,7 +46,7 @@ export async function getCareerProfile(
   if (!response.ok) {
     const message = await parseErrorMessage(
       response,
-      'Failed to load career profile',
+      "Failed to load career profile",
     );
     throw new ApiError(message, response.status);
   }
@@ -83,18 +84,15 @@ export async function createCareerProfile(
   }
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    method: "POST",
+    headers: getAuthHeaders(userId),
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const message = await parseErrorMessage(
       response,
-      'Failed to create career profile',
+      "Failed to create career profile",
     );
     throw new ApiError(message, response.status);
   }
@@ -141,18 +139,15 @@ export async function updateCareerProfile(
   }
 
   const response = await fetch(`${apiUrl}/api/v1/career-profile`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    method: "PUT",
+    headers: getAuthHeaders(userId),
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const message = await parseErrorMessage(
       response,
-      'Failed to update career profile',
+      "Failed to update career profile",
     );
     throw new ApiError(message, response.status);
   }

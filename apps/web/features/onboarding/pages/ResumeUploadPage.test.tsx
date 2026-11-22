@@ -23,15 +23,14 @@ describe('ResumeUploadPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('navigates to /onboarding/manual when selecting manual entry', () => {
+  it('does not render manual entry alternative button in current flow', () => {
     render(<ResumeUploadPage />);
 
-    const manualBtn = screen.getByRole('button', {
-      name: /Enter details manually →/i,
-    });
-    fireEvent.click(manualBtn);
-
-    expect(mockPush).toHaveBeenCalledWith('/onboarding/manual');
+    expect(
+      screen.queryByRole('button', {
+        name: /Enter details manually/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('provides an option to return to dashboard when career data is already created', async () => {
@@ -51,7 +50,7 @@ describe('ResumeUploadPage', () => {
     expect(returnBtn).toBeInTheDocument();
 
     fireEvent.click(returnBtn);
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/');
 
     sessionStorage.clear();
   });

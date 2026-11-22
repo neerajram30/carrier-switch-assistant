@@ -94,7 +94,7 @@ export default function ManualOnboardingPage({
       // Auto-navigate to dashboard
       if (router) {
         setTimeout(() => {
-          router?.push('/dashboard');
+          router?.push('/');
         }, 1000);
       }
     } catch (err) {
@@ -169,7 +169,7 @@ export default function ManualOnboardingPage({
                   label="Go to Dashboard →"
                   variant="primary"
                   size="sm"
-                  onClick={() => router?.push('/dashboard')}
+                  onClick={() => router?.push('/')}
                 />
               </HStack>
             </VStack>

@@ -59,7 +59,7 @@ describe('InternalPageHeader and InternalPageActions', () => {
     expect(returnBtn).toBeInTheDocument();
     fireEvent.click(returnBtn);
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 });
 
@@ -105,7 +105,7 @@ describe('InternalPageLayout', () => {
     );
 
     expect(screen.getByTestId('internal-navbar')).toBeInTheDocument();
-    expect(screen.getByLabelText(/User Profile Menu/i)).toBeInTheDocument();
+    expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
 
     rerender(
       <InternalPageLayout title="Dashboard Overview" current="dashboard" showNavbar={false}>

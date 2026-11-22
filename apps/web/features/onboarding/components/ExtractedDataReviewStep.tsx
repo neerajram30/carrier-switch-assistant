@@ -54,6 +54,7 @@ interface ExtractedDataReviewStepProps {
     fullData: ExtractedCareerData,
   ) => Promise<void> | void;
   onBack: () => void;
+  onReuploadResume?: () => void;
   onSwitchToManual?: () => void;
   isSaving?: boolean;
   saveError?: string | null;
@@ -66,6 +67,7 @@ export function ExtractedDataReviewStep({
   initialData,
   onConfirm,
   onBack,
+  onReuploadResume,
   onSwitchToManual,
   isSaving = false,
   saveError = null,
@@ -456,7 +458,23 @@ export function ExtractedDataReviewStep({
             <span style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--color-periwinkle-glow, #98a4f7)", background: "rgba(91, 99, 211, 0.15)", border: "1px solid rgba(152, 164, 247, 0.3)", padding: "3px 10px", borderRadius: 9999, letterSpacing: "0.05em", textTransform: "uppercase" }}>PROFILE CALIBRATION</span>
             <span style={{ fontSize: "0.8rem", color: "#86EFAC" }}>✓ Live Calibration Mode</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Button label="← Back to upload" variant="secondary" onClick={onBack} isDisabled={isSaving} /><button type="button" id="proceed-to-dashboard-btn" onClick={() => void handleConfirm()} disabled={isSaving} aria-label="Confirm & Save Profile →" style={{ background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)", color: "#ffffff", border: "none", borderRadius: 9999, padding: "9px 24px", fontSize: "0.88rem", fontWeight: 500, cursor: isSaving ? "not-allowed" : "pointer", boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {onReuploadResume ? (
+              <Button
+                label="Re-upload resume"
+                variant="secondary"
+                onClick={onReuploadResume}
+                isDisabled={isSaving}
+              />
+            ) : (
+              <Button
+                label="← Back to upload"
+                variant="secondary"
+                onClick={onBack}
+                isDisabled={isSaving}
+              />
+            )}
+            <button type="button" id="proceed-to-dashboard-btn" onClick={() => void handleConfirm()} disabled={isSaving} aria-label="Confirm & Save Profile →" style={{ background: "linear-gradient(353deg, rgb(91, 99, 211) 17.51%, rgb(124, 135, 247) 183.08%)", color: "#ffffff", border: "none", borderRadius: 9999, padding: "9px 24px", fontSize: "0.88rem", fontWeight: 500, cursor: isSaving ? "not-allowed" : "pointer", boxShadow: "var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)", display: "inline-flex", alignItems: "center", gap: 8 }}>
             <span>{isSaving ? "Saving..." : "Save Profile Changes"}</span>
             <CheckCircle2 size={15} />
           </button></div></div>
@@ -1403,23 +1421,23 @@ export function ExtractedDataReviewStep({
           borderRadius: "12px 12px 0 0",
         }}
       >
-        <Button
-          label="← Back to upload"
-          variant="secondary"
-          onClick={onBack}
-          isDisabled={isSaving}
-        />
+        {onReuploadResume ? (
+          <Button
+            label="Re-upload resume"
+            variant="secondary"
+            onClick={onReuploadResume}
+            isDisabled={isSaving}
+          />
+        ) : (
+          <Button
+            label="← Back to upload"
+            variant="secondary"
+            onClick={onBack}
+            isDisabled={isSaving}
+          />
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {onSwitchToManual && (
-            <Button
-              label="Switch to manual form"
-              variant="ghost"
-              onClick={onSwitchToManual}
-              isDisabled={isSaving}
-            />
-          )}
-
           {/* Primary CTA button matching wireframe & tests */}
           <button
             type="button"

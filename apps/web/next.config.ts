@@ -1,7 +1,26 @@
 import type { NextConfig } from "next";
+import withBundleAnalyzer from "@next/bundle-analyzer";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: [
+    "@astryxdesign/core",
+    "@astryxdesign/charts",
+    "@astryxdesign/theme-neutral",
+  ],
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "react-dom$": path.resolve(__dirname, "../../node_modules/react-dom"),
+      "react$": path.resolve(__dirname, "../../node_modules/react"),
+    };
+    return config;
+  },
 };
 
-export default nextConfig;
+const withAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: true,
+});
+
+export default withAnalyzer(nextConfig);

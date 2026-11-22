@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -28,6 +30,7 @@ import {
 } from 'lucide-react';
 
 import { InternalPageLayout } from '@/features/navigation/InternalPageLayout';
+import { getAuthHeaders } from '@/lib/auth-headers';
 
 interface UserProfile {
   currentRole: string;
@@ -86,73 +89,156 @@ interface BackendMilestoneItem {
   }>;
 }
 
+interface BackendRoadmapResponse {
+  id?: string;
+  targetRole?: string;
+  milestones?: BackendMilestoneItem[];
+  roadmaps?: Array<{ id: string; targetRole: string; progressPercent: number }>;
+  message?: string;
+}
+
+export interface CareerSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  fitScore: number;
+  matchReason?: string;
+  category: string;
+  bridgeSkills: string[];
+  timelineMonths: number;
+  marketDemand?: string;
+  salaryRange?: string;
+  coreStrengthsUsed?: string[];
+}
+
 const DEFAULT_PROFILE: UserProfile = {
-  currentRole: 'Frontend Developer',
-  yearsOfExperience: '4',
-  skills: [
-    'JavaScript',
-    'TypeScript',
-    'React',
-    'Next.js',
-    'Node.js',
-    'Python',
-    'PostgreSQL',
-    'AWS',
-    'Git',
-    'Tailwind CSS',
-  ],
+  currentRole: '',
+  yearsOfExperience: '0',
+  skills: [],
   targetRole: '',
   summary: '',
 };
 
+async function parseJsonSafely<T = unknown>(res: Response | null | undefined): Promise<T | null> {
+  if (!res) return null;
+  try {
+    if (typeof res.text === 'function') {
+      const text = await res.text();
+      if (!text || !text.trim()) return null;
+      return JSON.parse(text) as T;
+    }
+    if (typeof res.json === 'function') {
+      return (await res.json()) as T;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function DashboardPage({ initialProfile }: DashboardPageProps) {
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    if (initialProfile) return initialProfile;
-    if (typeof window !== 'undefined') {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // If user session is not found, navigate to login page
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Synchronize session identifiers into client storage for HTTP request authorization
+  useEffect(() => {
+    if (session?.user?.id) {
       try {
-        const stored = sessionStorage.getItem('csa_career_profile');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && parsed.currentRole) {
-            return {
-              ...DEFAULT_PROFILE,
-              currentRole: parsed.currentRole,
-              yearsOfExperience: parsed.yearsOfExperience || DEFAULT_PROFILE.yearsOfExperience,
-              skills: Array.isArray(parsed.skills) && parsed.skills.length > 0 ? (parsed.skills as string[]) : DEFAULT_PROFILE.skills,
-              targetRole: parsed.targetRole || DEFAULT_PROFILE.targetRole,
-              summary: parsed.summary || DEFAULT_PROFILE.summary,
-            };
-          }
+        localStorage.setItem('csa_user_id', session.user.id);
+        if (session.user.apiToken) {
+          localStorage.setItem('csa_auth_token', session.user.apiToken);
         }
       } catch {
-        // Fallback to default
+        // ignore
       }
     }
-    return DEFAULT_PROFILE;
-  });
+  }, [session]);
 
+  const [profile, setProfile] = useState<UserProfile>(() => initialProfile || DEFAULT_PROFILE);
   const [milestones, setMilestones] = useState<StudyMilestone[]>([]);
   const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
   const [roadmaps, setRoadmaps] = useState<Array<{ id: string; targetRole: string; progressPercent: number }>>([]);
   const [activeRoadmapId, setActiveRoadmapId] = useState<string | null>(null);
+  const [careerSuggestions, setCareerSuggestions] = useState<CareerSuggestion[]>([]);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
-  // Load dynamically from backend roadmap or fallback to session storage
+  // Load dynamically from backend PostgreSQL database for the authenticated user
   useEffect(() => {
-    async function fetchRoadmapAndActivity() {
+    let isMounted = true;
+
+    async function fetchUserData() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const headers = getAuthHeaders(session?.user?.id);
+
       try {
-        const [roadmapRes, activityRes] = await Promise.all([
-          fetch(`${apiUrl}/api/v1/roadmap`, {
-            headers: { 'x-user-id': '00000000-0000-0000-0000-000000000001' },
-          }),
-          fetch(`${apiUrl}/api/v1/roadmap/activity`, {
-            headers: { 'x-user-id': '00000000-0000-0000-0000-000000000001' },
-          }),
+        const [profileRes, roadmapRes, activityRes, pathsRes] = await Promise.all([
+          fetch(`${apiUrl}/api/v1/career-profile`, { headers }).catch(() => null),
+          fetch(`${apiUrl}/api/v1/roadmap`, { headers }).catch(() => null),
+          fetch(`${apiUrl}/api/v1/roadmap/activity`, { headers }).catch(() => null),
+          fetch(`${apiUrl}/api/v1/career-paths`, { headers }).catch(() => null),
         ]);
 
-        if (roadmapRes.ok) {
-          const data = await roadmapRes.json();
+        if (!isMounted) return;
+
+        // 1. Process User Career Profile from Database
+        if (profileRes && profileRes.ok) {
+          const profileData = await parseJsonSafely<Record<string, unknown>>(profileRes);
+          if (profileData && profileData.currentRole) {
+            setProfile({
+              currentRole: String(profileData.currentRole),
+              yearsOfExperience: String(profileData.yearsOfExperience || '0'),
+              skills: Array.isArray(profileData.skills) ? (profileData.skills as string[]) : [],
+              targetRole: String(profileData.targetRole || ''),
+              summary: String(profileData.summary || ''),
+            });
+
+            // Persist to session storage for instant reload hydration
+            try {
+              sessionStorage.setItem('csa_career_profile', JSON.stringify(profileData));
+            } catch {
+              // ignore
+            }
+          }
+        } else if (!initialProfile) {
+          // Asynchronously restore cached profile from session storage if available
+          try {
+            const stored = sessionStorage.getItem('csa_career_profile');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed && parsed.currentRole) {
+                setProfile({
+                  ...DEFAULT_PROFILE,
+                  currentRole: String(parsed.currentRole),
+                  yearsOfExperience: String(parsed.yearsOfExperience || DEFAULT_PROFILE.yearsOfExperience),
+                  skills: Array.isArray(parsed.skills) && parsed.skills.length > 0 ? (parsed.skills as string[]) : DEFAULT_PROFILE.skills,
+                  targetRole: String(parsed.targetRole || DEFAULT_PROFILE.targetRole),
+                  summary: String(parsed.summary || DEFAULT_PROFILE.summary),
+                });
+              }
+            }
+          } catch {
+            // Ignore fallback
+          }
+        }
+
+        // 2. Process User Career Suggestions
+        if (pathsRes && pathsRes.ok) {
+          const pathsData = await parseJsonSafely<CareerSuggestion[]>(pathsRes);
+          if (Array.isArray(pathsData)) {
+            setCareerSuggestions(pathsData);
+          }
+        }
+
+        // 3. Process User Roadmap Milestones & Telemetry
+        if (roadmapRes && roadmapRes.ok) {
+          const data = await parseJsonSafely<BackendRoadmapResponse>(roadmapRes);
           if (data && data.milestones) {
             setMilestones(
               data.milestones.map((m: BackendMilestoneItem) => {
@@ -189,32 +275,39 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
               setActiveRoadmapId(data.id);
             }
           }
-        } else {
-          const errData = await roadmapRes.json().catch(() => ({}));
+        } else if (roadmapRes && !roadmapRes.ok) {
+          const errData = (await parseJsonSafely<{ message?: string }>(roadmapRes)) || {};
           setRoadmapError(errData.message || `API error (${roadmapRes.status})`);
         }
 
-        if (activityRes.ok) {
-          const act = await activityRes.json();
-          setActivityData(act);
+        // 4. Process Learning Streak Activity
+        if (activityRes && activityRes.ok) {
+          const act = await parseJsonSafely<ActivityResponse>(activityRes);
+          if (act) {
+            setActivityData(act);
+          }
         }
       } catch (err: unknown) {
         setRoadmapError(err instanceof Error ? err.message : 'Failed to connect to API');
       }
     }
 
-    void fetchRoadmapAndActivity();
-  }, []);
+    void fetchUserData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session, initialProfile]);
 
   const handleSelectDashboardRoadmap = async (roadmapId: string) => {
     setActiveRoadmapId(roadmapId);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     try {
       const res = await fetch(`${apiUrl}/api/v1/roadmap?roadmapId=${encodeURIComponent(roadmapId)}`, {
-        headers: { 'x-user-id': '00000000-0000-0000-0000-000000000001' },
+        headers: getAuthHeaders(session?.user?.id),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await parseJsonSafely<BackendRoadmapResponse>(res);
         if (data && data.milestones) {
           setMilestones(
             data.milestones.map((m: BackendMilestoneItem) => ({
@@ -249,7 +342,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
   const weeklyVelocityData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     // If activityData is present, use last 7 days from API
-    if (activityData && activityData.activity.length >= 7) {
+    if (activityData && activityData.activity && activityData.activity.length >= 7) {
       const recent7 = activityData.activity.slice(-7);
       return recent7.map((item) => {
         const dayDate = new Date(item.date);
@@ -274,27 +367,21 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
     const weights = [0.2, 0.25, 0.15, 0.25, 0.15, 0, 0];
     return days.map((day, idx) => ({
       day,
-      tasks: totalDone > 0 ? Math.max(0, Math.round(totalDone * weights[idx])) : idx < 3 ? idx + 1 : 0,
+      tasks: totalDone > 0 ? Math.max(0, Math.round(totalDone * weights[idx])) : 0,
     }));
   }, [milestones, activityData]);
 
   // Derive sprint stage trajectory for Astryx line/area chart
   const sprintTrajectoryData = useMemo(() => {
     if (milestones.length === 0) {
-      return [
-        { sprint: 'Sprint 1', readiness: 15 },
-        { sprint: 'Sprint 2', readiness: 35 },
-        { sprint: 'Sprint 3', readiness: 55 },
-        { sprint: 'Sprint 4', readiness: 78 },
-        { sprint: 'Sprint 5', readiness: 100 },
-      ];
+      return [];
     }
     let cumulative = 0;
     const step = 100 / milestones.length;
     return milestones.map((m, idx) => {
       if (m.completed) cumulative += step;
       return {
-        sprint: `S${idx + 1}`,
+        sprint: `Sprint ${idx + 1}`,
         readiness: Math.min(100, Math.round(cumulative)),
       };
     });
@@ -304,7 +391,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
   const totalEstimatedHours = useMemo(() => {
     return milestones.reduce((acc, m) => {
       const match = m.duration?.match(/\d+/);
-      return acc + (match ? parseInt(match[0], 10) : 15);
+      return acc + (match ? parseInt(match[0], 10) : 0);
     }, 0);
   }, [milestones]);
 
@@ -313,27 +400,23 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
       .filter((m) => m.completed)
       .reduce((acc, m) => {
         const match = m.duration?.match(/\d+/);
-        return acc + (match ? parseInt(match[0], 10) : 15);
+        return acc + (match ? parseInt(match[0], 10) : 0);
       }, 0);
   }, [milestones]);
 
   // 12-week heatmap data (84 days)
   const heatmapDays = useMemo(() => {
-    if (activityData && activityData.activity.length > 0) {
+    if (activityData && activityData.activity && activityData.activity.length > 0) {
       return activityData.activity;
     }
-    // Generate synthetic 84 days with baseline progression for aesthetic presentation
+    // Initialize 84 days with zero activity when no activity is logged yet
     const days: Array<{ date: string; count: number; level: number }> = [];
     const now = new Date();
     for (let i = 83; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().split('T')[0];
-      // Random deterministic density matching completed milestones
-      const activeSeed = (i * 17) % 7;
-      const count = activeSeed > 4 ? activeSeed - 3 : 0;
-      const level = count === 0 ? 0 : count <= 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4;
-      days.push({ date: iso, count, level });
+      days.push({ date: iso, count: 0, level: 0 });
     }
     return days;
   }, [activityData]);
@@ -638,6 +721,140 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
         </HStack>
       </Card>
 
+      {/* SECTION: Tailored Career Trajectory Suggestions */}
+      {careerSuggestions.length > 0 && (
+        <Card
+          variant="default"
+          elevation="low"
+          style={{
+            background: 'var(--color-carbon-surface, #151621)',
+            border: '1px solid var(--color-gunmetal, #1f2433)',
+            boxShadow: 'var(--shadow-subtle, rgba(255, 255, 255, 0.25) 0px 1px 3px 0px inset)',
+            padding: '22px 26px',
+            width: '100%',
+          }}
+        >
+          <VStack gap={4}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={18} style={{ color: 'var(--color-periwinkle-glow, #98a4f7)' }} />
+                <Heading level={3} weight="medium">
+                  Tailored Career Suggestions
+                </Heading>
+              </div>
+              <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+                <span style={{ fontSize: '0.8rem', color: '#98a4f7', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span>View Full Constellation</span>
+                  <Compass size={14} />
+                </span>
+              </Link>
+            </div>
+
+            <Text type="supporting" color="secondary" style={{ fontSize: '0.85rem' }}>
+              Dynamic career trajectories generated specifically from your verified background and experience:
+            </Text>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: 16,
+                width: '100%',
+              }}
+            >
+              {careerSuggestions.slice(0, 3).map((path) => {
+                const isSelected = profile.targetRole?.toLowerCase() === path.title.toLowerCase();
+                return (
+                  <div
+                    key={path.id}
+                    style={{
+                      background: isSelected ? 'rgba(91, 99, 211, 0.12)' : 'var(--color-void-black, #0f101a)',
+                      border: isSelected ? '1px solid var(--color-periwinkle-glow, #98a4f7)' : '1px solid var(--color-gunmetal, #1f2433)',
+                      borderRadius: 12,
+                      padding: '16px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: '0.96rem', fontWeight: 600, color: '#ffffff' }}>
+                          {path.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            color: path.fitScore >= 80 ? '#86EFAC' : '#98a4f7',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            padding: '2px 8px',
+                            borderRadius: 9999,
+                          }}
+                        >
+                          {path.fitScore}% Fit
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: 0, lineHeight: 1.4 }}>
+                        {path.description}
+                      </p>
+                    </div>
+
+                    {path.bridgeSkills && path.bridgeSkills.length > 0 && (
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#646e87', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Key Bridge Skills:
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                          {path.bridgeSkills.slice(0, 3).map((skill) => (
+                            <span
+                              key={skill}
+                              style={{
+                                fontSize: '0.72rem',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                color: '#c9d3ee',
+                              }}
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#646e87' }}>
+                        ⏱ ~{path.timelineMonths || 4} months
+                      </span>
+                      <Link href={`/dashboard/track?roadmapId=${encodeURIComponent(path.id)}`} style={{ textDecoration: 'none' }}>
+                        <button
+                          type="button"
+                          style={{
+                            background: isSelected ? '#86EFAC' : 'rgba(91, 99, 211, 0.25)',
+                            color: isSelected ? '#0f101a' : '#ffffff',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '5px 12px',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {isSelected ? 'Active Path' : 'Select Path →'}
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </VStack>
+        </Card>
+      )}
+
       {/* MINIMAL DETAILS STATE: When user hasn't selected a path yet */}
       {!hasSelectedPath ? (
         <div
@@ -776,8 +993,14 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                       Weekly Learning Velocity
                     </Heading>
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: '#86EFAC', fontWeight: 600 }}>
-                    Active Cadence
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      color: weeklyVelocityData.some((d) => d.tasks > 0) ? '#86EFAC' : 'var(--color-muted-steel, #646e87)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {weeklyVelocityData.some((d) => d.tasks > 0) ? 'Active Cadence' : '0 Tasks This Week'}
                   </span>
                 </div>
                 <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
@@ -828,9 +1051,11 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                       Role Transition Trajectory
                     </Heading>
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--color-periwinkle-glow, #98a4f7)', fontWeight: 600 }}>
-                    {targetRole}
-                  </span>
+                  {targetRole ? (
+                    <span style={{ fontSize: '0.74rem', color: 'var(--color-periwinkle-glow, #98a4f7)', fontWeight: 600 }}>
+                      {targetRole}
+                    </span>
+                  ) : null}
                 </div>
                 <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
                   Estimated cumulative transition competency across progressive sprint milestones.
@@ -838,30 +1063,57 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
 
                 {/* Astryx Area & Line Chart */}
                 <div style={{ width: '100%', marginTop: 8 }}>
-                  <Chart
-                    data={sprintTrajectoryData}
-                    xKey="sprint"
-                    series={[
-                      area('readiness', {
-                        color: 'var(--color-iris-blue, #5b63d3)',
-                        opacity: 0.2,
-                      }),
-                      line('readiness', {
-                        color: '#86EFAC',
-                        label: 'Readiness %',
-                      }),
-                    ]}
-                    height={210}
-                    yDomain={[0, 100]}
-                    grid={<ChartGrid horizontal />}
-                    axes={
-                      <>
-                        <ChartAxis position="bottom" />
-                        <ChartAxis position="left" />
-                      </>
-                    }
-                    tooltip
-                  />
+                  {sprintTrajectoryData.length > 0 ? (
+                    <Chart
+                      data={sprintTrajectoryData}
+                      xKey="sprint"
+                      series={[
+                        area('readiness', {
+                          color: 'var(--color-iris-blue, #5b63d3)',
+                          opacity: 0.2,
+                        }),
+                        line('readiness', {
+                          color: '#86EFAC',
+                          label: 'Readiness %',
+                        }),
+                      ]}
+                      height={210}
+                      yDomain={[0, 100]}
+                      grid={<ChartGrid horizontal />}
+                      axes={
+                        <>
+                          <ChartAxis position="bottom" />
+                          <ChartAxis position="left" />
+                        </>
+                      }
+                      tooltip
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        height: 210,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        background: 'rgba(15, 16, 26, 0.4)',
+                        border: '1px dashed var(--color-gunmetal, #1f2433)',
+                        borderRadius: 8,
+                        padding: 16,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Text type="supporting" color="secondary">
+                        No active roadmap selected yet.
+                      </Text>
+                      <Link href="/explore" style={{ textDecoration: 'none' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-periwinkle-glow, #98a4f7)' }}>
+                          Explore Career Paths &amp; Generate Roadmap →
+                        </span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </VStack>
             </Card>
@@ -889,13 +1141,13 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem' }}>
                     <span style={{ color: 'var(--color-muted-steel, #646e87)' }}>Current Streak:</span>
                     <span style={{ color: '#FBBF24', fontWeight: 700 }}>
-                      🔥 {activityData?.currentStreak || 3} days
+                      🔥 {activityData?.currentStreak ?? 0} days
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem' }}>
                     <span style={{ color: 'var(--color-muted-steel, #646e87)' }}>Total Active:</span>
                     <span style={{ color: '#86EFAC', fontWeight: 700 }}>
-                      {activityData?.totalActiveDays || 14} days
+                      {activityData?.totalActiveDays ?? 0} days
                     </span>
                   </div>
                 </HStack>
@@ -975,16 +1227,22 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
             <VStack gap={3}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Heading level={3} weight="medium">
-                  Calibrated Target Competencies ({targetRole})
+                  Calibrated Target Competencies {targetRole ? `(${targetRole})` : ''}
                 </Heading>
                 <span style={{ fontSize: '0.74rem', color: 'var(--color-muted-steel, #646e87)' }}>
                   Total {skills.length} core requirements
                 </span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {skills.map((s) => (
-                  <Token key={s} label={s} size="sm" />
-                ))}
+                {skills.length > 0 ? (
+                  skills.map((s) => (
+                    <Token key={s} label={s} size="sm" />
+                  ))
+                ) : (
+                  <Text type="supporting" color="secondary">
+                    No competencies calibrated yet. Upload your resume to extract skills.
+                  </Text>
+                )}
               </div>
             </VStack>
           </Card>

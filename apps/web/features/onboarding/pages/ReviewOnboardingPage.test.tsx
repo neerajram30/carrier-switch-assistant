@@ -71,15 +71,14 @@ describe('ReviewOnboardingPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('allows switching to manual page', () => {
+  it('does not render manual entry button in review flow', () => {
     render(<ReviewOnboardingPage initialData={mockInitialData} />);
 
-    const manualBtn = screen.getByRole('button', {
-      name: /Switch to manual form/i,
-    });
-    fireEvent.click(manualBtn);
-
-    expect(mockPush).toHaveBeenCalledWith('/onboarding/manual');
+    expect(
+      screen.queryByRole('button', {
+        name: /Switch to manual form/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('allows navigating back to upload page', () => {

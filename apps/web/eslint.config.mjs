@@ -7,7 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      "@next/next/no-html-link-for-pages": ["warn", "app"],
+      "@next/next/no-html-link-for-pages": ["warn", "apps/web/app"],
     },
   },
   // Override default ignores of eslint-config-next.

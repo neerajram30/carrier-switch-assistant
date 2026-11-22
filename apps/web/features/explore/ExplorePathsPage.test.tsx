@@ -106,6 +106,10 @@ describe('ExplorePathsPage', () => {
         name: /Set as Target & Update Roadmap/i,
       }),
     ).toBeInTheDocument();
+
+    // Verify down item (y = 145 > 20) aligns to bottom: 16px to prevent button from going down
+    const pod = screen.getByTestId('explore-inspector-pod');
+    expect(pod).toHaveStyle({ bottom: '16px', top: 'auto' });
   });
 
   it('closes inspector pod when close button is clicked', async () => {
