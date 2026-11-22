@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
     "@astryxdesign/charts",
     "@astryxdesign/theme-neutral",
   ],
+  experimental: {
+    optimizePackageImports: [
+      "@astryxdesign/core",
+      "@astryxdesign/charts",
+      "lucide-react",
+    ],
+  },
+  turbopack: {},
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

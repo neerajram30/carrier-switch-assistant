@@ -1,4 +1,5 @@
 import { AppSidebar } from '@/features/navigation/AppSidebar';
+import SessionProvider from '@/components/SessionProvider';
 
 export default function DashboardLayout({
   children,
@@ -6,33 +7,35 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100vh',
-        maxHeight: '100vh',
-        width: '100%',
-        background: 'var(--color-void-black, #0f101a)',
-        overflow: 'hidden',
-      }}
-    >
-      <AppSidebar />
+    <SessionProvider>
       <div
         style={{
-          flex: 1,
-          minWidth: 0,
-          height: '100%',
-          maxHeight: '100vh',
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          justifyContent: 'flex-start',
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          height: '100vh',
+          maxHeight: '100vh',
+          width: '100%',
+          background: 'var(--color-void-black, #0f101a)',
+          overflow: 'hidden',
         }}
       >
-        {children}
+        <AppSidebar />
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            maxHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            justifyContent: 'flex-start',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </SessionProvider>
   );
 }

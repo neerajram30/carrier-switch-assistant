@@ -10,14 +10,16 @@ import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
-import {
-  Chart,
-  bar,
-  line,
-  area,
-  ChartAxis,
-  ChartGrid,
-} from '@astryxdesign/charts';
+import dynamic from 'next/dynamic';
+import { DashboardAnalyticsChartsSkeleton } from './DashboardAnalyticsCharts';
+
+const DashboardAnalyticsCharts = dynamic(
+  () => import('./DashboardAnalyticsCharts'),
+  {
+    ssr: false,
+    loading: () => <DashboardAnalyticsChartsSkeleton />,
+  }
+);
 import {
   BarChart3,
   Compass,
@@ -966,158 +968,12 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
       ) : (
         /* GRAPHICAL DASHBOARD: Graphical completion visualizations */
         <VStack gap={5} width="100%">
-          {/* SECTION 2: Graphical Analytics Grid Powered by @astryxdesign/charts */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(380px, 1.2fr) minmax(340px, 1fr)',
-              gap: 20,
-              width: '100%',
-            }}
-          >
-            {/* Chart A: Weekly Completion Velocity Bar Chart */}
-            <Card
-              variant="default"
-              elevation="low"
-              style={{
-                background: 'var(--color-carbon-surface, #151621)',
-                border: '1px solid var(--color-gunmetal, #1f2433)',
-                padding: '22px 24px',
-              }}
-            >
-              <VStack gap={3}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <BarChart3 size={18} style={{ color: 'var(--color-periwinkle-glow, #98a4f7)' }} />
-                    <Heading level={3} weight="medium">
-                      Weekly Learning Velocity
-                    </Heading>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '0.74rem',
-                      color: weeklyVelocityData.some((d) => d.tasks > 0) ? '#86EFAC' : 'var(--color-muted-steel, #646e87)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {weeklyVelocityData.some((d) => d.tasks > 0) ? 'Active Cadence' : '0 Tasks This Week'}
-                  </span>
-                </div>
-                <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                  Daily study task completions across the current weekly sprint cycle.
-                </Text>
-
-                {/* Astryx Bar Chart */}
-                <div style={{ width: '100%', marginTop: 8 }}>
-                  <Chart
-                    data={weeklyVelocityData}
-                    xKey="day"
-                    series={[
-                      bar('tasks', {
-                        label: 'Tasks Completed',
-                        color: 'var(--color-periwinkle-glow, #98a4f7)',
-                        radius: 4,
-                      }),
-                    ]}
-                    height={210}
-                    grid={<ChartGrid horizontal />}
-                    axes={
-                      <>
-                        <ChartAxis position="bottom" />
-                        <ChartAxis position="left" />
-                      </>
-                    }
-                    tooltip
-                  />
-                </div>
-              </VStack>
-            </Card>
-
-            {/* Chart B: Target Readiness Cumulative Trajectory Curve */}
-            <Card
-              variant="default"
-              elevation="low"
-              style={{
-                background: 'var(--color-carbon-surface, #151621)',
-                border: '1px solid var(--color-gunmetal, #1f2433)',
-                padding: '22px 24px',
-              }}
-            >
-              <VStack gap={3}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <TrendingUp size={18} style={{ color: '#86EFAC' }} />
-                    <Heading level={3} weight="medium">
-                      Role Transition Trajectory
-                    </Heading>
-                  </div>
-                  {targetRole ? (
-                    <span style={{ fontSize: '0.74rem', color: 'var(--color-periwinkle-glow, #98a4f7)', fontWeight: 600 }}>
-                      {targetRole}
-                    </span>
-                  ) : null}
-                </div>
-                <Text type="supporting" color="secondary" style={{ fontSize: '0.8rem' }}>
-                  Estimated cumulative transition competency across progressive sprint milestones.
-                </Text>
-
-                {/* Astryx Area & Line Chart */}
-                <div style={{ width: '100%', marginTop: 8 }}>
-                  {sprintTrajectoryData.length > 0 ? (
-                    <Chart
-                      data={sprintTrajectoryData}
-                      xKey="sprint"
-                      series={[
-                        area('readiness', {
-                          color: 'var(--color-iris-blue, #5b63d3)',
-                          opacity: 0.2,
-                        }),
-                        line('readiness', {
-                          color: '#86EFAC',
-                          label: 'Readiness %',
-                        }),
-                      ]}
-                      height={210}
-                      yDomain={[0, 100]}
-                      grid={<ChartGrid horizontal />}
-                      axes={
-                        <>
-                          <ChartAxis position="bottom" />
-                          <ChartAxis position="left" />
-                        </>
-                      }
-                      tooltip
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        height: 210,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        background: 'rgba(15, 16, 26, 0.4)',
-                        border: '1px dashed var(--color-gunmetal, #1f2433)',
-                        borderRadius: 8,
-                        padding: 16,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Text type="supporting" color="secondary">
-                        No active roadmap selected yet.
-                      </Text>
-                      <Link href="/explore" style={{ textDecoration: 'none' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-periwinkle-glow, #98a4f7)' }}>
-                          Explore Career Paths &amp; Generate Roadmap →
-                        </span>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </VStack>
-            </Card>
-          </div>
+          {/* SECTION 2: Graphical Analytics Grid Powered by @astryxdesign/charts (Lazy-Loaded) */}
+          <DashboardAnalyticsCharts
+            weeklyVelocityData={weeklyVelocityData}
+            sprintTrajectoryData={sprintTrajectoryData}
+            targetRole={targetRole}
+          />
 
           {/* SECTION 3: 12-Week Study Streak Activity Matrix (Heatmap) */}
           <Card
