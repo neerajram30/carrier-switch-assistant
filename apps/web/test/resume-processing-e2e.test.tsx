@@ -176,7 +176,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
     // -------------------------------------------------------------------------
     // Step 1: Render Home Page
     // -------------------------------------------------------------------------
-    render(<OnboardingRoute initialStep="upload" />);
+    render(<OnboardingRoute />);
 
     expect(screen.getByText('Build your career baseline')).toBeInTheDocument();
 
@@ -380,7 +380,7 @@ describe('Resume Processing Frontend Integration Journey (Mocked Boundaries)', (
       etag: 'etag-1',
     });
 
-    render(<OnboardingRoute initialStep="upload" />);
+    render(<OnboardingRoute />);
 
     const fileInput = document.querySelector('input[type="file"]')!;
     fireEvent.change(fileInput, {

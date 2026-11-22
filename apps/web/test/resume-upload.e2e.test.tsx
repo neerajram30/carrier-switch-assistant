@@ -78,7 +78,7 @@ describe('Resume Upload E2E Journey', () => {
     // -------------------------------------------------------------------------
     // Step 1: Open / (Mount root Next.js page)
     // -------------------------------------------------------------------------
-    render(<OnboardingRoute initialStep="upload" />);
+    render(<OnboardingRoute />);
 
     // Verify initial wireframe is present
     expect(
