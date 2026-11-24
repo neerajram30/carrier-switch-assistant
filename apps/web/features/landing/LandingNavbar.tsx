@@ -83,19 +83,6 @@ export function LandingNavbar() {
 
         {/* Right CTA Actions */}
         <div className="hidden sm:flex items-center gap-3">
-          {/* Live system status pill */}
-          <Link
-            href="/status"
-            className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#151621] border border-[#1f2433] hover:border-[#939db8]/40 transition-colors text-[11px] text-[#c9d3ee]"
-            title="View live systems telemetry"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>Systems Operational</span>
-          </Link>
-
           <Link
             href="/login"
             className="text-[14px] text-[#c9d3ee] hover:text-white px-3.5 py-2 rounded-full hover:bg-white/[0.04] transition-colors font-medium"

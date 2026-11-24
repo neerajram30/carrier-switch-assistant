@@ -28,12 +28,6 @@ export function LandingFooter() {
               Benchmark verified skills, isolate technical bottlenecks, and execute structured
               12-week transition sprints.
             </p>
-            <div className="pt-1 flex items-center gap-2 text-[11px] text-[#646e87]">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-              <Link href="/status" className="hover:text-white transition-colors">
-                All systems operational · SRE Console
-              </Link>
-            </div>
           </div>
 
           {/* Nav columns */}
@@ -110,14 +104,10 @@ export function LandingFooter() {
           </div>
         </div>
 
-        {/* Advisory statement per product principles */}
+        {/* Copyright and platform notice */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#646e87]">
           <p>
             © {new Date().getFullYear()} Career Switch Assistant. Built with Next.js and NestJS.
-          </p>
-          <p className="text-center sm:text-right max-w-md">
-            Career Switch Assistant provides advisory recommendations and evidence-based
-            roadmaps; outcomes vary by individual deliberate practice and hiring market conditions.
           </p>
         </div>
       </div>

@@ -85,12 +85,14 @@ describe('SSR Landing Page & SEO Validation', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders footer with proper advisory disclaimer adhering to product principles', () => {
+  it('renders footer with proper branding adhering to product principles', () => {
     render(<LandingPage />);
 
-    expect(screen.getByText(/All systems operational · SRE Console/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/Career Switch Assistant provides advisory recommendations/i)
+      screen.getByText(/The evidence-based career transition platform for software engineers/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Built with Next.js and NestJS/i)
     ).toBeInTheDocument();
   });
 });
