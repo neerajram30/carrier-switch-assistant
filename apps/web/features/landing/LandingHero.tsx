@@ -16,14 +16,18 @@ import {
 export function LandingHero() {
   return (
     <section className="relative pt-28 sm:pt-36 lg:pt-40 pb-20 sm:pb-28 overflow-hidden">
-      {/* Ambient background glows */}
+      {/* Ambient background glows with subtle depth parallax */}
       <div
         className="ambient-glow-iris w-[500px] h-[500px] -top-32 -left-20 sm:-top-20 sm:left-10"
         aria-hidden="true"
+        data-parallax="0.18"
+        data-parallax-limit="100"
       />
       <div
         className="ambient-glow-pink w-[550px] h-[550px] top-40 -right-20 sm:right-10"
         aria-hidden="true"
+        data-parallax="-0.15"
+        data-parallax-limit="80"
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -123,118 +127,136 @@ export function LandingHero() {
             </p>
           </div>
 
-          {/* Right Column: Floating Product Cards Showcase (Matching Beehiiv Style) */}
+          {/* Right Column: Floating Product Cards Showcase (Matching Beehiiv Style with GPU Parallax) */}
           <div className="lg:col-span-5 relative mt-6 lg:mt-0 flex justify-center">
             <div className="relative w-full max-w-[460px] sm:max-w-[500px]">
               {/* Back Card 1: Target Role & Readiness (Digital Products equivalent) */}
-              <div className="glass-sre-card rounded-2xl p-5 sm:p-6 relative z-10 transition-transform duration-300">
-                {/* Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-[#1f2433] mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-[#5b63d3]/20 border border-[#5b63d3]/40 flex items-center justify-center text-[#98a4f7]">
-                      <Compass className="w-4 h-4" />
+              <div
+                className="parallax-layer relative z-10"
+                data-parallax="0.04"
+                data-parallax-limit="40"
+              >
+                <div className="glass-sre-card rounded-2xl p-5 sm:p-6 transition-transform duration-300">
+                  {/* Header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-[#1f2433] mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-[#5b63d3]/20 border border-[#5b63d3]/40 flex items-center justify-center text-[#98a4f7]">
+                        <Compass className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#98a4f7] block">
+                          Target Path Telemetry
+                        </span>
+                        <h2 className="text-sm font-semibold text-white">
+                          Senior Full-Stack & AI Engineer
+                        </h2>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#98a4f7] block">
-                        Target Path Telemetry
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      82% Ready
+                    </span>
+                  </div>
+
+                  {/* Role Gradient Visual Box */}
+                  <div className="w-full h-32 rounded-xl bg-gradient-to-br from-[#1e1e38] via-[#241c40] to-[#121324] border border-[#1f2433] p-4 flex flex-col justify-between mb-4 relative overflow-hidden">
+                    <div className="ambient-glow-iris w-36 h-36 -top-10 -right-10 opacity-70" />
+                    <div className="flex items-center justify-between relative z-10">
+                      <span className="text-xs text-[#c9d3ee] font-medium">Hiring Benchmark</span>
+                      <span className="text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+                        $165k – $215k
                       </span>
-                      <h2 className="text-sm font-semibold text-white">
-                        Senior Full-Stack & AI Engineer
-                      </h2>
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[#c9d3ee]">Core Skill Match</span>
+                        <span className="text-emerald-400 font-semibold">14 / 17 Verified</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[#0f101a] overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-[#5b63d3] to-[#98a4f7] rounded-full w-[82%]"></div>
+                      </div>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    82% Ready
-                  </span>
-                </div>
 
-                {/* Role Gradient Visual Box */}
-                <div className="w-full h-32 rounded-xl bg-gradient-to-br from-[#1e1e38] via-[#241c40] to-[#121324] border border-[#1f2433] p-4 flex flex-col justify-between mb-4 relative overflow-hidden">
-                  <div className="ambient-glow-iris w-36 h-36 -top-10 -right-10 opacity-70" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs text-[#c9d3ee] font-medium">Hiring Benchmark</span>
-                    <span className="text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
-                      $165k – $215k
-                    </span>
-                  </div>
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-[#c9d3ee]">Core Skill Match</span>
-                      <span className="text-emerald-400 font-semibold">14 / 17 Verified</span>
+                  {/* Verified Skills vs Gaps Tags */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-[#646e87]">
+                      <span>Transferable Strengths</span>
+                      <span className="text-xs text-[#98a4f7]">3 High-Priority Gaps</span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-[#0f101a] overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#5b63d3] to-[#98a4f7] rounded-full w-[82%]"></div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        TypeScript
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        Next.js 15
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        PostgreSQL
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-[#5b63d3]/15 border border-[#5b63d3]/40 text-[11px] text-[#98a4f7] font-medium flex items-center gap-1">
+                        <CircleDot className="w-3 h-3 text-[#98a4f7]" />
+                        Vector Embeddings
+                      </span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Verified Skills vs Gaps Tags */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-[#646e87]">
-                    <span>Transferable Strengths</span>
-                    <span className="text-xs text-[#98a4f7]">3 High-Priority Gaps</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      TypeScript
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      Next.js 15
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-[#1f2433]/70 border border-[#939db8]/20 text-[11px] text-white font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      PostgreSQL
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-[#5b63d3]/15 border border-[#5b63d3]/40 text-[11px] text-[#98a4f7] font-medium flex items-center gap-1">
-                      <CircleDot className="w-3 h-3 text-[#98a4f7]" />
-                      Vector Embeddings
-                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Overlapping Floating Card 2: Velocity & Streak (Referrals equivalent) */}
-              <div className="glass-sre-card rounded-xl p-3.5 sm:p-4 absolute -bottom-8 -left-4 sm:-left-8 z-20 w-52 sm:w-60 animate-float-slow shadow-2xl">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] text-[#646e87] font-medium">Readiness Velocity</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    <TrendingUp className="w-3 h-3" />
-                    +18%
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-2xl font-bold text-white tracking-tight">84 / 100</span>
-                  <span className="text-xs text-[#c9d3ee]">Index</span>
-                </div>
-                <div className="flex items-center gap-2 pt-2 border-t border-[#1f2433] text-[11px] text-[#c9d3ee]">
-                  <Flame className="w-3.5 h-3.5 text-orange-400" />
-                  <span>14-day study streak active</span>
+              {/* Overlapping Floating Card 2: Velocity & Streak (Parallax Foreground Shift) */}
+              <div
+                className="parallax-layer absolute -bottom-8 -left-4 sm:-left-8 z-20 w-52 sm:w-60 pointer-events-auto"
+                data-parallax="-0.14"
+                data-parallax-limit="85"
+              >
+                <div className="glass-sre-card rounded-xl p-3.5 sm:p-4 animate-float-slow shadow-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] text-[#646e87] font-medium">Readiness Velocity</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      <TrendingUp className="w-3 h-3" />
+                      +18%
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-2xl font-bold text-white tracking-tight">84 / 100</span>
+                    <span className="text-xs text-[#c9d3ee]">Index</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-[#1f2433] text-[11px] text-[#c9d3ee]">
+                    <Flame className="w-3.5 h-3.5 text-orange-400" />
+                    <span>14-day study streak active</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Overlapping Floating Card 3: Live Milestone Tasks (Podcasts equivalent) */}
-              <div className="glass-sre-card rounded-xl p-4 absolute -top-8 -right-4 sm:-right-8 z-20 w-60 sm:w-64 animate-float-reverse shadow-2xl">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#f472b6]"></span>
-                    <span className="text-[11px] font-semibold text-white">Sprint Week 4</span>
+              {/* Overlapping Floating Card 3: Live Milestone Tasks (Parallax Midground Counter-Shift) */}
+              <div
+                className="parallax-layer absolute -top-8 -right-4 sm:-right-8 z-20 w-60 sm:w-64 pointer-events-auto"
+                data-parallax="0.10"
+                data-parallax-limit="70"
+              >
+                <div className="glass-sre-card rounded-xl p-4 animate-float-reverse shadow-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#f472b6]"></span>
+                      <span className="text-[11px] font-semibold text-white">Sprint Week 4</span>
+                    </div>
+                    <span className="text-[10px] text-[#98a4f7] font-medium">Day 24 of 84</span>
                   </div>
-                  <span className="text-[10px] text-[#98a4f7] font-medium">Day 24 of 84</span>
-                </div>
-                <p className="text-xs text-white font-medium mb-2.5 truncate">
-                  RAG Pipeline & Hybrid Search
-                </p>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-[11px] text-white bg-[#0f101a]/60 px-2 py-1.5 rounded-lg border border-[#1f2433]">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">PGVector cosine search</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-[#c9d3ee] bg-[#0f101a]/30 px-2 py-1.5 rounded-lg border border-[#1f2433]/60">
-                    <CircleDot className="w-3.5 h-3.5 text-[#98a4f7] shrink-0" />
-                    <span className="truncate">Latency benchmarking</span>
+                  <p className="text-xs text-white font-medium mb-2.5 truncate">
+                    RAG Pipeline & Hybrid Search
+                  </p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-[11px] text-white bg-[#0f101a]/60 px-2 py-1.5 rounded-lg border border-[#1f2433]">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">PGVector cosine search</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-[#c9d3ee] bg-[#0f101a]/30 px-2 py-1.5 rounded-lg border border-[#1f2433]/60">
+                      <CircleDot className="w-3.5 h-3.5 text-[#98a4f7] shrink-0" />
+                      <span className="truncate">Latency benchmarking</span>
+                    </div>
                   </div>
                 </div>
               </div>

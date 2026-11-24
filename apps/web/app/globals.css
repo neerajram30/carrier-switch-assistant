@@ -392,6 +392,20 @@ textarea::placeholder {
   }
 }
 
+/* GPU-accelerated Parallax Layers */
+.parallax-layer {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parallax-layer,
+  [data-parallax] {
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
 /* Ambient glow orb backgrounds */
 .ambient-glow-iris {
   position: absolute;

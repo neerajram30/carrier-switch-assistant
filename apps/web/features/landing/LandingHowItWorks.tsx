@@ -48,7 +48,11 @@ export function LandingHowItWorks() {
             >
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <span className="text-3xl font-mono font-bold text-[#646e87]">
+                  <span
+                    className="text-3xl font-mono font-bold text-[#646e87] block"
+                    data-parallax="-0.04"
+                    data-parallax-limit="25"
+                  >
                     {step.step}
                   </span>
                   <div className="w-10 h-10 rounded-xl bg-[#0f101a] border border-[#1f2433] flex items-center justify-center">
