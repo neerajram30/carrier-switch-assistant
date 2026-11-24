@@ -1,0 +1,111 @@
+declare module 'lucide-react' {
+  import * as React from 'react';
+
+  export interface LucideProps extends React.SVGProps<SVGSVGElement> {
+    size?: number | string;
+    color?: string;
+    strokeWidth?: number | string;
+    absoluteStrokeWidth?: boolean;
+    className?: string;
+    'aria-hidden'?: boolean | 'true' | 'false';
+  }
+
+  export type LucideIcon = React.ForwardRefExoticComponent<
+    LucideProps & React.RefAttributes<SVGSVGElement>
+  >;
+
+  export const Activity: LucideIcon;
+  export const AlertCircle: LucideIcon;
+  export const AlertTriangle: LucideIcon;
+  export const ArrowDown: LucideIcon;
+  export const ArrowLeft: LucideIcon;
+  export const ArrowRight: LucideIcon;
+  export const ArrowUp: LucideIcon;
+  export const ArrowUpDown: LucideIcon;
+  export const ArrowUpCircle: LucideIcon;
+  export const ArrowUpRight: LucideIcon;
+  export const Award: LucideIcon;
+  export const BarChart3: LucideIcon;
+  export const BookOpen: LucideIcon;
+  export const BrainCircuit: LucideIcon;
+  export const Briefcase: LucideIcon;
+  export const Calendar: LucideIcon;
+  export const Check: LucideIcon;
+  export const CheckCheck: LucideIcon;
+  export const CheckCircle: LucideIcon;
+  export const CheckCircle2: LucideIcon;
+  export const CheckSquare: LucideIcon;
+  export const CheckSquare2: LucideIcon;
+  export const ChevronDown: LucideIcon;
+  export const ChevronLeft: LucideIcon;
+  export const ChevronRight: LucideIcon;
+  export const ChevronsLeft: LucideIcon;
+  export const ChevronsRight: LucideIcon;
+  export const ChevronUp: LucideIcon;
+  export const CircleDot: LucideIcon;
+  export const Clock: LucideIcon;
+  export const Cloud: LucideIcon;
+  export const Code2: LucideIcon;
+  export const Columns: LucideIcon;
+  export const Compass: LucideIcon;
+  export const Copy: LucideIcon;
+  export const Cpu: LucideIcon;
+  export const Database: LucideIcon;
+  export const DollarSign: LucideIcon;
+  export const ExternalLink: LucideIcon;
+  export const Eye: LucideIcon;
+  export const EyeOff: LucideIcon;
+  export const FileText: LucideIcon;
+  export const FileUp: LucideIcon;
+  export const Filter: LucideIcon;
+  export const Flame: LucideIcon;
+  export const FolderGit2: LucideIcon;
+  export const GitBranch: LucideIcon;
+  export const Github: LucideIcon;
+  export const Globe: LucideIcon;
+  export const HelpCircle: LucideIcon;
+  export const Home: LucideIcon;
+  export const Info: LucideIcon;
+  export const Layers: LucideIcon;
+  export const ListTodo: LucideIcon;
+  export const Loader2: LucideIcon;
+  export const Lock: LucideIcon;
+  export const LogOut: LucideIcon;
+  export const Mail: LucideIcon;
+  export const Menu: LucideIcon;
+  export const Mic: LucideIcon;
+  export const Milestone: LucideIcon;
+  export const MoreHorizontal: LucideIcon;
+  export const Network: LucideIcon;
+  export const Play: LucideIcon;
+  export const Plus: LucideIcon;
+  export const Quote: LucideIcon;
+  export const RefreshCw: LucideIcon;
+  export const Rocket: LucideIcon;
+  export const Route: LucideIcon;
+  export const Search: LucideIcon;
+  export const Settings: LucideIcon;
+  export const Shield: LucideIcon;
+  export const ShieldAlert: LucideIcon;
+  export const ShieldCheck: LucideIcon;
+  export const Sparkle: LucideIcon;
+  export const Sparkles: LucideIcon;
+  export const Square: LucideIcon;
+  export const Star: LucideIcon;
+  export const Target: LucideIcon;
+  export const Terminal: LucideIcon;
+  export const Trash2: LucideIcon;
+  export const TrendingUp: LucideIcon;
+  export const Upload: LucideIcon;
+  export const UploadCloud: LucideIcon;
+  export const User: LucideIcon;
+  export const UserCheck: LucideIcon;
+  export const Users: LucideIcon;
+  export const Wrench: LucideIcon;
+  export const X: LucideIcon;
+  export const XCircle: LucideIcon;
+  export const Zap: LucideIcon;
+
+  const defaultExport: Record<string, LucideIcon>;
+  export default defaultExport;
+}

@@ -1,9 +1,24 @@
-import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default auth((req) => {
+/**
+ * Next.js Edge Proxy (Middleware)
+ * 
+ * Lightweight session gate: Uses edge-native cookie verification to avoid bundling
+ * heavy server-side auth dependencies (OpenTelemetry, ua-parser, and crypto parsers).
+ * Full cryptographic validation is executed safely inside server components and route handlers.
+ */
+export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth;
+
+  // Check for session cookies (production or dev prefix)
+  const sessionToken =
+    req.cookies.get('__Secure-authjs.session-token')?.value ||
+    req.cookies.get('authjs.session-token')?.value ||
+    req.cookies.get('__Secure-next-auth.session-token')?.value ||
+    req.cookies.get('next-auth.session-token')?.value;
+
+  const isLoggedIn = !!sessionToken;
 
   // Protected internal routes that require authentication
   const isProtectedRoute =
@@ -29,8 +44,18 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - api routes (/api/...)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico
+     * - public static files: .svg, .png, .jpg, .jpeg, .gif, .webp, .ico, .woff, .woff2, .txt
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|txt)$).*)',
+  ],
 };
