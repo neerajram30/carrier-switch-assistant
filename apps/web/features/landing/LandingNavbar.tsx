@@ -68,12 +68,6 @@ export function LandingNavbar() {
             How It Works
           </a>
           <a
-            href="#testimonials"
-            className="hover:text-white transition-colors duration-150 focus:outline-none focus:text-white"
-          >
-            Outcomes
-          </a>
-          <a
             href="#faq"
             className="hover:text-white transition-colors duration-150 focus:outline-none focus:text-white"
           >
@@ -143,13 +137,6 @@ export function LandingNavbar() {
               className="px-3 py-2 rounded-lg hover:bg-[#151621] hover:text-white"
             >
               How It Works
-            </a>
-            <a
-              href="#testimonials"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg hover:bg-[#151621] hover:text-white"
-            >
-              Outcomes
             </a>
             <a
               href="#faq"

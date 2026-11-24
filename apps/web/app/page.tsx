@@ -5,7 +5,6 @@ import { CareerSwitchSimulator } from '@/features/landing/CareerSwitchSimulator'
 import { LandingFeatures } from '@/features/landing/LandingFeatures';
 import { LandingHowItWorks } from '@/features/landing/LandingHowItWorks';
 import { LandingComparison } from '@/features/landing/LandingComparison';
-import { LandingTestimonials } from '@/features/landing/LandingTestimonials';
 import { LandingFaq } from '@/features/landing/LandingFaq';
 import { LandingFooter } from '@/features/landing/LandingFooter';
 import { ScrollRevealProvider } from '@/features/landing/ScrollRevealProvider';
@@ -82,13 +81,6 @@ const structuredData = {
         price: '0',
         priceCurrency: 'USD',
       },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        ratingCount: '3420',
-        bestRating: '5',
-        worstRating: '1',
-      },
       description:
         'Evidence-based career readiness platform helping software engineers benchmark skill gaps and execute tailored weekly roadmaps.',
     },
@@ -135,9 +127,6 @@ export default function LandingPage() {
 
             {/* Comparison Matrix */}
             <LandingComparison />
-
-            {/* Social Proof & Outcomes */}
-            <LandingTestimonials />
 
             {/* Frequently Asked Questions */}
             <LandingFaq />
