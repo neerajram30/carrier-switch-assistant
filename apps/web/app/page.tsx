@@ -7,7 +7,6 @@ import { LandingHowItWorks } from '@/features/landing/LandingHowItWorks';
 import { LandingComparison } from '@/features/landing/LandingComparison';
 import { LandingTestimonials } from '@/features/landing/LandingTestimonials';
 import { LandingFaq } from '@/features/landing/LandingFaq';
-import { LandingCta } from '@/features/landing/LandingCta';
 import { LandingFooter } from '@/features/landing/LandingFooter';
 import { ScrollRevealProvider } from '@/features/landing/ScrollRevealProvider';
 
@@ -142,9 +141,6 @@ export default function LandingPage() {
 
             {/* Frequently Asked Questions */}
             <LandingFaq />
-
-            {/* Final Call to Action */}
-            <LandingCta />
           </main>
 
           {/* Footer */}

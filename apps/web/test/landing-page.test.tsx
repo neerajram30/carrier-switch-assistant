@@ -34,13 +34,11 @@ describe('SSR Landing Page & SEO Validation', () => {
     expect(screen.getByText(/Bridge The Gaps\./i)).toBeInTheDocument();
     expect(screen.getByText(/One Platform\./i)).toBeInTheDocument();
 
-    // Check CTAs
-    expect(screen.getByText(/Sign up with Google/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sign up with email/i)).toBeInTheDocument();
-
-    // Check social proof
-    expect(screen.getByText(/3,420\+/i)).toBeInTheDocument();
-    expect(screen.getByText(/4\.9\/5/i)).toBeInTheDocument();
+    // Check CTAs connecting to signup and login
+    const signupLinks = screen.getAllByRole('link', { name: /Get Started Free|Sign up free/i });
+    expect(signupLinks.length).toBeGreaterThan(0);
+    const loginLinks = screen.getAllByRole('link', { name: /Log in/i });
+    expect(loginLinks.length).toBeGreaterThan(0);
   });
 
   it('renders interactive role switch simulator and recalculates on selection', () => {
