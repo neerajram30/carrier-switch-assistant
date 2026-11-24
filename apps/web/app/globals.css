@@ -6,6 +6,11 @@
 @import "@astryxdesign/core/tailwind-theme.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
 html,
 body {
   height: 100%;
@@ -317,18 +322,39 @@ textarea::placeholder {
   color: transparent;
 }
 
-/* Scroll reveal triggers */
+/* Scroll reveal triggers — GPU-accelerated silky smooth transitions */
 .reveal-init {
   opacity: 0;
-  transform: translateY(28px);
-  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translate3d(0, 20px, 0);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
+  backface-visibility: hidden;
 }
 
 .reveal-active {
   opacity: 1 !important;
-  transform: translateY(0) !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+/* Smooth top scroll progress indicator */
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    #5b63d3 0%,
+    #98a4f7 50%,
+    #f472b6 100%
+  );
+  transform-origin: 0% 50%;
+  transform: scaleX(0);
+  z-index: 100;
+  pointer-events: none;
+  will-change: transform;
 }
 
 /* Stagger delay utilities */

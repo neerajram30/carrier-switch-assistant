@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Compass,
   ArrowRight,
   TrendingUp,
   Zap,
@@ -150,10 +149,6 @@ export function CareerSwitchSimulator() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-14 reveal-init">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151621] border border-[#1f2433] text-xs font-semibold text-[#98a4f7] mb-4">
-            <Compass className="w-3.5 h-3.5" />
-            <span>INTERACTIVE ROLE BENCHMARK</span>
-          </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight uppercase mb-4">
             Simulate Your Transition Velocity
           </h2>

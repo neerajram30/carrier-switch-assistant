@@ -6,7 +6,6 @@ import {
   BarChart3,
   Calendar,
   Activity,
-  Layers,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -122,10 +121,6 @@ export function LandingFeatures() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 reveal-init">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151621] border border-[#1f2433] text-xs font-semibold text-[#98a4f7] mb-4">
-            <Layers className="w-3.5 h-3.5" />
-            <span>ARCHITECTED FOR ENGINEERS</span>
-          </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight uppercase mb-4">
             Built Like An SRE Console For Your Career
           </h2>

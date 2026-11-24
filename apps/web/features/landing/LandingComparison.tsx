@@ -31,9 +31,6 @@ export function LandingComparison() {
     <section className="py-20 sm:py-28 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16 reveal-init">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151621] border border-[#1f2433] text-xs font-semibold text-[#98a4f7] mb-4">
-            <span>THE SHIFT</span>
-          </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight uppercase mb-4">
             Traditional Guesswork vs. SRE Telemetry
           </h2>

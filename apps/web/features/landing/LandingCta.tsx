@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Sparkles, ChevronRight } from 'lucide-react';
+import { ShieldCheck, ChevronRight } from 'lucide-react';
 
 export function LandingCta() {
   return (
@@ -16,11 +16,6 @@ export function LandingCta() {
           />
 
           <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0f101a] border border-[#1f2433] text-xs font-semibold text-[#98a4f7] mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>START YOUR TRANSITION FLIGHT</span>
-            </div>
-
             <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight uppercase mb-6 leading-tight">
               Stop Guessing. <br />
               <span className="bg-gradient-to-r from-[#98a4f7] via-[#c084fc] to-[#f472b6] text-transparent bg-clip-text">

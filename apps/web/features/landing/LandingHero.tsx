@@ -30,13 +30,6 @@ export function LandingHero() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Left Column: Headlines & Call to Actions */}
           <div className="lg:col-span-7 flex flex-col items-start text-left">
-            {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#151621] border border-[#1f2433] text-[#c9d3ee] text-[12px] sm:text-[13px] font-medium mb-6 shadow-[inset_0_1px_2px_rgba(255,255,255,0.06)] animate-fade-in-up">
-              <span className="w-2 h-2 rounded-full bg-[#98a4f7] animate-pulse"></span>
-              <span className="text-[#98a4f7] font-semibold">NEW:</span>
-              <span>AI-Assisted Skill Gap Telemetry</span>
-            </div>
-
             {/* Main Headline (Multi-line punchy typography like reference) */}
             <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-extrabold tracking-tight text-white uppercase leading-[1.04] mb-6">
               <span className="block animate-fade-in-up">Assess Skills.</span>
