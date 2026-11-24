@@ -217,6 +217,7 @@ export function AppSidebar() {
         {/* Brand Header */}
         <Link
           href="/"
+          prefetch={false}
           style={{
             textDecoration: 'none',
             display: 'block',
@@ -260,6 +261,7 @@ export function AppSidebar() {
               <Link
                 key={item.id}
                 href={item.href}
+                prefetch={false}
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 style={{

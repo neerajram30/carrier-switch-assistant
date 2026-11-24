@@ -11,7 +11,7 @@ import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
 import dynamic from 'next/dynamic';
-import { DashboardAnalyticsChartsSkeleton } from './DashboardAnalyticsCharts';
+import { DashboardAnalyticsChartsSkeleton } from './DashboardAnalyticsChartsSkeleton';
 
 const DashboardAnalyticsCharts = dynamic(
   () => import('./DashboardAnalyticsCharts'),
@@ -21,12 +21,10 @@ const DashboardAnalyticsCharts = dynamic(
   }
 );
 import {
-  BarChart3,
   Compass,
   Flame,
   Layers,
   Sparkles,
-  TrendingUp,
   Upload,
   Zap,
 } from 'lucide-react';
@@ -163,7 +161,30 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
     }
   }, [session]);
 
-  const [profile, setProfile] = useState<UserProfile>(() => initialProfile || DEFAULT_PROFILE);
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    if (initialProfile) return initialProfile;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('csa_career_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.currentRole) {
+            return {
+              ...DEFAULT_PROFILE,
+              currentRole: String(parsed.currentRole),
+              yearsOfExperience: String(parsed.yearsOfExperience || '0'),
+              skills: Array.isArray(parsed.skills) ? (parsed.skills as string[]) : [],
+              targetRole: String(parsed.targetRole || ''),
+              summary: String(parsed.summary || ''),
+            };
+          }
+        }
+      } catch {
+        // ignore fallback
+      }
+    }
+    return DEFAULT_PROFILE;
+  });
   const [milestones, setMilestones] = useState<StudyMilestone[]>([]);
   const [activityData, setActivityData] = useState<ActivityResponse | null>(null);
   const [roadmaps, setRoadmaps] = useState<Array<{ id: string; targetRole: string; progressPercent: number }>>([]);
@@ -189,93 +210,74 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
 
         if (!isMounted) return;
 
-        // 1. Process User Career Profile from Database
-        if (profileRes && profileRes.ok) {
-          const profileData = await parseJsonSafely<Record<string, unknown>>(profileRes);
-          if (profileData && profileData.currentRole) {
-            setProfile({
-              currentRole: String(profileData.currentRole),
-              yearsOfExperience: String(profileData.yearsOfExperience || '0'),
-              skills: Array.isArray(profileData.skills) ? (profileData.skills as string[]) : [],
-              targetRole: String(profileData.targetRole || ''),
-              summary: String(profileData.summary || ''),
-            });
+        // Parse all responses in parallel so state updates can be batched atomically
+        const [profileData, pathsData, roadmapData, activityDataRes] = await Promise.all([
+          profileRes && profileRes.ok ? parseJsonSafely<Record<string, unknown>>(profileRes) : null,
+          pathsRes && pathsRes.ok ? parseJsonSafely<CareerSuggestion[]>(pathsRes) : null,
+          roadmapRes && roadmapRes.ok ? parseJsonSafely<BackendRoadmapResponse>(roadmapRes) : null,
+          activityRes && activityRes.ok ? parseJsonSafely<ActivityResponse>(activityRes) : null,
+        ]);
 
-            // Persist to session storage for instant reload hydration
-            try {
-              sessionStorage.setItem('csa_career_profile', JSON.stringify(profileData));
-            } catch {
-              // ignore
-            }
-          }
-        } else if (!initialProfile) {
-          // Asynchronously restore cached profile from session storage if available
+        if (!isMounted) return;
+
+        // 1. Process User Career Profile from Database
+        if (profileData && profileData.currentRole) {
+          setProfile({
+            currentRole: String(profileData.currentRole),
+            yearsOfExperience: String(profileData.yearsOfExperience || '0'),
+            skills: Array.isArray(profileData.skills) ? (profileData.skills as string[]) : [],
+            targetRole: String(profileData.targetRole || ''),
+            summary: String(profileData.summary || ''),
+          });
+
+          // Persist to session storage for instant reload hydration
           try {
-            const stored = sessionStorage.getItem('csa_career_profile');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed && parsed.currentRole) {
-                setProfile({
-                  ...DEFAULT_PROFILE,
-                  currentRole: String(parsed.currentRole),
-                  yearsOfExperience: String(parsed.yearsOfExperience || DEFAULT_PROFILE.yearsOfExperience),
-                  skills: Array.isArray(parsed.skills) && parsed.skills.length > 0 ? (parsed.skills as string[]) : DEFAULT_PROFILE.skills,
-                  targetRole: String(parsed.targetRole || DEFAULT_PROFILE.targetRole),
-                  summary: String(parsed.summary || DEFAULT_PROFILE.summary),
-                });
-              }
-            }
+            sessionStorage.setItem('csa_career_profile', JSON.stringify(profileData));
           } catch {
-            // Ignore fallback
+            // ignore
           }
         }
 
         // 2. Process User Career Suggestions
-        if (pathsRes && pathsRes.ok) {
-          const pathsData = await parseJsonSafely<CareerSuggestion[]>(pathsRes);
-          if (Array.isArray(pathsData)) {
-            setCareerSuggestions(pathsData);
-          }
+        if (Array.isArray(pathsData)) {
+          setCareerSuggestions(pathsData);
         }
 
         // 3. Process User Roadmap Milestones & Telemetry
-        if (roadmapRes && roadmapRes.ok) {
-          const data = await parseJsonSafely<BackendRoadmapResponse>(roadmapRes);
-          if (data && data.milestones) {
-            setMilestones(
-              data.milestones.map((m: BackendMilestoneItem) => {
-                let dailyTasks = m.dailyTasks;
-                if (!dailyTasks && typeof m.description === 'string') {
-                  try {
-                    const parsed = JSON.parse(m.description);
-                    if (Array.isArray(parsed.dailyTasks)) {
-                      dailyTasks = parsed.dailyTasks;
-                    }
-                  } catch {
-                    // plain text
+        if (roadmapData && roadmapData.milestones) {
+          setMilestones(
+            roadmapData.milestones.map((m: BackendMilestoneItem) => {
+              let dailyTasks = m.dailyTasks;
+              if (!dailyTasks && typeof m.description === 'string') {
+                try {
+                  const parsed = JSON.parse(m.description);
+                  if (Array.isArray(parsed.dailyTasks)) {
+                    dailyTasks = parsed.dailyTasks;
                   }
+                } catch {
+                  // plain text
                 }
-                return {
-                  id: m.id,
-                  week: m.weekRange,
-                  title: m.title,
-                  description: m.description,
-                  duration: m.duration,
-                  completed: m.isCompleted,
-                  category: m.category,
-                  dailyTasks: dailyTasks || [],
-                };
-              }),
-            );
-            if (data.targetRole) {
-              setProfile((prev) => ({ ...prev, targetRole: data.targetRole }));
-            }
-            if (Array.isArray(data.roadmaps)) {
-              setRoadmaps(data.roadmaps);
-            }
-            if (data.id) {
-              setActiveRoadmapId(data.id);
-            }
+              }
+              return {
+                id: m.id,
+                week: m.weekRange,
+                title: m.title,
+                description: m.description,
+                duration: m.duration,
+                completed: m.isCompleted,
+                category: m.category,
+                dailyTasks: dailyTasks || [],
+              };
+            }),
+          );
+          if (roadmapData.targetRole) {
+            setProfile((prev) => ({ ...prev, targetRole: roadmapData.targetRole }));
+          }
+          if (Array.isArray(roadmapData.roadmaps)) {
+            setRoadmaps(roadmapData.roadmaps);
+          }
+          if (roadmapData.id) {
+            setActiveRoadmapId(roadmapData.id);
           }
         } else if (roadmapRes && !roadmapRes.ok) {
           const errData = (await parseJsonSafely<{ message?: string }>(roadmapRes)) || {};
@@ -284,10 +286,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
 
         // 4. Process Learning Streak Activity
         if (activityRes && activityRes.ok) {
-          const act = await parseJsonSafely<ActivityResponse>(activityRes);
-          if (act) {
-            setActivityData(act);
-          }
+          setActivityData(activityDataRes);
         }
       } catch (err: unknown) {
         setRoadmapError(err instanceof Error ? err.message : 'Failed to connect to API');
@@ -406,22 +405,24 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
       }, 0);
   }, [milestones]);
 
-  // 12-week heatmap data (84 days)
-  const heatmapDays = useMemo(() => {
-    if (activityData && activityData.activity && activityData.activity.length > 0) {
-      return activityData.activity;
-    }
-    // Initialize 84 days with zero activity when no activity is logged yet
+  const [fallbackHeatmapDays] = useState(() => {
     const days: Array<{ date: string; count: number; level: number }> = [];
     const now = new Date();
     for (let i = 83; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().split('T')[0];
-      days.push({ date: iso, count: 0, level: 0 });
+      days.push({ date: d.toISOString().split('T')[0], count: 0, level: 0 });
     }
     return days;
-  }, [activityData]);
+  });
+
+  // 12-week heatmap data (84 days)
+  const heatmapDays = useMemo(() => {
+    if (activityData && activityData.activity && activityData.activity.length > 0) {
+      return activityData.activity;
+    }
+    return fallbackHeatmapDays;
+  }, [activityData, fallbackHeatmapDays]);
 
   // Group 84 days into 12 columns of 7 rows (weeks)
   const heatmapWeeks = useMemo(() => {
@@ -535,7 +536,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                   >
                     Current Origin Baseline
                   </Text>
-                  <Link href="/onboarding" style={{ textDecoration: 'none' }}>
+                  <Link href="/onboarding" prefetch={false} style={{ textDecoration: 'none' }}>
                     <span
                       style={{
                         fontSize: '0.68rem',
@@ -744,7 +745,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                   Tailored Career Suggestions
                 </Heading>
               </div>
-              <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+              <Link href="/dashboard/explore" prefetch={false} style={{ textDecoration: 'none' }}>
                 <span style={{ fontSize: '0.8rem', color: '#98a4f7', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <span>View Full Constellation</span>
                   <Compass size={14} />
@@ -831,7 +832,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                       <span style={{ fontSize: '0.75rem', color: '#646e87' }}>
                         ⏱ ~{path.timelineMonths || 4} months
                       </span>
-                      <Link href={`/dashboard/track?roadmapId=${encodeURIComponent(path.id)}`} style={{ textDecoration: 'none' }}>
+                      <Link href={`/dashboard/track?roadmapId=${encodeURIComponent(path.id)}`} prefetch={false} style={{ textDecoration: 'none' }}>
                         <button
                           type="button"
                           style={{
@@ -913,7 +914,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
             </VStack>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+              <Link href="/dashboard/explore" prefetch={false} style={{ textDecoration: 'none' }}>
                 <button
                   type="button"
                   style={{
@@ -983,6 +984,8 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
               background: 'var(--color-carbon-surface, #151621)',
               border: '1px solid var(--color-gunmetal, #1f2433)',
               padding: '22px 24px',
+              contentVisibility: 'auto',
+              containIntrinsicSize: '240px',
             }}
           >
             <VStack gap={3}>
@@ -1040,7 +1043,6 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                           background: getCellColor(day.level),
                           border: day.level === 0 ? '1px solid #1f2433' : '1px solid transparent',
                           cursor: 'pointer',
-                          transition: 'transform 0.15s ease',
                         }}
                       />
                     ))}
@@ -1078,6 +1080,8 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
               background: 'var(--color-carbon-surface, #151621)',
               border: '1px solid var(--color-gunmetal, #1f2433)',
               padding: '20px 24px',
+              contentVisibility: 'auto',
+              containIntrinsicSize: '160px',
             }}
           >
             <VStack gap={3}>

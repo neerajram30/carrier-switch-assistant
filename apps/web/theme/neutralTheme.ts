@@ -410,3 +410,5 @@ export const neutralTheme = defineTheme({
 
   icons: neutralIconRegistry,
 });
+
+neutralTheme.__built = true;

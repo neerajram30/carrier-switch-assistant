@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
-import path from "path";
 
 const nextConfig: NextConfig = {
   transpilePackages: [
@@ -16,14 +15,6 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {},
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "react-dom$": path.resolve(__dirname, "../../node_modules/react-dom"),
-      "react$": path.resolve(__dirname, "../../node_modules/react"),
-    };
-    return config;
-  },
 };
 
 const withAnalyzer = withBundleAnalyzer({

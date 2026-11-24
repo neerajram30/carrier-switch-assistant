@@ -1,10 +1,10 @@
-import DashboardPage from '@/features/dashboard/DashboardPage';
-import DashboardLayout from './layout';
+import DashboardPage from "@/features/dashboard/DashboardPage";
+import DashboardLayout from "./layout";
 
 export const metadata = {
-  title: 'Dashboard | Career Switch Assistant',
+  title: "Dashboard | Career Switch Assistant",
   description:
-    'Evidence-based career readiness dashboard, skill gap analysis, and transition roadmap.',
+    "Evidence-based career readiness dashboard, skill gap analysis, and transition roadmap.",
 };
 
 export default function DashboardRoute() {

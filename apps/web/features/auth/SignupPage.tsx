@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface SignupPageProps {
@@ -72,6 +71,7 @@ export default function SignupPage({ onSignupSuccess }: SignupPageProps) {
 
       // Synchronize NextAuth session on successful registration
       try {
+        const { signIn } = await import('next-auth/react');
         await signIn('credentials', {
           email: targetEmail,
           password: targetPass,
@@ -150,21 +150,25 @@ export default function SignupPage({ onSignupSuccess }: SignupPageProps) {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 overflow-hidden bg-[#0a0b12] text-[#F8FAFC] selection:bg-indigo-500/30">
       {/* Background Ambient Curved Horizon Glow */}
-      <div
-        className="pointer-events-none absolute -bottom-[420px] left-1/2 -translate-x-1/2 h-[680px] w-[1400px] rounded-[100%] bg-gradient-to-t from-indigo-950/40 via-violet-900/15 to-transparent blur-[90px]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -bottom-[220px] left-1/2 -translate-x-1/2 h-[320px] w-[950px] rounded-[100%] border-t border-indigo-500/15 shadow-[0_-25px_60px_rgba(99,102,241,0.12)]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full bg-violet-600/[0.07] blur-[140px] animate-pulse-glow"
-        aria-hidden="true"
-      />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ contain: 'paint' }} aria-hidden="true">
+        <div
+          className="absolute -bottom-[420px] left-1/2 -translate-x-1/2 h-[680px] w-[1400px] rounded-[100%] bg-gradient-to-t from-indigo-950/40 via-violet-900/15 to-transparent blur-3xl"
+          style={{ willChange: 'transform' }}
+        />
+        <div
+          className="absolute -bottom-[220px] left-1/2 -translate-x-1/2 h-[320px] w-[950px] rounded-[100%] border-t border-indigo-500/15 shadow-[0_-25px_60px_rgba(99,102,241,0.12)]"
+        />
+        <div
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full animate-pulse-glow"
+          style={{
+            background: 'radial-gradient(circle, rgba(124, 58, 237, 0.14) 0%, transparent 70%)',
+            willChange: 'opacity',
+          }}
+        />
+      </div>
 
       {/* Main Centered Signup Card */}
-      <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-[#1f2433] bg-[#151621]/95 p-8 shadow-2xl shadow-black/80 backdrop-blur-2xl transition-all duration-300 animate-fade-in-up">
+      <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-[#1f2433] bg-[#151621]/95 p-8 shadow-2xl shadow-black/80 backdrop-blur-sm transition-all duration-300 animate-fade-in-up">
         {/* Subtle top rim highlight */}
         <div
           className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
