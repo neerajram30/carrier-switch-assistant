@@ -4,7 +4,7 @@ import { signOut } from 'next-auth/react';
 import { AppSidebar } from './AppSidebar';
 
 const mockPush = vi.fn();
-let mockPathname = '/dashboard/experience';
+let mockPathname = '/experience';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
 describe('AppSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPathname = '/dashboard/experience';
+    mockPathname = '/experience';
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -132,17 +132,17 @@ describe('AppSidebar', () => {
     fireEvent.keyDown(window, { key: '1' });
     expect(mockPush).toHaveBeenCalledWith('/');
 
-    // Press '2' to go to Explore Paths (/dashboard/explore)
+    // Press '2' to go to Explore Paths (/explore)
     fireEvent.keyDown(window, { key: '2' });
-    expect(mockPush).toHaveBeenCalledWith('/dashboard/explore');
+    expect(mockPush).toHaveBeenCalledWith('/explore');
 
-    // Press '3' to go to Track (/dashboard/track)
+    // Press '3' to go to Track (/track)
     fireEvent.keyDown(window, { key: '3' });
-    expect(mockPush).toHaveBeenCalledWith('/dashboard/track');
+    expect(mockPush).toHaveBeenCalledWith('/track');
 
-    // Press '4' to go to Edit Experience (/dashboard/experience)
+    // Press '4' to go to Edit Experience (/experience)
     fireEvent.keyDown(window, { key: '4' });
-    expect(mockPush).toHaveBeenCalledWith('/dashboard/experience');
+    expect(mockPush).toHaveBeenCalledWith('/experience');
   });
 
   it('does not trigger shortcut navigation when user is typing in an input', () => {

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import LandingPage, { metadata } from '../app/page';
+import { metadata } from '../features/landing/metadata';
+import { LandingView as LandingPage } from '../features/landing/LandingView';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

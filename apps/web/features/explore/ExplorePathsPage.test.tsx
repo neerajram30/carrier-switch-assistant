@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  usePathname: () => '/dashboard/explore',
+  usePathname: () => '/explore',
 }));
 
 const mockPaths = [
@@ -152,7 +152,7 @@ describe('ExplorePathsPage', () => {
       expect(stored).toBeTruthy();
       const parsed = JSON.parse(stored!);
       expect(parsed.targetRole).toBe('Cloud Solutions Architect');
-      expect(mockPush).toHaveBeenCalledWith('/dashboard/track?roadmapId=new-rm-123');
+      expect(mockPush).toHaveBeenCalledWith('/track?roadmapId=new-rm-123');
     });
   });
 

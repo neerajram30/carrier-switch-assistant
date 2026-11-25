@@ -37,21 +37,21 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   {
     id: 'explore',
     label: 'Explore Paths',
-    href: '/dashboard/explore',
+    href: '/explore',
     shortcut: '2',
     icon: <Compass size={16} aria-hidden="true" />,
   },
   {
     id: 'track',
     label: 'Track',
-    href: '/dashboard/track',
+    href: '/track',
     shortcut: '3',
     icon: <ListTodo size={16} aria-hidden="true" />,
   },
   {
     id: 'review',
     label: 'Profile',
-    href: '/dashboard/experience',
+    href: '/experience',
     shortcut: '4',
     icon: <User size={16} aria-hidden="true" />,
   },
@@ -170,21 +170,21 @@ export function AppSidebar() {
 
   const isItemActive = (href: string) => {
     if (!pathname) return false;
-    if (href === '/dashboard' || href === '/') {
-      return pathname === '/dashboard' || pathname === '/';
+    if (href === '/') {
+      return pathname === '/' || pathname === '/dashboard';
     }
-    if (href === '/dashboard/explore') {
-      return pathname.startsWith('/dashboard/explore') || pathname.startsWith('/explore');
+    if (href === '/explore') {
+      return pathname.startsWith('/explore') || pathname.startsWith('/dashboard/explore');
     }
-    if (href === '/dashboard/track') {
+    if (href === '/track') {
       return (
-        pathname.startsWith('/dashboard/track') || pathname.startsWith('/track')
+        pathname.startsWith('/track') || pathname.startsWith('/dashboard/track')
       );
     }
-    if (href === '/dashboard/experience') {
+    if (href === '/experience') {
       return (
-        pathname.startsWith('/dashboard/experience') ||
-        pathname.startsWith('/dashboard/edit-experience')
+        pathname.startsWith('/experience') ||
+        pathname.startsWith('/dashboard/experience')
       );
     }
     return pathname === href;
@@ -528,7 +528,7 @@ export function AppSidebar() {
               {/* Actions Section */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Link
-                  href="/dashboard/explore"
+                  href="/explore"
                   onClick={() => setUserMenuOpen(false)}
                   style={{
                     display: 'flex',
@@ -548,7 +548,7 @@ export function AppSidebar() {
                 </Link>
 
                 <Link
-                  href="/dashboard/experience"
+                  href="/experience"
                   onClick={() => setUserMenuOpen(false)}
                   style={{
                     display: 'flex',

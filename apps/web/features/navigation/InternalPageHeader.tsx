@@ -70,7 +70,7 @@ export function InternalPageActions({
 
       {/* Explore Paths button (if not currently on explore) */}
       {current !== 'explore' && (
-        <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+        <Link href="/explore" style={{ textDecoration: 'none' }}>
           <button
             type="button"
             style={{
@@ -99,7 +99,7 @@ export function InternalPageActions({
 
       {/* Track Roadmap button (if not currently on track) */}
       {current !== 'track' && (
-        <Link href="/dashboard/track" style={{ textDecoration: 'none' }}>
+        <Link href="/track" style={{ textDecoration: 'none' }}>
           <Button
             label="Track Roadmap"
             variant="secondary"
@@ -110,7 +110,7 @@ export function InternalPageActions({
 
       {/* Edit Experience button (if not currently on experience) */}
       {current !== 'experience' && (
-        <Link href="/dashboard/experience" style={{ textDecoration: 'none' }}>
+        <Link href="/experience" style={{ textDecoration: 'none' }}>
           <Button
             label="Edit Experience"
             variant="secondary"

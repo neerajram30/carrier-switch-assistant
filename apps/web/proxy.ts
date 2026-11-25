@@ -11,7 +11,30 @@ import type { NextRequest } from 'next/server';
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Check for session cookies (production or dev prefix)
+  // 1. Canonical redirect: normalize legacy /dashboard and alias paths to canonical routes
+  if (pathname === '/onboarding/upload' || pathname.startsWith('/onboarding/upload/')) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/onboarding';
+    return NextResponse.redirect(url);
+  }
+  if (pathname === '/edit-experience' || pathname.startsWith('/edit-experience/')) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/experience';
+    return NextResponse.redirect(url);
+  }
+  if (pathname === '/dashboard') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
+  }
+  if (pathname.startsWith('/dashboard/')) {
+    const url = req.nextUrl.clone();
+    const normalized = pathname.replace(/^\/dashboard/, '');
+    url.pathname = normalized.startsWith('/edit-experience') ? '/experience' : normalized;
+    return NextResponse.redirect(url);
+  }
+
+  // 2. Check for session cookies (production or dev prefix)
   const sessionToken =
     req.cookies.get('__Secure-authjs.session-token')?.value ||
     req.cookies.get('authjs.session-token')?.value ||
@@ -20,25 +43,22 @@ export default function proxy(req: NextRequest) {
 
   const isLoggedIn = !!sessionToken;
 
-  // Protected internal routes that require authentication
+  // 3. Protected internal routes that require authentication
+  // Note: '/' is public at proxy level because unauthenticated visitors view the Landing page,
+  // and authenticated users view the Dashboard (handled dynamically inside app/page.tsx).
   const isProtectedRoute =
-    pathname === '/' ||
-    pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/explore') ||
     pathname.startsWith('/track') ||
-    pathname.startsWith('/experience') ||
-    pathname.startsWith('/edit-experience');
+    pathname.startsWith('/experience');
 
   if (isProtectedRoute && !isLoggedIn) {
     const loginUrl = new URL('/login', req.nextUrl.origin);
-    if (pathname !== '/') {
-      loginUrl.searchParams.set('callbackUrl', pathname);
-    }
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If user is already authenticated and visits login or signup page, redirect to dashboard (/)
+  // 4. If user is already authenticated and visits login or signup page, redirect to home (/)
   if (isLoggedIn && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/', req.nextUrl.origin));
   }

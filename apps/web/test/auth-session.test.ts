@@ -188,28 +188,22 @@ describe('NextAuth JWT Session Management & Security', () => {
   describe('Route Protection & Security Enforcement', () => {
     const isProtected = (pathname: string) => {
       return (
-        pathname === '/' ||
-        pathname.startsWith('/dashboard') ||
         pathname.startsWith('/onboarding') ||
         pathname.startsWith('/explore') ||
         pathname.startsWith('/track') ||
-        pathname.startsWith('/experience') ||
-        pathname.startsWith('/edit-experience')
+        pathname.startsWith('/experience')
       );
     };
 
-    it('identifies root dashboard and internal career planning routes as protected', () => {
-      expect(isProtected('/')).toBe(true);
-      expect(isProtected('/dashboard')).toBe(true);
-      expect(isProtected('/dashboard/settings')).toBe(true);
+    it('identifies internal career planning routes as protected', () => {
       expect(isProtected('/onboarding')).toBe(true);
       expect(isProtected('/explore')).toBe(true);
       expect(isProtected('/track')).toBe(true);
       expect(isProtected('/experience')).toBe(true);
-      expect(isProtected('/edit-experience')).toBe(true);
     });
 
-    it('allows public access to login, signup, and status routes', () => {
+    it('allows root and public routes through proxy for dynamic or public handling', () => {
+      expect(isProtected('/')).toBe(false);
       expect(isProtected('/login')).toBe(false);
       expect(isProtected('/signup')).toBe(false);
       expect(isProtected('/status')).toBe(false);

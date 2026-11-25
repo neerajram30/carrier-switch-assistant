@@ -186,7 +186,7 @@ export function TrackRoadmapPage() {
       window.history.pushState(
         null,
         '',
-        `/dashboard/track?roadmapId=${encodeURIComponent(newRoadmapId)}`,
+        `/track?roadmapId=${encodeURIComponent(newRoadmapId)}`,
       );
     }
   };
@@ -465,7 +465,7 @@ export function TrackRoadmapPage() {
                 and lock in your target destination.
               </Text>
             </VStack>
-            <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+            <Link href="/explore" style={{ textDecoration: 'none' }}>
               <button
                 type="button"
                 id="explore-paths-cta"
@@ -607,7 +607,7 @@ export function TrackRoadmapPage() {
                   })}
                 </div>
 
-                <Link href="/dashboard/explore" style={{ textDecoration: 'none' }}>
+                <Link href="/explore" style={{ textDecoration: 'none' }}>
                   <button
                     type="button"
                     style={{

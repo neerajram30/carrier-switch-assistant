@@ -745,7 +745,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                   Tailored Career Suggestions
                 </Heading>
               </div>
-              <Link href="/dashboard/explore" prefetch={false} style={{ textDecoration: 'none' }}>
+              <Link href="/explore" prefetch={false} style={{ textDecoration: 'none' }}>
                 <span style={{ fontSize: '0.8rem', color: '#98a4f7', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <span>View Full Constellation</span>
                   <Compass size={14} />
@@ -832,7 +832,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
                       <span style={{ fontSize: '0.75rem', color: '#646e87' }}>
                         ⏱ ~{path.timelineMonths || 4} months
                       </span>
-                      <Link href={`/dashboard/track?roadmapId=${encodeURIComponent(path.id)}`} prefetch={false} style={{ textDecoration: 'none' }}>
+                      <Link href={`/track?roadmapId=${encodeURIComponent(path.id)}`} prefetch={false} style={{ textDecoration: 'none' }}>
                         <button
                           type="button"
                           style={{
@@ -914,7 +914,7 @@ export function DashboardPage({ initialProfile }: DashboardPageProps) {
             </VStack>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Link href="/dashboard/explore" prefetch={false} style={{ textDecoration: 'none' }}>
+              <Link href="/explore" prefetch={false} style={{ textDecoration: 'none' }}>
                 <button
                   type="button"
                   style={{

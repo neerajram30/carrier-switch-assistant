@@ -63,8 +63,7 @@ export function InternalNavbar({
       return "Track Execution";
     if (
       current === "experience" ||
-      pathname?.includes("/experience") ||
-      pathname?.includes("/edit-experience")
+      pathname?.includes("/experience")
     )
       return "Profile";
     return "Dashboard Overview";

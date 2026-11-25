@@ -1,10 +1,5 @@
-import { EditExperiencePage } from '@/features/dashboard/EditExperiencePage';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Edit Experience | Career Switch Assistant',
-  description: 'Calibrate your technical baseline, work experience, competencies, and achievements.',
-};
-
-export default function EditExperienceRoute() {
-  return <EditExperiencePage />;
+export default function DashboardExperienceRedirect() {
+  redirect('/experience');
 }

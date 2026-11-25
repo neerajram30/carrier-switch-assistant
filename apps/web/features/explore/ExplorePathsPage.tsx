@@ -342,8 +342,8 @@ export function ExplorePathsPage() {
 
       router.push(
         createdData?.id
-          ? `/dashboard/track?roadmapId=${createdData.id}`
-          : '/dashboard/track',
+          ? `/track?roadmapId=${createdData.id}`
+          : '/track',
       );
     } catch (err: unknown) {
       const errorMsg =
@@ -1219,7 +1219,7 @@ export function ExplorePathsPage() {
                 type="button"
                 id="open-in-track-btn"
                 onClick={() =>
-                  router.push(`/dashboard/track?roadmapId=${matchingActiveRoadmap.id}`)
+                  router.push(`/track?roadmapId=${matchingActiveRoadmap.id}`)
                 }
                 style={{
                   width: '100%',

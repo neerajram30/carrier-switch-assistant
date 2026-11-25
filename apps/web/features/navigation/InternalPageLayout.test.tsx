@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  usePathname: () => '/dashboard',
+  usePathname: () => '/',
 }));
 
 describe('InternalPageHeader and InternalPageActions', () => {

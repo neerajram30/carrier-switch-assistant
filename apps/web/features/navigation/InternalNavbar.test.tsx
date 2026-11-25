@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InternalNavbar } from './InternalNavbar';
 
 const mockPush = vi.fn();
-let mockPathname = '/dashboard';
+let mockPathname = '/';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 describe('InternalNavbar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPathname = '/dashboard';
+    mockPathname = '/';
   });
 
   it('renders compact navbar containing only the breadcrumb', () => {
@@ -38,7 +38,7 @@ describe('InternalNavbar', () => {
   });
 
   it('infers section label from pathname dynamically', () => {
-    mockPathname = '/dashboard/explore';
+    mockPathname = '/explore';
     render(<InternalNavbar />);
     expect(screen.getByText('Explore Paths')).toBeInTheDocument();
   });

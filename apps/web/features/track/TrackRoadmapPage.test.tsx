@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  usePathname: () => '/dashboard/track',
+  usePathname: () => '/track',
   useSearchParams: () => ({
     get: (key: string) => (key === 'roadmapId' ? 'rm-1' : null),
   }),
